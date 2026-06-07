@@ -11,7 +11,7 @@
 
 Siloquy is a personal fork of [VoiceInk](https://github.com/Beingpax/VoiceInk) by [Prakash Joshi Pax](https://github.com/Beingpax). It transcribes speech to text on-device using whisper.cpp / Parakeet models, then passes the result through a local AI model to clean up grammar and remove disfluencies — no cloud, no API keys.
 
-This fork is not distributed publicly. It is built and run locally via `make local`.
+Pre-built releases are available on the [Releases](https://github.com/vmlrodrigues/Siloquy/releases) page. Or build from source — see below.
 
 ## The name
 
@@ -38,15 +38,34 @@ The logo concept: a single speech bubble drawn in circuit-board traces, floating
 
 See [CHANGES.md](CHANGES.md) for the full diff from upstream.
 
-## Building
+## Building from source
 
 Requires macOS 14.4+, Xcode, and an Apple Developer certificate in your keychain.
+
+whisper.cpp is expected at `~/Code/opensource/whisper.cpp`. If the XCFramework is not already built, `make local` will clone and build it automatically (takes ~10 minutes the first time).
+
+### Local development build
 
 ```bash
 make local   # → ~/Downloads/Siloquy.app
 ```
 
-whisper.cpp is expected at `~/Code/opensource/whisper.cpp`. If the XCFramework isn't built yet, `make local` will build it automatically (takes ~10 minutes the first time).
+Builds with ad-hoc signing then re-signs with your Apple Development certificate. macOS preserves Accessibility, Microphone, and Input Monitoring permissions across rebuilds because the code identity stays stable.
+
+### Distribution build
+
+```bash
+make release VERSION=1.0.0
+```
+
+Builds with the Developer ID Application certificate, packages as a DMG, submits to Apple for notarisation, staples the ticket, and creates a GitHub Release with the DMG attached.
+
+Requires one-time setup before first use:
+- A **Developer ID Application** certificate installed in your keychain
+- An **App Store Connect API key** stored as a named keychain profile (`siloquy-notarization`)
+- `create-dmg` installed (`brew install create-dmg`)
+
+See `holding/DISTRIBUTION_SETUP.md` for step-by-step instructions.
 
 ## Requirements
 
