@@ -1,0 +1,18 @@
+# Developer — Local Configuration Template
+
+Copy this file to `DEVELOPER.local.md` and fill in your details.
+`DEVELOPER.local.md` is gitignored and should never be committed.
+
+## Apple Developer Account
+
+- **Apple ID:** your-apple-id@example.com
+- **Team ID:** XXXXXXXXXX
+- **Signing cert:** Apple Development: Your Name (XXXXXXXXXX)
+- **Bundle ID:** `com.victorrodrigues.siloquy`
+
+For notarized distribution (outside App Store), a **Developer ID Application** certificate is needed.
+The Apple Development cert is sufficient for local builds via `make local`.
+
+## Support Email
+
+- **Public support address:** support@yourdomain.com
