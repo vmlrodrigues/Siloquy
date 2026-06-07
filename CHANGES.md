@@ -77,6 +77,75 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 - Copyright headers in `VoiceInkTests.swift`, `VoiceInkUITests.swift`, `VoiceInkUITestsLaunchTests.swift`:
   "Created by Prakash Joshi" → "Created by Victor Rodrigues"
 
+### Local On-Device AI Enhancement via LiteRT-LM (2026-06-08)
+
+Replaces the planned Gemma 3 1B QAT integration with a more capable
+multi-model local provider using Google's LiteRT-LM Swift package.
+
+#### New files
+- `Siloquy/Services/AIEnhancement/GemmaService.swift` — owns the LiteRT-LM
+  engine lifecycle, model catalogue, download/import/delete, and enhancement
+- `Siloquy/Models/EnglishVariant.swift` — enum for English spelling variants
+
+#### Swift Package (project.pbxproj)
+- Added `google-ai-edge/LiteRT-LM` (pinned to `main` branch)
+- `GIT_LFS_SKIP_SMUDGE=1` added to `make local` to skip Android LFS objects
+  that are missing from GitHub's LFS server
+
+#### Model catalogue (`GemmaService.swift`)
+Two models available for in-app download:
+- **Qwen3 0.6B** (497 MB, mixed int4) — `litert-community/Qwen3-0.6B`
+- **Gemma 4 E2B** (2.4 GB) — `litert-community/gemma-4-E2B-it-litert-lm` — recommended
+
+Models stored at `~/Library/Application Support/Siloquy/Models/`.
+Each supports download with progress bar, local file import, and deletion.
+HTTP status code validated on download — 4xx responses are rejected before
+the file is saved to disk.
+
+#### Engine lifecycle
+- `Engine` actor initialised lazily; GPU (Metal) tried first, CPU fallback
+  on failure (e.g. after a binary rebuild invalidates the Metal shader cache)
+- Engine state surfaced in the settings UI: warming up / ready / error + retry
+- Switching models tears down the old engine before initialising the new one
+
+#### Qwen3 thinking mode fix
+Qwen3 0.6B has chain-of-thought reasoning on by default. Added a
+`messageSuffix` field to `LocalModel`; Qwen3 gets `" /no_think"` appended
+to every user message to switch to direct-answer mode.
+
+#### Provider & UI
+- `AIProvider.gemmaLocal = "Local (On-device)"` added to `AIService.swift`
+- Positioned between Ollama and Local CLI in the dropdown
+- Routed in `AIEnhancementService.makeRequest()`
+- Settings UI in `APIKeyManagementView.swift` (per-model download/import/delete,
+  engine status banner, radio selection)
+
+#### Entitlements
+- `com.apple.developer.kernel.increased-memory-limit = true` added to
+  `Siloquy/Siloquy.entitlements` (required for models ≥ ~500 MB; not applied
+  to local/ad-hoc builds, which are unsandboxed and don't need it)
+
+---
+
+### English Variant Setting (2026-06-08)
+
+- `EnglishVariant` enum (American / Australian / British / Canadian)
+- `@Published var englishVariant` on `AIEnhancementService`, persisted to
+  UserDefaults key `"englishVariant"`
+- Injected as a `LANGUAGE:` instruction in `getSystemMessage(for:)`, covering
+  all prompts in one place; American appends nothing (LLM default)
+- Language picker added to `EnhancementSettingsPanel` (the gear panel) as a
+  new "Language" section at the top
+
+---
+
+### UI & Branding Cleanup (2026-06-08)
+
+- Sidebar item "Siloquy Pro" renamed to "About Siloquy"; `checkmark.seal.fill`
+  icon replaced with `info.circle.fill`
+- README: added name etymology section — silicon + soliloquy (+ silo), triple
+  meaning, pronunciation SIL-oh-kwee
+
 ---
 
 ## Not Changed (intentional)
@@ -94,9 +163,4 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ## Pending
 
-- [ ] Add LiteRT-LM Swift package
-- [ ] Implement `GemmaService.swift` (Gemma 3 1B QAT local enhancement)
-- [ ] Add `AIProvider.gemmaLocal` enum case
-- [ ] Route in `AIEnhancementService`
-- [ ] Enhancement settings UI for model download
-- [ ] Add increased-memory-limit entitlement
+Nothing currently tracked.

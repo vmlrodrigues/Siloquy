@@ -13,13 +13,28 @@ Siloquy is a personal fork of [VoiceInk](https://github.com/Beingpax/VoiceInk) b
 
 This fork is not distributed publicly. It is built and run locally via `make local`.
 
+## The name
+
+**Siloquy** = *silicon* + *soliloquy* (with a nod to *silo*)
+
+A speech you deliver to yourself, processed on local silicon, never leaving your machine. Triple meaning:
+
+- **Silicon** — the hardware doing the work, entirely on-device
+- **Soliloquy** — a speech addressed to no one else; what dictation really is
+- **Silo** — data that stays contained, never shared with a cloud
+
+Pronounced **SIL-oh-kwee** — like *soliloquy* with the *so-* swapped for *sil-*, landing the stress on the first syllable.
+
+The logo concept: a single speech bubble drawn in circuit-board traces, floating in negative space.
+
 ## What's different from upstream VoiceInk
 
 - App renamed to **Siloquy**, new icon, new bundle ID (`com.victorrodrigues.siloquy`)
 - License requirement removed (always treated as licensed)
 - Sparkle auto-update and all payment/affiliate links removed
 - Attribution UI updated to credit original developer
-- Gemma 3 1B QAT local enhancement provider (in progress — see `GEMMA_INTEGRATION_FINDINGS.md`)
+- Local on-device AI enhancement via [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) — runs in-process via Metal, no API key or server required
+- English variant setting (Australian / British / Canadian / American) in the enhancement gear panel
 
 See [CHANGES.md](CHANGES.md) for the full diff from upstream.
 

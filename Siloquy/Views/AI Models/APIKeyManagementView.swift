@@ -15,6 +15,7 @@ struct APIKeyManagementView: View {
     @State private var localCLICommandTemplate: String = ""
     @State private var localCLITimeoutSeconds: Double = LocalCLIService.defaultTimeoutSeconds
     @State private var isSyncingLocalCLIState = false
+    @State private var showDeleteGemmaConfirm = false
     
     var body: some View {
         Section("AI Provider Integration") {
@@ -64,6 +65,11 @@ struct APIKeyManagementView: View {
                 if aiService.selectedProvider == .localCLI {
                     syncLocalCLIStateFromService()
                 }
+                if aiService.selectedProvider == .gemmaLocal {
+                    if aiService.gemmaService.isModelDownloaded {
+                        Task { await aiService.gemmaService.initializeEngine() }
+                    }
+                }
             }
 
             VStack(alignment: .leading, spacing: 12) {
@@ -107,7 +113,8 @@ struct APIKeyManagementView: View {
                     
                 } else if !aiService.availableModels.isEmpty &&
                             aiService.selectedProvider != .ollama &&
-                            aiService.selectedProvider != .custom {
+                            aiService.selectedProvider != .custom &&
+                            aiService.selectedProvider != .gemmaLocal {
                     Picker("Model", selection: Binding(
                         get: { aiService.currentModel },
                         set: { aiService.selectModel($0) }
@@ -221,6 +228,12 @@ struct APIKeyManagementView: View {
                             .foregroundColor(.orange)
                     }
 
+                } else if aiService.selectedProvider == .gemmaLocal {
+                    GemmaLocalSetupView(
+                        gemmaService: aiService.gemmaService,
+                        showDeleteConfirm: $showDeleteGemmaConfirm,
+                        onDeleted: { aiService.refreshGemmaValidityState() }
+                    )
                 } else if aiService.selectedProvider == .custom {
                     TextField("API Endpoint URL", text: $aiService.customBaseURL, prompt: Text("e.g. https://api.openai.com/v1/chat/completions"))
                         .textFieldStyle(.roundedBorder)
@@ -328,6 +341,10 @@ struct APIKeyManagementView: View {
             if aiService.selectedProvider == .localCLI {
                 syncLocalCLIStateFromService()
             }
+            if aiService.selectedProvider == .gemmaLocal
+                && aiService.gemmaService.isModelDownloaded {
+                Task { await aiService.gemmaService.initializeEngine() }
+            }
         }
     }
 
@@ -372,6 +389,209 @@ struct APIKeyManagementView: View {
         case .openRouter: return URL(string: "https://openrouter.ai/keys")
         case .cerebras: return URL(string: "https://cloud.cerebras.ai/")
         default: return nil
+        }
+    }
+}
+
+// MARK: - Local Models Setup View
+
+private struct GemmaLocalSetupView: View {
+    @ObservedObject var gemmaService: GemmaService
+    @Binding var showDeleteConfirm: Bool
+    let onDeleted: () -> Void
+
+    @State private var showFilePicker = false
+    @State private var importTargetModel: LocalModel?
+    @State private var deleteTargetModel: LocalModel?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Engine state banner (shown when a model is selected and active)
+            if let selected = gemmaService.selectedModel {
+                engineBanner(for: selected)
+                    .padding(.bottom, 8)
+            }
+
+            // One row per catalogued model
+            ForEach(Array(GemmaService.catalog.enumerated()), id: \.element.id) { index, model in
+                if index > 0 { Divider().padding(.vertical, 6) }
+                modelRow(for: model)
+            }
+        }
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.init(filenameExtension: "litertlm") ?? .data],
+            allowsMultipleSelection: false
+        ) { result in
+            guard let target = importTargetModel else { return }
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                let didAccess = url.startAccessingSecurityScopedResource()
+                defer { if didAccess { url.stopAccessingSecurityScopedResource() } }
+                gemmaService.importModel(from: url, as: target)
+            case .failure(let error):
+                gemmaService.downloadStates[target.id] = .error("Import failed: \(error.localizedDescription)")
+            }
+        }
+        .confirmationDialog(
+            "Delete \(deleteTargetModel?.displayName ?? "model")?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                if let m = deleteTargetModel { gemmaService.deleteModel(m) }
+                onDeleted()
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("The model file will be removed. You can download it again at any time.")
+        }
+    }
+
+    // MARK: - Engine banner
+
+    @ViewBuilder
+    private func engineBanner(for model: LocalModel) -> some View {
+        switch gemmaService.engineState {
+        case .initializing:
+            HStack(spacing: 6) {
+                ProgressView().controlSize(.small)
+                Text("Warming up \(model.displayName)…")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        case .ready:
+            HStack(spacing: 4) {
+                Circle().fill(Color.green).frame(width: 7, height: 7)
+                Text("\(model.displayName) ready")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        case .error(let msg):
+            HStack(alignment: .top, spacing: 6) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundColor(.red)
+                    .font(.caption)
+                Text(msg).font(.caption).foregroundColor(.secondary)
+                Spacer()
+                Button("Retry") { Task { await gemmaService.initializeEngine() } }
+                    .controlSize(.small).buttonStyle(.bordered)
+            }
+        case .notReady:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Model row
+
+    @ViewBuilder
+    private func modelRow(for model: LocalModel) -> some View {
+        let isSelected = gemmaService.selectedModelID == model.id
+        let state = gemmaService.downloadStates[model.id] ?? .notDownloaded
+
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
+                // Selection indicator
+                Image(systemName: isSelected ? "circle.inset.filled" : "circle")
+                    .foregroundColor(isSelected ? .accentColor : .secondary)
+                    .font(.system(size: 14))
+                    .onTapGesture {
+                        Task { await gemmaService.selectModel(model) }
+                    }
+
+                // Name + detail
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(model.displayName)
+                        .font(.subheadline)
+                        .fontWeight(isSelected ? .semibold : .regular)
+                    Text(model.detail)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                // Action buttons
+                actionButtons(for: model, state: state)
+            }
+
+            // Progress bar (downloading only)
+            if case .downloading(let progress) = state {
+                VStack(alignment: .leading, spacing: 2) {
+                    ProgressView(value: progress).progressViewStyle(.linear)
+                    Text("\(Int(progress * 100))% of \(model.formattedSize)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundColor(.secondary)
+                }
+                .padding(.leading, 22)
+            }
+
+            // Error message
+            if case .error(let msg) = state {
+                Text(msg)
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.leading, 22)
+            }
+        }
+    }
+
+    // MARK: - Action buttons per state
+
+    @ViewBuilder
+    private func actionButtons(for model: LocalModel, state: DownloadState) -> some View {
+        switch state {
+        case .notDownloaded:
+            HStack(spacing: 6) {
+                Button("Download") {
+                    gemmaService.startDownload(for: model)
+                    Task { await gemmaService.selectModel(model) }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+
+                Button("Import…") {
+                    importTargetModel = model
+                    showFilePicker = true
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+        case .downloading:
+            Button("Cancel") { gemmaService.cancelDownload(for: model) }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+
+        case .downloaded:
+            HStack(spacing: 6) {
+                if gemmaService.selectedModelID != model.id {
+                    Button("Use") {
+                        Task { await gemmaService.selectModel(model) }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+                Button("Delete", role: .destructive) {
+                    deleteTargetModel = model
+                    showDeleteConfirm = true
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+
+        case .error:
+            HStack(spacing: 6) {
+                Button("Retry") { gemmaService.startDownload(for: model) }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.small)
+                Button("Import…") {
+                    importTargetModel = model
+                    showFilePicker = true
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
         }
     }
 }

@@ -43,6 +43,17 @@ struct EnhancementSettingsPanel: View {
             // Content
             Form {
                 Section {
+                    Picker("English variant", selection: $enhancementService.englishVariant) {
+                        ForEach(EnglishVariant.allCases, id: \.self) { variant in
+                            Text(variant.displayName).tag(variant)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                } header: {
+                    Text("Language")
+                }
+
+                Section {
                     Toggle(isOn: $enhancementService.useClipboardContext) {
                         HStack(spacing: 4) {
                             Text("Clipboard Context")

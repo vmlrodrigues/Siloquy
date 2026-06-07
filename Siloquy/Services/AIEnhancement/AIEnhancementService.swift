@@ -53,6 +53,12 @@ class AIEnhancementService: ObservableObject {
         }
     }
 
+    @Published var englishVariant: EnglishVariant {
+        didSet {
+            UserDefaults.standard.set(englishVariant.rawValue, forKey: "englishVariant")
+        }
+    }
+
     @Published var lastSystemMessageSent: String?
     @Published var lastUserMessageSent: String?
 
@@ -86,6 +92,8 @@ class AIEnhancementService: ObservableObject {
         self.isEnhancementEnabled = UserDefaults.standard.bool(forKey: "isAIEnhancementEnabled")
         self.useClipboardContext = UserDefaults.standard.bool(forKey: "useClipboardContext")
         self.useScreenCaptureContext = UserDefaults.standard.bool(forKey: "useScreenCaptureContext")
+        let savedVariant = UserDefaults.standard.string(forKey: "englishVariant") ?? ""
+        self.englishVariant = EnglishVariant(rawValue: savedVariant) ?? .american
         if let savedPromptsData = UserDefaults.standard.data(forKey: "customPrompts"),
            let decodedPrompts = try? JSONDecoder().decode([CustomPrompt].self, from: savedPromptsData) {
             self.customPrompts = decodedPrompts
@@ -187,7 +195,11 @@ class AIEnhancementService: ObservableObject {
             ""
         }
 
-        let finalContextSection = allContextSections + customVocabularySection
+        let languageSection = englishVariant.promptInstruction.map {
+            "\n\nLANGUAGE: \($0)"
+        } ?? ""
+
+        let finalContextSection = allContextSections + customVocabularySection + languageSection
 
         if let activePrompt = activePrompt {
             if activePrompt.id == PredefinedPrompts.assistantPromptId {
@@ -247,6 +259,28 @@ class AIEnhancementService: ObservableObject {
             } catch {
                 if let localError = error as? LocalCLIError {
                     throw EnhancementError.customError(localError.errorDescription ?? "An unknown Local CLI error occurred.")
+                } else {
+                    throw EnhancementError.customError(error.localizedDescription)
+                }
+            }
+        }
+
+        if aiService.selectedProvider == .gemmaLocal {
+            do {
+                let result = try await aiService.enhanceWithGemma(
+                    text: formattedText,
+                    systemPrompt: systemMessage,
+                    timeout: baseTimeout
+                )
+                return AIEnhancementOutputFilter.filter(result)
+            } catch {
+                if let gemmaError = error as? GemmaError {
+                    switch gemmaError {
+                    case .timeout:
+                        throw EnhancementError.timeout
+                    default:
+                        throw EnhancementError.customError(gemmaError.errorDescription ?? "An unknown Gemma error occurred.")
+                    }
                 } else {
                     throw EnhancementError.customError(error.localizedDescription)
                 }

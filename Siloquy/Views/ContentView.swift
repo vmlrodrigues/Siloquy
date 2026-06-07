@@ -14,7 +14,7 @@ enum ViewType: String, CaseIterable, Identifiable {
     case audioInput = "Audio Input"
     case dictionary = "Dictionary"
     case settings = "Settings"
-    case license = "Siloquy Pro"
+    case license = "About Siloquy"
 
     var id: String { rawValue }
 
@@ -30,7 +30,7 @@ enum ViewType: String, CaseIterable, Identifiable {
         case .audioInput: return "mic.fill"
         case .dictionary: return "character.book.closed.fill"
         case .settings: return "gearshape.fill"
-        case .license: return "checkmark.seal.fill"
+        case .license: return "info.circle.fill"
         }
     }
 }

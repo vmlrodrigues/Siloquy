@@ -46,7 +46,7 @@ build: setup
 local: check setup
 	@echo "Building Siloquy..."
 	@rm -rf "$(LOCAL_DERIVED_DATA)"
-	xcodebuild -project Siloquy.xcodeproj -scheme Siloquy -configuration Debug \
+	GIT_LFS_SKIP_SMUDGE=1 xcodebuild -project Siloquy.xcodeproj -scheme Siloquy -configuration Debug \
 		-derivedDataPath "$(LOCAL_DERIVED_DATA)" \
 		-xcconfig LocalBuild.xcconfig \
 		CODE_SIGN_IDENTITY="-" \

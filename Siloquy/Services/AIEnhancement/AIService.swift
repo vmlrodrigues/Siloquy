@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import LLMkit
 
 enum AIProvider: String, CaseIterable {
@@ -15,6 +16,7 @@ enum AIProvider: String, CaseIterable {
     case speechmatics = "Speechmatics"
     case assemblyAI = "AssemblyAI"
     case ollama = "Ollama"
+    case gemmaLocal = "Local (On-device)"
     case localCLI = "Local CLI"
     case custom = "Custom"
     
@@ -45,6 +47,8 @@ enum AIProvider: String, CaseIterable {
             return "https://asr.api.speechmatics.com/v2"
         case .assemblyAI:
             return "https://api.assemblyai.com/v2/transcript"
+        case .gemmaLocal:
+            return ""
         case .ollama:
             return UserDefaults.standard.string(forKey: "ollamaBaseURL") ?? "http://localhost:11434"
         case .localCLI:
@@ -78,6 +82,8 @@ enum AIProvider: String, CaseIterable {
             return "speechmatics-enhanced"
         case .assemblyAI:
             return "universal-3-pro"
+        case .gemmaLocal:
+            return "Gemma 4 E2B"
         case .ollama:
             return UserDefaults.standard.string(forKey: "ollamaSelectedModel") ?? "mistral"
         case .localCLI:
@@ -150,6 +156,8 @@ enum AIProvider: String, CaseIterable {
             return ["speechmatics-enhanced"]
         case .assemblyAI:
             return ["universal-3-pro"]
+        case .gemmaLocal:
+            return ["Gemma 4 E2B"]
         case .ollama:
             return []
         case .localCLI:
@@ -163,7 +171,7 @@ enum AIProvider: String, CaseIterable {
     
     var requiresAPIKey: Bool {
         switch self {
-        case .ollama, .localCLI:
+        case .gemmaLocal, .ollama, .localCLI:
             return false
         default:
             return true
@@ -197,11 +205,20 @@ class AIService: ObservableObject {
                 }
             } else {
                 self.apiKey = ""
-                self.isAPIKeyValid = selectedProvider == .localCLI ? localCLIService.isConfigured : true
-                if selectedProvider == .ollama {
-                    Task {
-                        await ollamaService.checkConnection()
-                        await ollamaService.refreshModels()
+                if selectedProvider == .localCLI {
+                    self.isAPIKeyValid = localCLIService.isConfigured
+                } else if selectedProvider == .gemmaLocal {
+                    self.isAPIKeyValid = gemmaService.isModelDownloaded
+                    if gemmaService.isModelDownloaded {
+                        Task { await self.gemmaService.initializeEngine() }
+                    }
+                } else {
+                    self.isAPIKeyValid = true
+                    if selectedProvider == .ollama {
+                        Task {
+                            await ollamaService.checkConnection()
+                            await ollamaService.refreshModels()
+                        }
                     }
                 }
             }
@@ -213,12 +230,16 @@ class AIService: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private lazy var ollamaService = OllamaService()
     private lazy var localCLIService = LocalCLIService()
+    var gemmaService = GemmaService()
+    private var cancellables = Set<AnyCancellable>()
     
     @Published private var openRouterModels: [String] = []
     
     var connectedProviders: [AIProvider] {
         AIProvider.allCases.filter { provider in
-            if provider == .ollama {
+            if provider == .gemmaLocal {
+                return gemmaService.isModelDownloaded
+            } else if provider == .ollama {
                 return ollamaService.isConnected
             } else if provider == .localCLI {
                 return localCLIService.isConfigured
@@ -280,12 +301,33 @@ class AIService: ObservableObject {
                 self.apiKey = savedKey
                 self.isAPIKeyValid = true
             }
+        } else if selectedProvider == .localCLI {
+            self.isAPIKeyValid = localCLIService.isConfigured
+        } else if selectedProvider == .gemmaLocal {
+            self.isAPIKeyValid = gemmaService.isModelDownloaded
         } else {
-            self.isAPIKeyValid = selectedProvider == .localCLI ? localCLIService.isConfigured : true
+            self.isAPIKeyValid = true
         }
 
         loadSavedModelSelections()
         loadSavedOpenRouterModels()
+
+        // Forward GemmaService state changes so views observing AIService re-render,
+        // and keep isAPIKeyValid in sync when the model is downloaded or deleted.
+        gemmaService.objectWillChange
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] in
+                guard let self = self else { return }
+                if self.selectedProvider == .gemmaLocal {
+                    let downloaded = self.gemmaService.isModelDownloaded
+                    if self.isAPIKeyValid != downloaded {
+                        self.isAPIKeyValid = downloaded
+                        NotificationCenter.default.post(name: .AppSettingsDidChange, object: nil)
+                    }
+                }
+                self.objectWillChange.send()
+            }
+            .store(in: &cancellables)
     }
     
     private func loadSavedModelSelections() {
@@ -416,6 +458,18 @@ class AIService: ObservableObject {
     
     func enhanceWithOllama(text: String, systemPrompt: String, timeout: TimeInterval = 30) async throws -> String {
         try await ollamaService.enhance(text, withSystemPrompt: systemPrompt, timeout: timeout)
+    }
+
+    func enhanceWithGemma(text: String, systemPrompt: String, timeout: TimeInterval = 30) async throws -> String {
+        try await gemmaService.enhance(text, withSystemPrompt: systemPrompt, timeout: timeout)
+    }
+
+    func refreshGemmaValidityState() {
+        if selectedProvider == .gemmaLocal {
+            isAPIKeyValid = gemmaService.isModelDownloaded
+        }
+        objectWillChange.send()
+        NotificationCenter.default.post(name: .AppSettingsDidChange, object: nil)
     }
     
     func updateOllamaBaseURL(_ newURL: String) {

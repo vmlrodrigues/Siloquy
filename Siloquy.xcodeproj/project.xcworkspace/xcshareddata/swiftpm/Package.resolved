@@ -1,5 +1,5 @@
 {
-  "originHash" : "d831b109b089cfc6a97c0c12cf31d8f5a0bb05a3abdc76065c515877d300da33",
+  "originHash" : "1c675299597d8fe7b89db3af31647b9301935b18ab288dab0be5f7dcb7e0172a",
   "pins" : [
     {
       "identity" : "axswift",
@@ -35,6 +35,15 @@
       "state" : {
         "branch" : "main",
         "revision" : "a04ec1c363be3627734f6dad757d82f5d4fa8fcc"
+      }
+    },
+    {
+      "identity" : "litert-lm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/google-ai-edge/LiteRT-LM",
+      "state" : {
+        "branch" : "main",
+        "revision" : "b9d59eb5610c1116fd6896cf71a19eb61355a707"
       }
     },
     {
