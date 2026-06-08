@@ -10,6 +10,7 @@ NOTARIZE_PROFILE         := siloquy-notarization
 RELEASE_DERIVED_DATA     := $(CURDIR)/.release-build
 RELEASE_STAGING          := $(CURDIR)/.release-staging
 DMG_NAME                 := Siloquy-$(VERSION).dmg
+SPARKLE_SIGN_UPDATE      := $(RELEASE_DERIVED_DATA)/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update
 
 .PHONY: all clean whisper setup build local check healthcheck help dev run release
 
@@ -139,6 +140,7 @@ release: check setup
 		ONLY_ACTIVE_ARCH=NO \
 		MACOSX_DEPLOYMENT_TARGET=14.0 \
 		MARKETING_VERSION="$(VERSION)" \
+		CURRENT_PROJECT_VERSION="$(VERSION)" \
 		build
 
 	@APP_PATH="$(RELEASE_DERIVED_DATA)/Build/Products/Release/Siloquy.app" && \
@@ -190,9 +192,17 @@ release: check setup
 		--ignore-cache "$(RELEASE_STAGING)/Siloquy.app" && \
 		echo "  Gatekeeper: OK" || echo "  Warning: Gatekeeper check failed — check entitlements"
 
+	@echo "→ Signing DMG and updating appcast..."
+	@SIG_LINE=$$("$(SPARKLE_SIGN_UPDATE)" "$(DMG_NAME)" 2>&1) && \
+	SIG=$$(echo "$$SIG_LINE" | awk -F'"' '{print $$2}') && \
+	LEN=$$(echo "$$SIG_LINE" | awk -F'"' '{print $$4}') && \
+	python3 scripts/update_appcast.py "$(VERSION)" "$$SIG" "$$LEN"
+	@git add appcast.xml
+	@git commit -m "chore: Update appcast for v$(VERSION)"
+
 	@echo "→ Tagging v$(VERSION) and pushing..."
 	git tag "v$(VERSION)"
-	git push origin "v$(VERSION)"
+	git push origin main "v$(VERSION)"
 
 	@echo "→ Creating GitHub release v$(VERSION)..."
 	gh release create "v$(VERSION)" \

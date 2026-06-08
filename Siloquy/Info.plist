@@ -5,7 +5,11 @@
 	<key>LSUIElement</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<false/>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://raw.githubusercontent.com/vmlrodrigues/Siloquy/main/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>qpqw3qvaW6bjRdvTYHeH9Z3xg6/aThUQ1s2NPbkZUh8=</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Siloquy needs access to your microphone to record audio for transcription.</string>
 	<key>NSAppleEventsUsageDescription</key>
