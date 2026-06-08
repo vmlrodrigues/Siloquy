@@ -15,7 +15,8 @@ struct OnboardingPermission: Identifiable {
         case accessibility
         case screenRecording
         case keyboardShortcut
-        
+        case inputMonitoring
+
         var systemName: String {
             switch self {
             case .microphone: return "mic"
@@ -23,6 +24,7 @@ struct OnboardingPermission: Identifiable {
             case .accessibility: return "accessibility"
             case .screenRecording: return "rectangle.inset.filled.and.person.filled"
             case .keyboardShortcut: return "keyboard"
+            case .inputMonitoring: return "hand.raised"
             }
         }
     }
@@ -33,7 +35,7 @@ struct OnboardingPermissionsView: View {
     @EnvironmentObject private var recordingShortcutManager: RecordingShortcutManager
     @ObservedObject private var audioDeviceManager = AudioDeviceManager.shared
     @State private var currentPermissionIndex = 0
-    @State private var permissionStates: [Bool] = [false, false, false, false, false]
+    @State private var permissionStates: [Bool] = [false, false, false, false, false, false]
     @State private var showAnimation = false
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
@@ -69,6 +71,12 @@ struct OnboardingPermissionsView: View {
             description: "Set up a keyboard shortcut to quickly access Siloquy from anywhere.",
             icon: "keyboard",
             type: .keyboardShortcut
+        ),
+        OnboardingPermission(
+            title: "Input Monitoring",
+            description: "Lets Siloquy detect your recording shortcut while another app is in focus.",
+            icon: "hand.raised",
+            type: .inputMonitoring
         )
     ]
     
@@ -278,6 +286,9 @@ struct OnboardingPermissionsView: View {
         
         // Check keyboard shortcut
         permissionStates[4] = recordingShortcutManager.isShortcutConfigured
+
+        // Check input monitoring permission
+        permissionStates[5] = CGPreflightListenEventAccess()
     }
     
     private func requestPermission() {
@@ -361,6 +372,21 @@ struct OnboardingPermissionsView: View {
         case .keyboardShortcut:
             // The shortcut recorder handles this step directly.
             break
+
+        case .inputMonitoring:
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                NSWorkspace.shared.open(url)
+            }
+            // Poll until the user grants access (or moves on via Skip).
+            Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
+                if CGPreflightListenEventAccess() {
+                    timer.invalidate()
+                    self.permissionStates[self.currentPermissionIndex] = true
+                    withAnimation {
+                        self.showAnimation = true
+                    }
+                }
+            }
         }
     }
     

@@ -6,6 +6,7 @@ class PermissionManager: ObservableObject {
     @Published var audioPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
     @Published var isAccessibilityEnabled = false
     @Published var isScreenRecordingEnabled = false
+    @Published var isInputMonitoringEnabled = false
     @Published var isKeyboardShortcutSet = false
     
     init() {
@@ -38,6 +39,7 @@ class PermissionManager: ObservableObject {
     func checkAllPermissions() {
         checkAccessibilityPermissions()
         checkScreenRecordingPermission()
+        checkInputMonitoringPermission()
         checkAudioPermissionStatus()
         checkKeyboardShortcut()
     }
@@ -55,9 +57,15 @@ class PermissionManager: ObservableObject {
             self.isScreenRecordingEnabled = CGPreflightScreenCaptureAccess()
         }
     }
-    
+
     func requestScreenRecordingPermission() {
         CGRequestScreenCaptureAccess()
+    }
+
+    func checkInputMonitoringPermission() {
+        DispatchQueue.main.async {
+            self.isInputMonitoringEnabled = CGPreflightListenEventAccess()
+        }
     }
     
     func checkAudioPermissionStatus() {
@@ -277,6 +285,22 @@ struct PermissionsView: View {
                         checkPermission: { permissionManager.checkScreenRecordingPermission() },
                         infoTipMessage: "Siloquy captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
                         infoTipLink: "https://tryvoiceink.com/docs/contextual-awareness"
+                    )
+
+                    // Input Monitoring Permission
+                    PermissionCard(
+                        icon: "keyboard",
+                        title: "Input Monitoring",
+                        description: "Lets Siloquy detect your recording shortcut while another app is in focus",
+                        isGranted: permissionManager.isInputMonitoringEnabled,
+                        buttonTitle: "Open System Settings",
+                        buttonAction: {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        },
+                        checkPermission: { permissionManager.checkInputMonitoringPermission() },
+                        infoTipMessage: "Siloquy uses Input Monitoring to detect your recording shortcut when another app is frontmost. Without it, pressing the shortcut will have no effect unless Siloquy is the active app. Siloquy only watches for its configured shortcut key — it does not log keystrokes."
                     )
                 }
             }
