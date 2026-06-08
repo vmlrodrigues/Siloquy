@@ -32,7 +32,7 @@ def main():
         f"            <pubDate>{pub_date}</pubDate>\n"
         f"            <sparkle:version>{version}</sparkle:version>\n"
         f"            <sparkle:shortVersionString>{version}</sparkle:shortVersionString>\n"
-        f"            <sparkle:minimumSystemVersion>12.0</sparkle:minimumSystemVersion>\n"
+        f"            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>\n"
         f"            <sparkle:releaseNotesLink>{release_notes_url}</sparkle:releaseNotesLink>\n"
         f"            <enclosure\n"
         f"                url=\"{download_url}\"\n"

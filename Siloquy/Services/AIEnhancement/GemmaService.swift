@@ -69,6 +69,14 @@ class GemmaService: ObservableObject {
 
     static let catalog: [LocalModel] = [
         LocalModel(
+            id: "gemma4-e2b",
+            displayName: "Gemma 4 E2B",
+            detail: "2.4 GB · Google · recommended",
+            filename: "gemma4-e2b-it.litertlm",
+            downloadURL: URL(string: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm")!,
+            fileSizeBytes: 2_588_147_712
+        ),
+        LocalModel(
             id: "qwen3-0.6b-int4",
             displayName: "Qwen3 0.6B",
             detail: "497 MB · mixed int4 · fast",
@@ -76,14 +84,6 @@ class GemmaService: ObservableObject {
             downloadURL: URL(string: "https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/qwen3_0_6b_mixed_int4.litertlm")!,
             fileSizeBytes: 497_664_000,
             messageSuffix: " /no_think"   // disable Qwen3's chain-of-thought mode
-        ),
-        LocalModel(
-            id: "gemma4-e2b",
-            displayName: "Gemma 4 E2B",
-            detail: "2.4 GB · Google · recommended",
-            filename: "gemma4-e2b-it.litertlm",
-            downloadURL: URL(string: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm")!,
-            fileSizeBytes: 2_588_147_712
         ),
     ]
 
@@ -145,7 +145,7 @@ class GemmaService: ObservableObject {
     nonisolated init() {
         let savedID = UserDefaults.standard.string(forKey: "localModelSelectedID")
                       ?? Self.catalog.first?.id
-                      ?? "qwen3-0.6b-int4"
+                      ?? "gemma4-e2b"
         _selectedModelID = Published(initialValue: savedID)
 
         Task { @MainActor [weak self] in
