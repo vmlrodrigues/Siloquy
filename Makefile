@@ -2,6 +2,10 @@ WHISPER_CPP_DIR := $(HOME)/Code/opensource/whisper.cpp
 FRAMEWORK_PATH := $(WHISPER_CPP_DIR)/build-apple/whisper.xcframework
 LOCAL_DERIVED_DATA := $(CURDIR)/.local-build
 
+# ── Version — single source of truth is the VERSION file ──────────────────────
+# Override on the command line if needed: make release VERSION=1.2.3
+VERSION ?= $(shell cat $(CURDIR)/VERSION 2>/dev/null || echo "0.0.0")
+
 # ── Release configuration ─────────────────────────────────────────────────────
 RELEASE_SIGN_IDENTITY    := Developer ID Application: Victor Rodrigues (9N354A3UZK)
 RELEASE_TEAM             := 9N354A3UZK
@@ -64,6 +68,7 @@ local: check setup
 		CODE_SIGNING_ALLOWED=YES \
 		DEVELOPMENT_TEAM="" \
 		CODE_SIGN_ENTITLEMENTS="$(CURDIR)/Siloquy/Siloquy.local.entitlements" \
+		MARKETING_VERSION="$(VERSION)-dev" \
 		build
 	@APP_PATH="$(LOCAL_DERIVED_DATA)/Build/Products/Debug/Siloquy.app" && \
 	if [ -d "$$APP_PATH" ]; then \
@@ -107,7 +112,7 @@ run:
 # Distribution build — sign with Developer ID, package DMG, notarise, publish GitHub Release.
 # Usage: make release VERSION=1.2.3
 release: check setup
-	@[ -n "$(VERSION)" ] || { echo "Error: VERSION is required.  Usage: make release VERSION=x.y.z"; exit 1; }
+	@[ -n "$(VERSION)" ] || { echo "Error: VERSION not set. Edit the VERSION file or pass VERSION=x.y.z"; exit 1; }
 	@command -v create-dmg >/dev/null 2>&1 || { echo "create-dmg not found — run: brew install create-dmg"; exit 1; }
 	@command -v gh >/dev/null 2>&1 || { echo "gh not found — run: brew install gh"; exit 1; }
 	@security find-identity -v -p codesigning | grep -q "$(RELEASE_SIGN_IDENTITY)" || \
