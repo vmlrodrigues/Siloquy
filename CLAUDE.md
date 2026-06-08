@@ -222,6 +222,9 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - Blank line between subject and body
 - Body lines wrap at 72 characters — use it to explain *why*, not *what*
 
+**⚠️ NEVER push to remote without explicit user approval.**
+Commit freely to the local repo. Before any `git push` (including force pushes and tag pushes), stop and ask the user to review. The user will decide when to squash, reorder, or push. Do not push as part of `make release` or any other automated step without first getting sign-off.
+
 **Example:**
 ```
 feat: Add Gemma local enhancement provider

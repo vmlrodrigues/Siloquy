@@ -4,7 +4,7 @@
   <p>Personal macOS dictation app — on-device speech-to-text with local AI enhancement</p>
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
-  ![Platform](https://img.shields.io/badge/platform-macOS%2014.4%2B-brightgreen)
+  ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
 </div>
 
 ---
@@ -12,6 +12,16 @@
 Siloquy is a personal fork of [VoiceInk](https://github.com/Beingpax/VoiceInk) by [Prakash Joshi Pax](https://github.com/Beingpax). It transcribes speech to text on-device using whisper.cpp / Parakeet models, then passes the result through a local AI model to clean up grammar and remove disfluencies — no cloud, no API keys.
 
 Pre-built releases are available on the [Releases](https://github.com/vmlrodrigues/Siloquy/releases) page. Or build from source — see below.
+
+## Why this fork
+
+[VoiceInk](https://github.com/Beingpax/VoiceInk) is an excellent app — Prakash built something genuinely useful and I'd been running it daily. But I wanted AI enhancement to run entirely in-process: no cloud API, no Ollama server to spin up, just a model that loads directly into the app and runs on Metal. VoiceInk's architecture didn't support that at the time, so I decided to build it myself.
+
+That led me to [Google LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) and quantised Gemma and Qwen3 models. The results have been better than expected — enhancement on a typical dictation session takes 2–3 seconds and the quality is solid. Siloquy is the result of that experiment.
+
+There's a support link in the app if you run into issues. I'm a sole developer working on this in my spare time, so I may not be able to respond to every request — bugs and pull requests via GitHub are more likely to get attention.
+
+A big thank you to [Prakash Joshi Pax](https://github.com/Beingpax) for building VoiceInk and open-sourcing it under GPL. Without that foundation, none of this would exist.
 
 ## The name
 
@@ -30,7 +40,7 @@ The logo concept: a single speech bubble drawn in circuit-board traces, floating
 ## What's different from upstream VoiceInk
 
 - App renamed to **Siloquy**, new icon, new bundle ID (`com.victorrodrigues.siloquy`)
-- License requirement removed (always treated as licensed)
+- In-app purchase requirement removed — app is fully unlocked (source licence remains GPL v3)
 - Sparkle auto-update and all payment/affiliate links removed
 - Attribution UI updated to credit original developer
 - Local on-device AI enhancement via [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) — runs in-process via Metal, no API key or server required
@@ -40,7 +50,7 @@ See [CHANGES.md](CHANGES.md) for the full diff from upstream.
 
 ## Building from source
 
-Requires macOS 14.4+, Xcode, and an Apple Developer certificate in your keychain.
+Requires macOS 14.0+, Xcode, and an Apple Developer certificate in your keychain.
 
 whisper.cpp is expected at `~/Code/opensource/whisper.cpp`. If the XCFramework is not already built, `make local` will clone and build it automatically (takes ~10 minutes the first time).
 
@@ -69,7 +79,7 @@ See `holding/DISTRIBUTION_SETUP.md` for step-by-step instructions.
 
 ## Requirements
 
-- macOS 14.4 or later
+- macOS 14.0 (Sonoma) or later
 - Apple Silicon recommended (M-series) for on-device AI enhancement
 
 ## Acknowledgments
