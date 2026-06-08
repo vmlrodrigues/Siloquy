@@ -264,7 +264,7 @@ struct MetricsContent: View {
                         .font(.system(size: 36, design: .rounded))
                         .foregroundStyle(.white)
                      +
-                     Text(" with VoiceInk")
+                     Text(" with Siloquy")
                         .fontWeight(.bold)
                         .foregroundColor(.white.opacity(0.85))
                     )
@@ -371,7 +371,7 @@ struct MetricsContent: View {
         }
 
         guard totalCount > 0 else {
-            return "Your VoiceInk journey starts with your first recording."
+            return "Your Siloquy journey starts with your first recording."
         }
 
         let wordsText = Formatters.formattedNumber(totalWords)

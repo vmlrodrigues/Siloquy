@@ -10,7 +10,7 @@ struct EnhancementShortcutsView: View {
                         .font(.system(size: 13))
 
                     InfoTip(
-                        "Quickly enable or disable AI enhancement while recording. Available only when VoiceInk is running and the recorder is visible.",
+                        "Quickly enable or disable AI enhancement while recording. Available only when Siloquy is running and the recorder is visible.",
                         learnMoreURL: "https://tryvoiceink.com/docs/enhancement-shortcuts"
                     )
                 }
@@ -28,7 +28,7 @@ struct EnhancementShortcutsView: View {
                         .font(.system(size: 13))
 
                     InfoTip(
-                        "Switch between your saved prompts using ⌘1 through ⌘0 to activate the corresponding prompt in the order they are saved. Available only when VoiceInk is running and the recorder is visible.",
+                        "Switch between your saved prompts using ⌘1 through ⌘0 to activate the corresponding prompt in the order they are saved. Available only when Siloquy is running and the recorder is visible.",
                         learnMoreURL: "https://tryvoiceink.com/docs/enhancement-shortcuts"
                     )
                 }

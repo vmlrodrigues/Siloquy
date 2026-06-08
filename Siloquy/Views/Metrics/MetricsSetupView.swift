@@ -16,7 +16,7 @@ struct MetricsSetupView: View {
                         .padding(.bottom, 20)
                        
                     VStack(spacing: 4) {
-                        Text("Welcome to VoiceInk")
+                        Text("Welcome to Siloquy")
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .multilineTextAlignment(.center)
                         
@@ -70,7 +70,7 @@ struct MetricsSetupView: View {
                 isCompleted: recordingShortcutManager.isShortcutConfigured,
                 icon: "command",
                 title: "Set Keyboard Shortcut",
-                description: "Use VoiceInk anywhere with a shortcut."
+                description: "Use Siloquy anywhere with a shortcut."
             )
         case 1:
             stepInfo = (
