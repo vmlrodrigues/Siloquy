@@ -13,7 +13,7 @@ RELEASE_PROFILE_UUID     := f8dcb4b0-e37c-4257-9642-bc80baf94376
 NOTARIZE_PROFILE         := siloquy-notarization
 RELEASE_DERIVED_DATA     := $(CURDIR)/.release-build
 RELEASE_STAGING          := $(CURDIR)/.release-staging
-DMG_NAME                 := Siloquy-$(VERSION).dmg
+DMG_NAME                 := Siloquy.dmg
 SPARKLE_SIGN_UPDATE      := $(RELEASE_DERIVED_DATA)/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update
 
 .PHONY: all clean whisper setup build local check healthcheck help dev run release

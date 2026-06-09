@@ -6,7 +6,7 @@
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
 
-  <a href="https://github.com/vmlrodrigues/Siloquy/releases/latest">
+  <a href="https://github.com/vmlrodrigues/Siloquy/releases/latest/download/Siloquy.dmg">
     <img src="https://img.shields.io/badge/Download_for_Mac-007AFF?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac" height="40">
   </a>
 </div>

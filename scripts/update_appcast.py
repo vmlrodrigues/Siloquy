@@ -22,7 +22,7 @@ def main():
 
     download_url = (
         f"https://github.com/vmlrodrigues/Siloquy/releases/download/"
-        f"v{version}/Siloquy-{version}.dmg"
+        f"v{version}/Siloquy.dmg"
     )
     release_notes_url = f"https://github.com/vmlrodrigues/Siloquy/releases/tag/v{version}"
 
