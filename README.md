@@ -5,6 +5,7 @@
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
+  ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2B-black?logo=apple&logoColor=white)
 
   <a href="https://github.com/vmlrodrigues/Siloquy/releases/latest/download/Siloquy.dmg">
     <img src="https://img.shields.io/badge/Download_for_Mac-007AFF?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac" height="40">
@@ -84,7 +85,7 @@ See `holding/DISTRIBUTION_SETUP.md` for step-by-step instructions.
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
-- Apple Silicon recommended (M-series) for on-device AI enhancement
+- Apple Silicon Mac — any M-series chip (M1 or later). Intel Macs are not supported.
 
 ## Acknowledgments
 
