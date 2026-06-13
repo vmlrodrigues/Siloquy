@@ -35,7 +35,7 @@ build/
 .dist/
 .release-build/
 .release-staging/
-Siloquy-*.dmg
+*.dmg
 
 # CocoaPods
 #
