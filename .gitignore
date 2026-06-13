@@ -32,6 +32,7 @@ playground.xcworkspace
 .build/
 build/
 .local-build/
+.dist/
 .release-build/
 .release-staging/
 Siloquy-*.dmg
@@ -106,3 +107,4 @@ Temporary Items
 GEMMA_INTEGRATION_FINDINGS.md
 holding/
 DEVELOPER.local.md
+.env

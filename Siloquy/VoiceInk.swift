@@ -37,6 +37,22 @@ struct VoiceInkApp: App {
     @StateObject private var prewarmService: ModelPrewarmService
 
     init() {
+        // Single-instance enforcement: terminate any existing instance before continuing.
+        // Prevents duplicate paste when a startup instance and a fresh local build both run.
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID)
+            where app != NSRunningApplication.current {
+            app.terminate()
+        }
+
+        // Dev builds: also terminate the release build so only one Siloquy is running.
+        // The release app is often active via login item when doing local dev work.
+        #if LOCAL_BUILD
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: "com.victorrodrigues.siloquy") {
+            app.terminate()
+        }
+        #endif
+
         // Disable HTTP response caching — prevents API responses from being stored in Cache.db
         URLCache.shared = URLCache(memoryCapacity: 0, diskCapacity: 0)
 
@@ -104,8 +120,7 @@ struct VoiceInkApp: App {
         _enhancementService = StateObject(wrappedValue: enhancementService)
 
         // 1. Create modelsDirectory URL
-        let appSupportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("com.victorrodrigues.siloquy")
+        let appSupportDirectory = AppContainer.supportDirectory
         let modelsDirectory = appSupportDirectory.appendingPathComponent("WhisperModels")
 
         // 2. Create model managers
@@ -186,8 +201,7 @@ struct VoiceInkApp: App {
     private static func createPersistentContainer(schema: Schema, logger: Logger) -> ModelContainer? {
         do {
             // Create app-specific Application Support directory URL
-            let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("com.victorrodrigues.siloquy", isDirectory: true)
+            let appSupportURL = AppContainer.supportDirectory
 
             // Create the directory if it doesn't exist
             try? FileManager.default.createDirectory(at: appSupportURL, withIntermediateDirectories: true)

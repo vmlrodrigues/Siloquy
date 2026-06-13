@@ -13,3 +13,13 @@ PROVISIONING_PROFILE_SPECIFIER =
 
 // Add LOCAL_BUILD compilation flag so Swift code can use #if LOCAL_BUILD
 SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) LOCAL_BUILD
+
+// Apple Silicon only — Intel is not supported
+ARCHS = arm64
+VALID_ARCHS = arm64
+
+// Separate bundle ID so the dev build gets its own permissions slot in
+// System Settings and never interferes with the released app's permissions.
+// iCloud/CloudKit is intentionally absent on the dev build.
+PRODUCT_BUNDLE_IDENTIFIER = com.victorrodrigues.siloquy.dev
+INFOPLIST_KEY_CFBundleDisplayName = Siloquy Dev

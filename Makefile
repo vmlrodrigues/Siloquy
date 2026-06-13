@@ -1,6 +1,11 @@
 WHISPER_CPP_DIR := $(HOME)/Code/opensource/whisper.cpp
 FRAMEWORK_PATH := $(WHISPER_CPP_DIR)/build-apple/whisper.xcframework
 LOCAL_DERIVED_DATA := $(CURDIR)/.local-build
+LOCAL_DIST         := $(CURDIR)/.dist
+# The dev bundle is named "Siloquy Dev.app" so System Settings privacy panels,
+# Finder and Spotlight all label it distinctly from the release "Siloquy.app".
+# (The executable inside stays "Siloquy" — it never appears in those panels.)
+LOCAL_APP          := $(LOCAL_DIST)/Siloquy Dev.app
 
 # ── Version — single source of truth is the VERSION file ──────────────────────
 # Override on the command line if needed: make release VERSION=1.2.3
@@ -16,7 +21,7 @@ RELEASE_STAGING          := $(CURDIR)/.release-staging
 DMG_NAME                 := Siloquy.dmg
 SPARKLE_SIGN_UPDATE      := $(RELEASE_DERIVED_DATA)/SourcePackages/artifacts/sparkle/Sparkle/bin/sign_update
 
-.PHONY: all clean whisper setup build local check healthcheck help dev run release
+.PHONY: all clean whisper setup build local check healthcheck help dev run reset-onboarding reset-dev release deploy-docs
 
 # Default target
 all: check build
@@ -58,6 +63,9 @@ build: setup
 # Build for local use — ad-hoc build, then re-signed with Apple Development cert via codesign.
 # Re-signing gives a stable identity so Accessibility/Microphone permissions survive rebuilds.
 local: check setup
+	@echo "Quitting any running Siloquy dev instance..."
+	@osascript -e 'if application id "com.victorrodrigues.siloquy.dev" is running then tell application id "com.victorrodrigues.siloquy.dev" to quit' 2>/dev/null || true
+	@sleep 0.5
 	@echo "Building Siloquy..."
 	@rm -rf "$(LOCAL_DERIVED_DATA)"
 	GIT_LFS_SKIP_SMUDGE=1 xcodebuild -project Siloquy.xcodeproj -scheme Siloquy -configuration Debug \
@@ -72,18 +80,26 @@ local: check setup
 		build
 	@APP_PATH="$(LOCAL_DERIVED_DATA)/Build/Products/Debug/Siloquy.app" && \
 	if [ -d "$$APP_PATH" ]; then \
-		echo "Copying Siloquy.app to ~/Downloads..."; \
-		rm -rf "$$HOME/Downloads/Siloquy.app"; \
-		ditto "$$APP_PATH" "$$HOME/Downloads/Siloquy.app"; \
-		xattr -cr "$$HOME/Downloads/Siloquy.app"; \
+		mkdir -p "$(LOCAL_DIST)"; \
+		echo "Copying to .dist/Siloquy Dev.app..."; \
+		rm -rf "$(LOCAL_DIST)/Siloquy.app" "$(LOCAL_APP)"; \
+		ditto "$$APP_PATH" "$(LOCAL_APP)"; \
+		xattr -cr "$(LOCAL_APP)"; \
+		echo "Patching CFBundleName to 'Siloquy Dev'..."; \
+		/usr/libexec/PlistBuddy -c "Set :CFBundleName 'Siloquy Dev'" \
+			"$(LOCAL_APP)/Contents/Info.plist"; \
 		echo "Re-signing with Apple Development certificate..."; \
 		codesign --force --deep \
 			--sign "Apple Development: Victor Rodrigues (BWSYTSDVGC)" \
 			--entitlements "$(CURDIR)/Siloquy/Siloquy.local.entitlements" \
-			"$$HOME/Downloads/Siloquy.app"; \
+			"$(LOCAL_APP)"; \
+		echo "Clearing the stray build-output registration (else macOS shows two dock icons)..."; \
+		LSREG="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"; \
+		"$$LSREG" -u "$$APP_PATH" >/dev/null 2>&1 || true; \
+		rm -rf "$$APP_PATH"; \
+		"$$LSREG" -f "$(LOCAL_APP)" >/dev/null 2>&1 || true; \
 		echo ""; \
-		echo "Build complete! App saved to: ~/Downloads/Siloquy.app"; \
-		echo "Run with: open ~/Downloads/Siloquy.app"; \
+		echo "Build complete! Run 'make run' to launch."; \
 		echo ""; \
 		echo "Note: Permissions (Accessibility, Microphone, etc.) will persist across rebuilds."; \
 		echo "No automatic updates (pull new code and rebuild to update)."; \
@@ -94,20 +110,38 @@ local: check setup
 
 # Run application
 run:
-	@if [ -d "$$HOME/Downloads/Siloquy.app" ]; then \
-		echo "Opening ~/Downloads/Siloquy.app..."; \
-		open "$$HOME/Downloads/Siloquy.app"; \
+	@if [ -d "$(LOCAL_APP)" ]; then \
+		echo "Opening .dist/Siloquy Dev.app..."; \
+		open "$(LOCAL_APP)"; \
 	else \
-		echo "Looking for Siloquy.app in DerivedData..."; \
-		APP_PATH=$$(find "$$HOME/Library/Developer/Xcode/DerivedData" -name "Siloquy.app" -type d | head -1) && \
-		if [ -n "$$APP_PATH" ]; then \
-			echo "Found app at: $$APP_PATH"; \
-			open "$$APP_PATH"; \
-		else \
-			echo "Siloquy.app not found. Please run 'make build' or 'make local' first."; \
-			exit 1; \
-		fi; \
+		echo "Siloquy Dev.app not found. Run 'make local' first."; \
+		exit 1; \
 	fi
+
+# Reset the dev build's onboarding so the next launch replays the onboarding flow.
+# Only touches the dev build's UserDefaults; the release app and your data are untouched.
+reset-onboarding:
+	@echo "Quitting the dev app (if running)..."
+	@osascript -e 'if application id "com.victorrodrigues.siloquy.dev" is running then tell application id "com.victorrodrigues.siloquy.dev" to quit' 2>/dev/null || true
+	@pkill -f "Siloquy Dev.app/Contents/MacOS/Siloquy" 2>/dev/null || true
+	@n=0; while pgrep -f "Siloquy Dev.app/Contents/MacOS/Siloquy" >/dev/null 2>&1 && [ $$n -lt 25 ]; do sleep 0.2; n=$$((n+1)); done
+	@defaults delete com.victorrodrigues.siloquy.dev hasCompletedOnboarding 2>/dev/null || true
+	@defaults delete com.victorrodrigues.siloquy.dev onboardingStarted 2>/dev/null || true
+	@defaults delete com.victorrodrigues.siloquy.dev onboardingPermissionIndex 2>/dev/null || true
+	@echo "Onboarding reset. Run 'make run' to relaunch into the onboarding flow."
+
+# Full from-scratch reset of the DEV build: onboarding flags, the dev app's macOS
+# permission grants (Accessibility, Microphone, Screen Recording, Input Monitoring),
+# AND the downloaded models (Parakeet + Gemma 4 E2B) so both onboarding download steps
+# actually run. The next launch replays onboarding from scratch. Release app untouched.
+# NOTE: model files live in shared paths, so this also forces a re-download for release.
+reset-dev: reset-onboarding
+	@echo "Resetting the dev build's macOS permissions..."
+	@tccutil reset All com.victorrodrigues.siloquy.dev >/dev/null 2>&1 || true
+	@echo "Deleting onboarding models (Parakeet + Gemma 4 E2B) so the downloads re-run..."
+	@rm -rf "$$HOME/Library/Application Support/FluidAudio/Models/parakeet-tdt-0.6b-v2"
+	@rm -f "$$HOME/Library/Application Support/Siloquy/Models/gemma4-e2b-it.litertlm" "$$HOME/Library/Application Support/Siloquy/Models/"gemma4-e2b-it.litertlm_*.bin "$$HOME/Library/Application Support/Siloquy/Models/gemma3-1b-it-int4-qat.litertlm" 2>/dev/null || true
+	@echo "Done. Run 'make run' for a from-scratch onboarding (models re-download, ~2.9 GB)."
 
 # Distribution build — sign with Developer ID, package DMG, notarise, publish GitHub Release.
 # Usage: make release VERSION=1.2.3
@@ -142,7 +176,8 @@ release: check setup
 		CODE_SIGN_ENTITLEMENTS="$(CURDIR)/Siloquy/Siloquy.entitlements" \
 		ENABLE_HARDENED_RUNTIME=YES \
 		OTHER_CODE_SIGN_FLAGS="--timestamp" \
-		ONLY_ACTIVE_ARCH=NO \
+		ARCHS=arm64 \
+		VALID_ARCHS=arm64 \
 		MACOSX_DEPLOYMENT_TARGET=14.0 \
 		MARKETING_VERSION="$(VERSION)" \
 		CURRENT_PROJECT_VERSION="$(VERSION)" \
@@ -210,13 +245,22 @@ release: check setup
 	git push origin main "v$(VERSION)"
 
 	@echo "→ Creating GitHub release v$(VERSION)..."
+	@awk -v ver="$(VERSION)" 'index($$0, "### " ver) == 1 {f=1; next} f && (/^### [0-9]/ || /^---/) {exit} f {print}' CHANGES.md > /tmp/siloquy-release-notes.md
 	gh release create "v$(VERSION)" \
 		--title "Siloquy v$(VERSION)" \
-		--notes "See [CHANGES.md](CHANGES.md) for what's new." \
+		--notes-file /tmp/siloquy-release-notes.md \
 		"$(DMG_NAME)"
+	@rm -f /tmp/siloquy-release-notes.md
 
 	@echo "→ Cleaning temporary build directories..."
 	@rm -rf "$(RELEASE_DERIVED_DATA)" "$(RELEASE_STAGING)"
+
+	@echo "→ Deploying docs site..."
+	@if [ -f "$(CURDIR)/.env" ]; then \
+		bash tools/deploy-docs.sh deploy; \
+	else \
+		echo "  Skipped: .env not found (copy .env.example to .env to enable)"; \
+	fi
 
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -224,6 +268,11 @@ release: check setup
 	@echo "  DMG: $(DMG_NAME)"
 	@echo "  https://github.com/vmlrodrigues/Siloquy/releases/tag/v$(VERSION)"
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+# Deploy docs site to WebDAV
+deploy-docs:
+	@[ -f "$(CURDIR)/.env" ] || { echo "Error: .env not found. Copy .env.example to .env and fill in your credentials."; exit 1; }
+	@bash tools/deploy-docs.sh deploy
 
 # Cleanup
 clean:
@@ -242,7 +291,10 @@ help:
 	@echo "  release            Build, sign, notarise, and publish a GitHub release"
 	@echo "                     Usage: make release VERSION=x.y.z"
 	@echo "  run                Launch the built Siloquy app"
+	@echo "  reset-onboarding   Reset the dev build's onboarding flow (re-show it)"
+	@echo "  reset-dev          Full fresh-install reset (onboarding + permissions + models)"
 	@echo "  dev                Build and run the app (for development)"
 	@echo "  all                Run full build process (default)"
+	@echo "  deploy-docs        Upload docs/ to the configured WebDAV server"
 	@echo "  clean              Remove build artifacts"
 	@echo "  help               Show this help message"

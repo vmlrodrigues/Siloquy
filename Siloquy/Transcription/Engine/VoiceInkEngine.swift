@@ -42,8 +42,7 @@ class VoiceInkEngine: NSObject, ObservableObject {
         self.transcriptionModelManager = transcriptionModelManager
         self.enhancementService = enhancementService
 
-        let appSupportDirectory = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("com.victorrodrigues.siloquy")
+        let appSupportDirectory = AppContainer.supportDirectory
         self.recordingsDirectory = appSupportDirectory.appendingPathComponent("Recordings")
 
         self.serviceRegistry = TranscriptionServiceRegistry(
