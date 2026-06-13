@@ -177,6 +177,15 @@ enum AIProvider: String, CaseIterable {
             return true
         }
     }
+
+    var isLocalProvider: Bool {
+        switch self {
+        case .gemmaLocal, .ollama, .localCLI:
+            return true
+        default:
+            return false
+        }
+    }
 }
 
 class AIService: ObservableObject {

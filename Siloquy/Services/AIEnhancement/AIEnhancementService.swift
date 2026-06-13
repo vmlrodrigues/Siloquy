@@ -208,7 +208,10 @@ class AIEnhancementService: ObservableObject {
                 return activePrompt.finalPromptText + finalContextSection
             }
         } else {
-            let defaultPrompt = allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId }) ?? allPrompts.first!
+            let defaultId = aiService.selectedProvider.isLocalProvider
+                ? PredefinedPrompts.localModelPromptId
+                : PredefinedPrompts.defaultPromptId
+            let defaultPrompt = allPrompts.first(where: { $0.id == defaultId }) ?? allPrompts.first!
             return defaultPrompt.finalPromptText + finalContextSection
         }
     }
@@ -430,6 +433,13 @@ class AIEnhancementService: ObservableObject {
     }
 
     func captureScreenContext() async {
+        // Only capture when context awareness is explicitly enabled. Without this guard
+        // the app hits ScreenCaptureKit on every recording (whenever Screen Recording is
+        // granted) even though the feature is off by default — which is what triggers
+        // macOS's periodic "bypass the window picker" consent dialog. The captured text
+        // is only ever *used* when useScreenCaptureContext is true (see makeRequest), so
+        // capturing while it's false was pure waste plus an unwanted system prompt.
+        guard useScreenCaptureContext else { return }
         guard CGPreflightScreenCaptureAccess() else {
             return
         }
