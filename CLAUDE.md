@@ -18,7 +18,7 @@ See `DEVELOPER.local.md` (gitignored) for Apple ID, Team ID, signing cert, and s
 
 - **Bundle ID:** `com.victorrodrigues.siloquy`
 
-For notarized distribution (outside App Store), a **Developer ID Application** certificate is needed — not yet installed. The current cert is for development/local use only.
+For notarized distribution (outside App Store), a **Developer ID Application** certificate is required and is installed (`Developer ID Application: Victor Rodrigues (9N354A3UZK)`); `make release` uses it to sign and notarize. The Apple Development cert is used separately for local builds (`make local`).
 
 ---
 
