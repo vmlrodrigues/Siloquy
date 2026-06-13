@@ -9,7 +9,7 @@ class SystemInfoService {
 
     func getSystemInfoString() -> String {
         let info = """
-        === VOICEINK SYSTEM INFORMATION ===
+        === SILOQUY SYSTEM INFORMATION ===
         Generated: \(Date().formatted(date: .long, time: .standard))
 
         APP INFORMATION:

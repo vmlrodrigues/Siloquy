@@ -9,29 +9,15 @@ struct HelpAndResourcesSection: View {
 
             VStack(alignment: .leading, spacing: 10) {
                 resourceLink(
-                    icon: "sparkles",
-                    title: "Recommended Models",
-                    url: "https://tryvoiceink.com/recommended-models"
-                )
-
-                resourceLink(
-                    icon: "video.fill",
-                    title: "YouTube Videos & Guides",
-                    url: "https://www.youtube.com/@tryvoiceink/videos"
-                )
-
-                resourceLink(
                     icon: "book.fill",
                     title: "Documentation",
-                    url: "https://tryvoiceink.com/docs"
+                    url: "https://siloquy.jeunj.com"
                 )
-                
+
                 resourceLink(
                     icon: "exclamationmark.bubble.fill",
                     title: "Feedback or Issues?",
-                    action: {
-                        EmailSupport.openSupportEmail()
-                    }
+                    url: "https://github.com/vmlrodrigues/Siloquy/issues"
                 )
             }
         }

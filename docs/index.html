@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Siloquy — Getting Started</title>
+  <style>
+    :root {
+      --bg: #0f0f11;
+      --surface: #18181c;
+      --border: #2a2a30;
+      --text: #e8e8ed;
+      --muted: #8e8e99;
+      --accent: #007aff;
+      --accent-dim: #0a52a8;
+      --green: #34c759;
+      --yellow: #ffd60a;
+      --radius: 10px;
+      --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Layout ── */
+    .page {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 64px 24px 120px;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      margin-bottom: 64px;
+    }
+
+    header .logo {
+      font-size: 2.6rem;
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      color: var(--text);
+    }
+
+    header .tagline {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    header .download-btn {
+      display: inline-block;
+      margin-top: 28px;
+      padding: 13px 28px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      border-radius: 980px;
+      transition: background 0.15s;
+    }
+
+    header .download-btn:hover { background: var(--accent-dim); }
+
+    header .req {
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Section ── */
+    section {
+      margin-bottom: 56px;
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    h2 .num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-right: 10px;
+      flex-shrink: 0;
+    }
+
+    p { margin-bottom: 14px; color: var(--text); }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin-bottom: 12px;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .card-body {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    /* ── Steps list ── */
+    ol.steps {
+      list-style: none;
+      counter-reset: steps;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    ol.steps li {
+      counter-increment: steps;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+
+    ol.steps li::before {
+      content: counter(steps);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--border);
+      color: var(--muted);
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-top: 1px;
+      flex-shrink: 0;
+    }
+
+    ol.steps li .step-content { flex: 1; }
+    ol.steps li .step-title { font-weight: 600; font-size: 0.9rem; margin-bottom: 2px; }
+    ol.steps li .step-desc { font-size: 0.85rem; color: var(--muted); }
+
+    /* ── Pill badges ── */
+    .badge {
+      display: inline-block;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 980px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .badge-green { background: rgba(52,199,89,.15); color: var(--green); }
+    .badge-blue  { background: rgba(0,122,255,.15); color: var(--accent); }
+
+    /* ── Highlight box ── */
+    .tip {
+      background: rgba(0,122,255,.07);
+      border: 1px solid rgba(0,122,255,.2);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      font-size: 0.875rem;
+      color: var(--text);
+      margin-bottom: 12px;
+    }
+
+    .tip strong { color: var(--accent); }
+
+    /* ── Kbd ── */
+    kbd {
+      display: inline-block;
+      font-family: var(--font);
+      font-size: 0.8rem;
+      background: var(--border);
+      color: var(--text);
+      padding: 2px 7px;
+      border-radius: 5px;
+      border-bottom: 2px solid #111;
+    }
+
+    /* ── Divider ── */
+    hr {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 48px 0;
+    }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+
+    footer a { color: var(--muted); text-decoration: underline; }
+
+    @media (max-width: 480px) {
+      .page { padding: 40px 16px 80px; }
+      header .logo { font-size: 2rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ── Header ── -->
+  <header>
+    <div class="logo">Siloquy</div>
+    <p class="tagline">On-device speech-to-text for macOS — private, fast, no cloud required</p>
+    <a class="download-btn" href="https://github.com/vmlrodrigues/Siloquy/releases/latest/download/Siloquy.dmg">
+      Download for Mac
+    </a>
+    <p class="req">macOS 14 Sonoma or later &nbsp;·&nbsp; Apple Silicon required (M-series)</p>
+  </header>
+
+  <!-- ── What it does ── -->
+  <section>
+    <h2>What Siloquy does</h2>
+    <p>Press a shortcut, speak, release — your words appear at the cursor in any app. Everything runs on your Mac. No account, no subscription, no audio ever leaves your device.</p>
+    <div class="card">
+      <div class="card-title">Speech-to-text</div>
+      <div class="card-body">Supports local and cloud transcription models. Parakeet (on-device, Apple Silicon) is recommended for most people — it delivers the lowest word-error rate of the open-source local models (~6%) while transcribing thousands of times faster than real time, with no internet connection required.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">AI Enhancement <span class="badge badge-green">On-device</span></div>
+      <div class="card-body">After transcribing, an on-device AI model cleans up grammar, removes filler words, and fixes self-corrections — all without an API key or server. You can also connect a cloud provider if you prefer.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Power Mode</div>
+      <div class="card-body">Save different enhancement profiles per app or website. Your coding environment can get a different prompt than your email client.</div>
+    </div>
+  </section>
+
+  <!-- ── Setup ── -->
+  <section>
+    <h2><span class="num">1</span> Install</h2>
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <div class="step-title">Download and open the DMG</div>
+          <div class="step-desc">Drag Siloquy to your Applications folder, then launch it.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Grant Microphone access</div>
+          <div class="step-desc">Required to hear you speak. The onboarding flow will prompt you.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Grant Accessibility access</div>
+          <div class="step-desc">Required to paste text at the cursor in other apps.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Grant Input Monitoring access</div>
+          <div class="step-desc">Required for your recording shortcut to work when another app is in focus.</div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="num">2</span> Download the transcription model</h2>
+    <div class="tip"><strong>Recommended:</strong> Parakeet (local) — download it once from the AI Models screen, then it runs entirely on your Mac with no internet required.</div>
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <div class="step-title">Open Siloquy → Settings → AI Models</div>
+          <div class="step-desc">Click the Local tab.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Find Parakeet and click Download</div>
+          <div class="step-desc">The model is about 600 MB. Download happens once — it stays on disk between launches.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Select Parakeet as your active model</div>
+          <div class="step-desc">Click the model to make it active. You should see it appear in the main status bar.</div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="num">3</span> Set your shortcut and speak</h2>
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <div class="step-title">Open Settings → Shortcuts</div>
+          <div class="step-desc">A setup that works well: <kbd>Right ⌘</kbd> to start and stop recording, and <kbd>Right ⌥</kbd> to toggle AI Enhancement on or off. Both keys are easy to reach and rarely conflict with other shortcuts.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Click in any text field in any app</div>
+          <div class="step-desc">Siloquy pastes wherever the cursor is.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Press your shortcut, speak, press again</div>
+          <div class="step-desc">The mini recorder appears while you speak. Press again to transcribe. The result is pasted automatically.</div>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <hr>
+
+  <!-- ── AI Enhancement ── -->
+  <section>
+    <h2>AI Enhancement (optional but recommended)</h2>
+    <p>Enhancement takes the raw transcript and passes it through an AI model to fix grammar, remove fillers, and handle self-corrections. The default is the on-device Gemma model — no setup needed beyond downloading it once.</p>
+
+    <div class="card">
+      <div class="card-title">On-device <span class="badge badge-green">No API key</span></div>
+      <div class="card-body">Settings → Enhancement → Provider: <strong>Local (On-device)</strong>. Download the model when prompted (~530 MB). Runs via Metal on Apple Silicon — typically 2–3 seconds for a typical dictation.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Cloud providers <span class="badge badge-blue">API key required</span></div>
+      <div class="card-body">Groq and Cerebras both have generous free tiers and are significantly faster. Go to Settings → Enhancement, pick a provider, paste your API key. Groq <em>llama-3.3-70b</em> or Cerebras <em>llama-3.3-70b</em> are good starting points.</div>
+    </div>
+
+    <p style="margin-top:16px; font-size:0.875rem; color:var(--muted);">Enhancement is optional. If you turn it off, the raw Parakeet transcript is pasted directly.</p>
+  </section>
+
+  <!-- ── Tips ── -->
+  <section>
+    <h2>Tips</h2>
+    <div class="card">
+      <div class="card-title">Self-corrections</div>
+      <div class="card-body">Say <em>"scratch that"</em>, <em>"actually"</em>, or <em>"no wait"</em> mid-sentence and the enhancement model will discard the earlier version and keep only the correction.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">English variant</div>
+      <div class="card-body">Settings → Enhancement → gear icon → English variant. Choose Australian, British, Canadian, or American. The AI enhancement output will use that spelling.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Personal dictionary</div>
+      <div class="card-body">Add names, technical terms, or brand names in Settings → Dictionary. The AI enhancement model will preserve those spellings exactly.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Power Mode</div>
+      <div class="card-body">Create per-app profiles with different prompts and providers. Useful if you dictate in very different contexts — technical notes vs. casual messages, for example.</div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <section style="text-align:center; margin-bottom: 0;">
+    <p style="font-size:0.875rem; color:var(--muted);">This page covers the essentials. For the full feature set — Power Mode, trigger words, custom local models, and more — see the <a href="https://tryvoiceink.com/docs/introduction" style="color:var(--accent);">VoiceInk documentation</a>.</p>
+  </section>
+
+  <hr>
+
+  <footer>
+    <p>Siloquy is a personal fork of <a href="https://github.com/Beingpax/VoiceInk">VoiceInk</a>, built by <a href="https://github.com/Beingpax">Prakash Joshi Pax</a>.</p>
+    <p style="margin-top:6px;">Without Prakash's work — and his decision to open-source it under GPL v3 — Siloquy would not exist. Thank you.</p>
+    <p style="margin-top:12px;"><a href="https://github.com/vmlrodrigues/Siloquy">Siloquy source on GitHub</a></p>
+  </footer>
+
+</div>
+</body>
+</html>

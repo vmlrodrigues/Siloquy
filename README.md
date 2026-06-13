@@ -5,7 +5,7 @@
 
   [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
   ![Platform](https://img.shields.io/badge/platform-macOS%2014.0%2B-brightgreen)
-  ![Apple Silicon](https://img.shields.io/badge/Apple%20Silicon-M1%2B-black?logo=apple&logoColor=white)
+  ![Architecture](https://img.shields.io/badge/arch-Apple%20Silicon%20only-orange)
 
   <a href="https://github.com/vmlrodrigues/Siloquy/releases/latest/download/Siloquy.dmg">
     <img src="https://img.shields.io/badge/Download_for_Mac-007AFF?style=for-the-badge&logo=apple&logoColor=white" alt="Download for Mac" height="40">
@@ -82,10 +82,14 @@ Requires one-time setup before first use:
 
 See `holding/DISTRIBUTION_SETUP.md` for step-by-step instructions.
 
+### Docs deployment
+
+The `docs/` directory is a self-contained static site. `make release` deploys it automatically via WebDAV at the end of the release process. To deploy manually: `make deploy-docs`. Credentials are read from a `.env` file at the repo root — copy `.env.example` to get started.
+
 ## Requirements
 
 - macOS 14.0 (Sonoma) or later
-- Apple Silicon Mac — any M-series chip (M1 or later). Intel Macs are not supported.
+- **Apple Silicon required** (M-series) — Intel Macs are not supported
 
 ## Acknowledgments
 

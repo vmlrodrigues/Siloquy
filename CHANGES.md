@@ -4,163 +4,117 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
-## Completed
+### 0.10.0 — 2026-06-14
 
-### App Identity & Rename (2026-06-07)
+#### Onboarding
+- Onboarding now downloads both on-device models the app needs — the Parakeet
+  V2 transcription model and the Gemma 4 E2B enhancement model — so dictation
+  and AI cleanup both work offline as soon as setup finishes
+- Removed the Input Monitoring step: Accessibility (required for pasting)
+  already grants the input access the global shortcut needs, so the separate
+  grant was redundant — and couldn't be auto-registered once Accessibility was
+  on anyway
+- Onboarding resumes where you left off after the macOS-forced restart that
+  follows granting Screen Recording, instead of starting over
+- "Skip Tour" relabelled "Skip Setup"
+- Removed a spurious "keystroke receiving" prompt that appeared on the welcome
+  screen before onboarding asked for it
 
-**App renamed from VoiceInk to Siloquy throughout.**
+#### Permissions
+- Input Monitoring is now detected with a real event-tap probe, fixing a
+  macOS 26 false positive where the app reported the permission as granted when
+  it was not
+- Opening the Input Monitoring permission now correctly registers Siloquy in
+  System Settings so it can be enabled
+- Clearer Input Monitoring help text
 
-#### Signing & Build (project.pbxproj)
-- `DEVELOPMENT_TEAM`: `V6J6A3VWY2` → `BWSYTSDVGC` (Victor Rodrigues, Apple Developer)
-- `PRODUCT_BUNDLE_IDENTIFIER` (main): `com.prakashjoshipax.VoiceInk` → `com.victorrodrigues.siloquy`
-- `PRODUCT_BUNDLE_IDENTIFIER` (tests): `com.prakashjoshipax.VoiceInkTests` → `com.victorrodrigues.siloquy.tests`
-- `PRODUCT_BUNDLE_IDENTIFIER` (UITests): `com.prakashjoshipax.VoiceInkUITests` → `com.victorrodrigues.siloquy.uitests`
-- `PRODUCT_NAME`: `$(TARGET_NAME)` → `Siloquy` (main target only)
-- `INFOPLIST_KEY_CFBundleDisplayName`: `VoiceInk` → `Siloquy`
-- `TEST_HOST` updated to reference `Siloquy.app`
+#### App launch & Dock
+- Fixed a duplicate Dock icon in menu-bar-only mode, caused by switching the
+  activation policy at launch
+- First launch now defaults to menu-bar-only mode
+- No stray focus ring on the first window at launch
 
-#### whisper.cpp Path (Makefile + project.pbxproj)
-- Removed `~/VoiceInk-Dependencies` intermediary directory
-- `WHISPER_CPP_DIR` now points directly to `$(HOME)/Code/opensource/whisper.cpp`
-- XCFramework path in project file updated to match
-- Note: you can now delete `~/VoiceInk-Dependencies` from your home directory
+#### Privacy — screen context is now opt-in
+- Screen-context capture is off by default and runs only when explicitly
+  enabled. Previously the app reached for ScreenCaptureKit on every recording
+  whenever Screen Recording was granted, which triggered macOS's periodic
+  "bypass the window picker" consent dialog
 
-#### Info.plist
-- Added `CFBundleDisplayName`: `Siloquy`
-- Microphone, browser, and screen recording usage descriptions updated to say "Siloquy"
-- Removed Sparkle auto-update feed (SUFeedURL, SUPublicEDKey — pointed to upstream beingpax server)
-- Disabled Sparkle auto-update checks (`SUEnableAutomaticChecks = false`)
+#### Enhancement
+- Provider-aware prompt routing: local providers (Gemma, Ollama, Local CLI)
+  receive a leaner prompt with worked self-correction examples tuned for small
+  on-device models; cloud providers keep the existing detailed prompt; an
+  explicit user prompt selection always overrides the automatic choice
 
-#### App Icon
-- Source: `holding/Gemini_Generated_Image_ldydocldydocldyd.png` (2048×2048)
-- Cropped gray border (original content occupied ~1574×1574 of the 2048 canvas)
-- Generated all 7 sizes: 16, 32, 64, 128, 256, 512, 1024 px
-- Replaced all images in `VoiceInk/Assets.xcassets/AppIcon.appiconset/`
-- Trimmed source saved to `holding/icon_trimmed_source.png`
+#### Apple Silicon only
+- Builds restricted to `arm64` (`LocalBuild.xcconfig` and the Makefile release
+  target) — Intel Macs are not supported; the binary no longer contains an
+  `x86_64` slice
+- README and docs updated to state this as a hard requirement
 
-#### Bundle ID & Logger Subsystem (Swift — ~30 files)
-- All `com.prakashjoshipax.voiceink` → `com.victorrodrigues.siloquy`
-  (Logger subsystems, queue labels, NSUserInterfaceItemIdentifier values)
-- All `com.prakashjoshipax.VoiceInk` → `com.victorrodrigues.siloquy`
-  (file path components, CloudKit container ID: `iCloud.com.victorrodrigues.siloquy`)
-- Window autosave names: `VoiceInkMainWindowFrame` / `VoiceInkHistoryWindowFrame` → `Siloquy*`
+#### Reliability
+- Single-instance enforcement: the app terminates any existing instance with
+  the same bundle ID at launch, preventing the duplicate paste that occurred
+  when two copies both intercepted the global recording shortcut
+- Parakeet download progress now advances by file count, so the bar moves
+  steadily instead of sticking near the start and then jumping
 
-#### User-Visible Strings (Swift)
-- Window titles: "VoiceInk" / "VoiceInk Onboarding" / "VoiceInk — Transcription History" → Siloquy
-- Alert texts in `VoiceInk.swift`
-- `AppIntents`: ToggleMiniRecorderIntent and DismissMiniRecorderIntent
-- `PowerModeView`: "VoiceInk workflow" → "Siloquy workflow"
-- `PermissionsView`: all VoiceInk → Siloquy in permission descriptions
-- `MetricsContent`: "VoiceInk Insights", "VoiceInk sessions completed", etc.
-- `ContentView`: sidebar label and navigation title
-- `MenuBarView`: "Quit VoiceInk" → "Quit Siloquy"
-- `DictionaryQuickAddPanel`: placeholder text
-- `CustomSoundManager`: `VoiceInk/CustomSounds` → `Siloquy/CustomSounds` (file path)
-- `VoiceInkCSVExportService`: export filename → `Siloquy-transcription.csv`
-- `TranscriptionPipeline`: trial-expired message updated
+#### Help & "Copy System Info"
+- "Copy System Info" header corrected from `VOICEINK SYSTEM INFORMATION` to
+  `SILOQUY SYSTEM INFORMATION`
+- Help & Resources: removed the "Recommended Models" and "YouTube Videos &
+  Guides" links; Documentation now points to `https://siloquy.jeunj.com` and
+  Feedback to GitHub Issues
 
-#### EmailSupport.swift
-- Support email: `support@tryvoiceink.com` → `support@jeunj.com`
-- Subject: "VoiceInk Support Request" → "Siloquy Support Request"
-- Common-issues link → GitHub issues
-
-#### LicenseManagementView.swift (rewritten)
-- Removed: "Upgrade to Pro" purchase button, BuyMeACoffee tip jar, Polar license portal
-- Kept: License key activation (validates against original VoiceInk Pro licensing server)
-- Added: Attribution section crediting Prakash Joshi Pax / VoiceInk with link to original repo
-
-#### AnnouncementsService.swift
-- Announcements URL updated (previously pointed to beingpax's GitHub Pages)
-- `enableAnnouncements` default changed to `false` (no announcements server for this fork)
-
-#### Test Files
-- Copyright headers in `VoiceInkTests.swift`, `VoiceInkUITests.swift`, `VoiceInkUITestsLaunchTests.swift`:
-  "Created by Prakash Joshi" → "Created by Victor Rodrigues"
-
-### Local On-Device AI Enhancement via LiteRT-LM (2026-06-08)
-
-Replaces the planned Gemma 3 1B QAT integration with a more capable
-multi-model local provider using Google's LiteRT-LM Swift package.
-
-#### New files
-- `Siloquy/Services/AIEnhancement/GemmaService.swift` — owns the LiteRT-LM
-  engine lifecycle, model catalogue, download/import/delete, and enhancement
-- `Siloquy/Models/EnglishVariant.swift` — enum for English spelling variants
-
-#### Swift Package (project.pbxproj)
-- Added `google-ai-edge/LiteRT-LM` (pinned to `main` branch)
-- `GIT_LFS_SKIP_SMUDGE=1` added to `make local` to skip Android LFS objects
-  that are missing from GitHub's LFS server
-
-#### Model catalogue (`GemmaService.swift`)
-Two models available for in-app download:
-- **Qwen3 0.6B** (497 MB, mixed int4) — `litert-community/Qwen3-0.6B`
-- **Gemma 4 E2B** (2.4 GB) — `litert-community/gemma-4-E2B-it-litert-lm` — recommended
-
-Models stored at `~/Library/Application Support/Siloquy/Models/`.
-Each supports download with progress bar, local file import, and deletion.
-HTTP status code validated on download — 4xx responses are rejected before
-the file is saved to disk.
-
-#### Engine lifecycle
-- `Engine` actor initialised lazily; GPU (Metal) tried first, CPU fallback
-  on failure (e.g. after a binary rebuild invalidates the Metal shader cache)
-- Engine state surfaced in the settings UI: warming up / ready / error + retry
-- Switching models tears down the old engine before initialising the new one
-
-#### Qwen3 thinking mode fix
-Qwen3 0.6B has chain-of-thought reasoning on by default. Added a
-`messageSuffix` field to `LocalModel`; Qwen3 gets `" /no_think"` appended
-to every user message to switch to direct-answer mode.
-
-#### Provider & UI
-- `AIProvider.gemmaLocal = "Local (On-device)"` added to `AIService.swift`
-- Positioned between Ollama and Local CLI in the dropdown
-- Routed in `AIEnhancementService.makeRequest()`
-- Settings UI in `APIKeyManagementView.swift` (per-model download/import/delete,
-  engine status banner, radio selection)
-
-#### Entitlements
-- `com.apple.developer.kernel.increased-memory-limit = true` added to
-  `Siloquy/Siloquy.entitlements` (required for models ≥ ~500 MB; not applied
-  to local/ad-hoc builds, which are unsandboxed and don't need it)
+#### Docs site & deploy tooling
+- New self-contained static site at `docs/index.html`
+- `make deploy-docs` uploads the site via WebDAV; runs automatically at the
+  end of `make release`
+- `tools/deploy-docs.sh` supports `deploy`, `mount`, and `unmount`; upload
+  failures are non-fatal
 
 ---
 
-### English Variant Setting (2026-06-08)
+### 0.9.5 — 2026-06-08
 
-- `EnglishVariant` enum (American / Australian / British / Canadian)
-- `@Published var englishVariant` on `AIEnhancementService`, persisted to
-  UserDefaults key `"englishVariant"`
-- Injected as a `LANGUAGE:` instruction in `getSystemMessage(for:)`, covering
-  all prompts in one place; American appends nothing (LLM default)
-- Language picker added to `EnhancementSettingsPanel` (the gear panel) as a
-  new "Language" section at the top
+- Sparkle auto-update enabled with signed appcast hosted on GitHub
+- Download button added to README and docs site
+- DMG filename simplified (version number dropped from filename)
+- Input Monitoring permission added to onboarding flow
 
 ---
 
-### UI & Branding Cleanup (2026-06-08)
+### 0.9.4 — 2026-06-08
 
-- Sidebar item "Siloquy Pro" renamed to "About Siloquy"; `checkmark.seal.fill`
-  icon replaced with `info.circle.fill`
-- README: added name etymology section — silicon + soliloquy (+ silo), triple
-  meaning, pronunciation SIL-oh-kwee
+- English variant setting added (Australian / British / Canadian / American)
+  in the Enhancement gear panel — AI output uses the selected spelling
 
 ---
 
-## Not Changed (intentional)
+### 0.9.3 — 2026-06-08
 
-| Item | Reason |
-|------|--------|
-| Xcode target/scheme name ("VoiceInk") | Internal tooling only; no user impact |
-| `.xcodeproj` filename | Would require Makefile and git history changes for no benefit |
-| UserDefaults keys (`VoiceInkLicenseRequiresActivation`, etc.) | Changing breaks existing user preferences on upgrade |
-| Internal Swift class names (`VoiceInkEngine`, `VoiceInkEngineError`, `VoiceInkButton`) | Structural refactor; no user impact |
-| `tryvoiceink.com` "learn more" links | Original docs remain relevant; no Siloquy docs site |
-| LicenseViewModel.swift Polar API endpoint | License validation still works against original server |
+- Local on-device AI enhancement via Google LiteRT-LM
+- Two models available for in-app download: Qwen3 0.6B (497 MB) and
+  Gemma 4 E2B (2.4 GB, recommended)
+- Engine runs in-process via Metal (GPU), CPU fallback on failure
+- No API key or server required
 
 ---
 
-## Pending
+### 0.9.2 — 2026-06-08
 
-Nothing currently tracked.
+- App renamed from VoiceInk to Siloquy throughout (bundle ID, display name,
+  window titles, logger subsystems, file paths, export filenames)
+- New app icon
+- Bundle ID: `com.victorrodrigues.siloquy`
+- In-app purchase requirement removed — app fully unlocked
+- Attribution UI updated to credit Prakash Joshi Pax / VoiceInk
+
+---
+
+### 0.9.1 — 2026-06-08
+
+- Initial private fork of VoiceInk
+- Signing and build configuration updated for personal Apple Developer account
+- whisper.cpp path updated to local directory structure
+- Support email and issue links updated

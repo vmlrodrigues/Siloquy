@@ -111,7 +111,7 @@ struct MetricsContent: View {
                                 DashboardPromotionsSection(licenseState: licenseState)
                             }
 
-                            Spacer(minLength: 20)
+                            Spacer(minLength: 4)
 
                             HStack {
                                 Spacer()
