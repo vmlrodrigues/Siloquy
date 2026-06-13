@@ -16,8 +16,16 @@ class MenuBarManager: ObservableObject {
     private var engine: VoiceInkEngine?
 
     init() {
-        self.isMenuBarOnly = UserDefaults.standard.bool(forKey: "IsMenuBarOnly")
-        updateAppActivationPolicy()
+        let defaults = UserDefaults.standard
+        if defaults.object(forKey: "IsMenuBarOnly") == nil {
+            defaults.set(true, forKey: "IsMenuBarOnly")
+        }
+        self.isMenuBarOnly = defaults.bool(forKey: "IsMenuBarOnly")
+        // Do NOT apply the activation policy at launch. The app stays at its default
+        // (.regular) and the window open/close handlers below take it to .accessory
+        // when the last window closes. Forcing .accessory here — while the WindowGroup
+        // opens its window and windowDidBecomeKey flips back to .regular — churns the
+        // policy and makes macOS spawn a duplicate Dock tile.
 
         NotificationCenter.default.addObserver(
             self,
@@ -25,10 +33,28 @@ class MenuBarManager: ObservableObject {
             name: NSWindow.willCloseNotification,
             object: nil
         )
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(windowDidBecomeKey),
+            name: NSWindow.didBecomeKeyNotification,
+            object: nil
+        )
     }
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+    }
+
+    @objc private func windowDidBecomeKey(_ notification: Notification) {
+        guard isMenuBarOnly else { return }
+        guard let window = notification.object as? NSWindow,
+              window.level == .normal,
+              !window.styleMask.contains(.nonactivatingPanel) else { return }
+        if NSApplication.shared.activationPolicy() != .regular {
+            logger.notice("windowDidBecomeKey: main window active, switching to .regular")
+            NSApplication.shared.setActivationPolicy(.regular)
+        }
     }
 
     @objc private func windowDidClose(_ notification: Notification) {

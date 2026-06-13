@@ -6,7 +6,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     weak var menuBarManager: MenuBarManager?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        menuBarManager?.applyActivationPolicy()
+        // Intentionally does NOT touch the activation policy. The app launches at its
+        // default policy and MenuBarManager's window open/close handlers drive it from
+        // there. Forcing .accessory at launch — while the WindowGroup opens its window
+        // and flips to .regular — made macOS spawn a DUPLICATE Dock tile for the single
+        // running app (menu-bar-only mode). Window-driven transitions don't churn.
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

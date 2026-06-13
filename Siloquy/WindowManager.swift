@@ -42,6 +42,7 @@ class WindowManager: NSObject {
         applyInitialPlacementIfNeeded(to: window)
         registerMainWindowIfNeeded(window)
         window.orderFrontRegardless()
+        clearInitialFocus(from: window)
     }
     
     func configureOnboardingPanel(_ window: NSWindow) {
@@ -62,6 +63,7 @@ class WindowManager: NSObject {
         window.isOpaque = false
         window.minSize = NSSize(width: 900, height: 780)
         window.makeKeyAndOrderFront(nil)
+        clearInitialFocus(from: window)
     }
 
     func registerMainWindow(_ window: NSWindow) {
@@ -85,6 +87,16 @@ class WindowManager: NSObject {
             return
         }
         window.orderOut(nil)
+    }
+
+    /// Clear any control that grabbed keyboard focus when the window first appeared, so the
+    /// macOS focus ring isn't shown on launch (a pre-existing VoiceInk behaviour). The user's
+    /// first Tab re-engages keyboard focus and the ring returns, so keyboard accessibility is
+    /// preserved — only the unsolicited launch-time ring is removed.
+    private func clearInitialFocus(from window: NSWindow) {
+        DispatchQueue.main.async {
+            window.makeFirstResponder(nil)
+        }
     }
     
     func currentMainWindow() -> NSWindow? {
