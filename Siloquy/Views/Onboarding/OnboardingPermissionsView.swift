@@ -35,7 +35,10 @@ struct OnboardingPermissionsView: View {
     @EnvironmentObject private var recordingShortcutManager: RecordingShortcutManager
     @ObservedObject private var audioDeviceManager = AudioDeviceManager.shared
     @State private var currentPermissionIndex = 0
-    @State private var permissionStates: [Bool] = [false, false, false, false, false, false]
+    // Persisted so a mid-flow relaunch (e.g. after the macOS-forced Screen Recording quit)
+    // resumes at the step the user reached instead of restarting.
+    @AppStorage("onboardingPermissionIndex") private var onboardingPermissionIndex = 0
+    @State private var permissionStates: [Bool] = [false, false, false, false, false]
     @State private var showAnimation = false
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
@@ -71,13 +74,12 @@ struct OnboardingPermissionsView: View {
             description: "Set up a keyboard shortcut to quickly access Siloquy from anywhere.",
             icon: "keyboard",
             type: .keyboardShortcut
-        ),
-        OnboardingPermission(
-            title: "Input Monitoring",
-            description: "Lets Siloquy detect your recording shortcut while another app is in focus.",
-            icon: "hand.raised",
-            type: .inputMonitoring
         )
+        // Input Monitoring is intentionally NOT an onboarding step: Siloquy requires
+        // Accessibility (for pasting), and Accessibility already grants the input access
+        // the global shortcut needs. A separate IM grant is redundant for the common case
+        // (and can't be auto-registered once Accessibility is granted). The in-app
+        // Permissions screen keeps an IM entry for the rare user whose shortcut won't fire.
     ]
     
     var body: some View {
@@ -251,9 +253,12 @@ struct OnboardingPermissionsView: View {
             }
         }
         .onAppear {
+            // Resume at the step the user last reached (persisted). "First ungranted" was
+            // unreliable: the audio-device step's state isn't ready synchronously on appear,
+            // so a relaunch wrongly jumped back to Microphone Selection.
+            currentPermissionIndex = min(onboardingPermissionIndex, permissions.count - 1)
             checkExistingPermissions()
             animateIn()
-            // Ensure audio devices are loaded
             audioDeviceManager.loadAvailableDevices()
         }
     }
@@ -286,11 +291,8 @@ struct OnboardingPermissionsView: View {
         
         // Check keyboard shortcut
         permissionStates[4] = recordingShortcutManager.isShortcutConfigured
-
-        // Check input monitoring permission
-        permissionStates[5] = CGPreflightListenEventAccess()
     }
-    
+
     private func requestPermission() {
         if permissionStates[currentPermissionIndex] {
             moveToNext()
@@ -374,12 +376,18 @@ struct OnboardingPermissionsView: View {
             break
 
         case .inputMonitoring:
+            // CGRequestListenEventAccess() prompts (when the status is undetermined) AND
+            // registers the app in System Settings → Input Monitoring. Do NOT create an
+            // event tap first: an active tap succeeds via Accessibility and implicitly
+            // marks ListenEvent "determined", which turns this request into a no-op so the
+            // app never appears in the list (the original bug).
+            CGRequestListenEventAccess()
             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
                 NSWorkspace.shared.open(url)
             }
             // Poll until the user grants access (or moves on via Skip).
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
-                if CGPreflightListenEventAccess() {
+                if Self.canCreateEventTap() {
                     timer.invalidate()
                     self.permissionStates[self.currentPermissionIndex] = true
                     withAnimation {
@@ -396,6 +404,7 @@ struct OnboardingPermissionsView: View {
                 currentPermissionIndex += 1
                 resetAnimation()
             }
+            onboardingPermissionIndex = currentPermissionIndex
         } else {
             withAnimation {
                 showModelDownload = true
@@ -471,6 +480,23 @@ struct OnboardingPermissionsView: View {
         .padding()
         .background(Color.white.opacity(0.05))
         .cornerRadius(12)
+    }
+
+    // Try to create a real CGEventTap — if it succeeds the TCC grant is real.
+    // CGPreflightListenEventAccess() alone returns true as a false positive
+    // on macOS 26 for Apple-Development-signed builds.
+    static func canCreateEventTap() -> Bool {
+        let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+        let tap = CGEvent.tapCreate(
+            tap: .cgSessionEventTap,
+            place: .headInsertEventTap,
+            options: .defaultTap,
+            eventsOfInterest: mask,
+            callback: { _, _, event, _ in Unmanaged.passUnretained(event) },
+            userInfo: nil
+        )
+        if let tap { CFMachPortInvalidate(tap) }
+        return tap != nil
     }
 
     @ViewBuilder

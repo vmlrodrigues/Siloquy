@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import Cocoa
+import CoreGraphics
 
 class PermissionManager: ObservableObject {
     @Published var audioPermissionStatus = AVCaptureDevice.authorizationStatus(for: .audio)
@@ -64,7 +65,19 @@ class PermissionManager: ObservableObject {
 
     func checkInputMonitoringPermission() {
         DispatchQueue.main.async {
-            self.isInputMonitoringEnabled = CGPreflightListenEventAccess()
+            // Use a real tap attempt rather than CGPreflightListenEventAccess(),
+            // which returns true as a false positive on macOS 26.
+            let mask = CGEventMask(1 << CGEventType.keyDown.rawValue)
+            let tap = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .headInsertEventTap,
+                options: .defaultTap,
+                eventsOfInterest: mask,
+                callback: { _, _, event, _ in Unmanaged.passUnretained(event) },
+                userInfo: nil
+            )
+            if let tap { CFMachPortInvalidate(tap) }
+            self.isInputMonitoringEnabled = tap != nil
         }
     }
     
@@ -295,12 +308,18 @@ struct PermissionsView: View {
                         isGranted: permissionManager.isInputMonitoringEnabled,
                         buttonTitle: "Open System Settings",
                         buttonAction: {
+                            // CGRequestListenEventAccess() prompts (when undetermined) and
+                            // registers the app in System Settings → Input Monitoring. Don't
+                            // create an event tap first — an active tap succeeds via
+                            // Accessibility and marks ListenEvent "determined", making this a
+                            // no-op so the app never appears in the list.
+                            CGRequestListenEventAccess()
                             if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent") {
                                 NSWorkspace.shared.open(url)
                             }
                         },
                         checkPermission: { permissionManager.checkInputMonitoringPermission() },
-                        infoTipMessage: "Siloquy uses Input Monitoring to detect your recording shortcut when another app is frontmost. Without it, pressing the shortcut will have no effect unless Siloquy is the active app. Siloquy only watches for its configured shortcut key — it does not log keystrokes."
+                        infoTipMessage: "Siloquy detects your recording shortcut while another app is frontmost. Accessibility usually covers this — if your shortcut doesn't fire in other apps, click the + in System Settings → Input Monitoring and add Siloquy. Siloquy only watches for its configured shortcut key; it does not log keystrokes."
                     )
                 }
             }

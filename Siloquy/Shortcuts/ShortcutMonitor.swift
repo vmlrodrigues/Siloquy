@@ -24,7 +24,6 @@ final class ShortcutMonitor {
     private var eventTap: CFMachPort?
     private var eventTapRunLoopSource: CFRunLoopSource?
 
-    private static var hasRequestedListenEventAccess = false
     private static let shortcutInterruptionWindow: TimeInterval = 1.0
 
     deinit {
@@ -77,6 +76,11 @@ final class ShortcutMonitor {
 
     private func installEventTap() -> Bool {
         guard Self.hasListenEventAccess() else {
+            // No access yet — bail quietly. Do NOT call CGRequestListenEventAccess() here:
+            // the monitor starts at launch, so requesting would pop the "Keystroke
+            // Receiving" prompt on the welcome screen before onboarding even asks for it.
+            // Prompting/registration belongs to the onboarding Input Monitoring step and
+            // the in-app Permissions screen, where the user is expecting it.
             return false
         }
 
@@ -123,16 +127,7 @@ final class ShortcutMonitor {
     }
 
     private static func hasListenEventAccess() -> Bool {
-        if CGPreflightListenEventAccess() {
-            return true
-        }
-
-        guard !hasRequestedListenEventAccess else {
-            return false
-        }
-
-        hasRequestedListenEventAccess = true
-        return CGRequestListenEventAccess()
+        return CGPreflightListenEventAccess()
     }
 
     private func handleCGEvent(type: CGEventType, event: CGEvent) -> Bool {

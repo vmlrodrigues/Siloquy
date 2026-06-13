@@ -4,7 +4,9 @@ struct OnboardingView: View {
     @Binding var hasCompletedOnboarding: Bool
     @State private var textOpacity: CGFloat = 0
     @State private var showSecondaryElements = false
-    @State private var showPermissions = false
+    // Persisted so a mid-onboarding relaunch (e.g. after the Screen Recording quit)
+    // skips the welcome screen and resumes at the permissions step.
+    @AppStorage("onboardingStarted") private var onboardingStarted = false
     
     // Animation timing
     private let animationDelay = 0.2
@@ -58,7 +60,7 @@ struct OnboardingView: View {
                                 VStack(spacing: 20) {
                                     Button(action: {
                                         withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                                            showPermissions = true
+                                            onboardingStarted = true
                                         }
                                     }) {
                                         Text("Get Started")
@@ -70,7 +72,7 @@ struct OnboardingView: View {
                                     }
                                     .buttonStyle(ScaleButtonStyle())
                                     
-                                    SkipButton(text: "Skip Tour") {
+                                    SkipButton(text: "Skip Setup") {
                                         hasCompletedOnboarding = true
                                     }
                                 }
@@ -82,7 +84,7 @@ struct OnboardingView: View {
                 }
             }
             
-            if showPermissions {
+            if onboardingStarted {
                 OnboardingPermissionsView(hasCompletedOnboarding: $hasCompletedOnboarding)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
