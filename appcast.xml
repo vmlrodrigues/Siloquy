@@ -7,7 +7,20 @@
         <link>https://github.com/vmlrodrigues/Siloquy</link>
         <description>Siloquy release updates</description>
         <language>en</language>
-                                        <item>
+                                                <item>
+            <title>Siloquy 0.10.1</title>
+            <pubDate>Mon, 15 Jun 2026 00:54:07 +0000</pubDate>
+            <sparkle:version>0.10.1</sparkle:version>
+            <sparkle:shortVersionString>0.10.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <sparkle:releaseNotesLink>https://github.com/vmlrodrigues/Siloquy/releases/tag/v0.10.1</sparkle:releaseNotesLink>
+            <enclosure
+                url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.10.1/Siloquy.dmg"
+                sparkle:edSignature="R0HqWQf/3/TvJfxXRCy8+FA7KpYxkDbvEFARNQ78j1CUprFi7knr6xtCcMoirdoWUS4ARSgaeVL8Fn8FwlZ4AA=="
+                length="56953712"
+                type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Siloquy 0.10.0</title>
             <pubDate>Sat, 13 Jun 2026 16:28:57 +0000</pubDate>
             <sparkle:version>0.10.0</sparkle:version>
