@@ -4,6 +4,18 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.10.1 — 2026-06-14
+
+#### Fixed
+- Local AI enhancement no longer gets stuck after a long dictation. A long
+  local enhancement could exceed the short default timeout; the timed-out
+  generation left the on-device model engine wedged, so every later
+  enhancement failed until the app was restarted. The engine now recovers on
+  its own, the local timeout scales with the length of the dictation (so long
+  ones aren't cut off mid-way), and only one enhancement runs at a time.
+
+---
+
 ### 0.10.0 — 2026-06-14
 
 #### Onboarding
