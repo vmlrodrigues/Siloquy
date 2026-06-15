@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import LiteRTLM
+import os
 
 // MARK: - Local Model Catalogue
 
@@ -103,6 +104,8 @@ class GemmaService: ObservableObject {
     private var engine: Engine?
     private var engineModelID: String?          // model the current engine was built from
     private var downloadTasks: [String: Task<Void, Error>] = [:]
+    private var isGenerating = false            // single-flight: the engine runs one generation at a time
+    private let logger = Logger(subsystem: "com.victorrodrigues.siloquy", category: "GemmaService")
 
     // MARK: - Computed helpers (called from non-actor contexts too)
 
@@ -312,11 +315,33 @@ class GemmaService: ObservableObject {
         }
     }
 
+    // MARK: - Engine recovery
+
+    /// Tear the engine down so the next enhancement rebuilds a clean one.
+    ///
+    /// A local generation cancelled mid-decode (e.g. by a timeout) can leave the in-process
+    /// LiteRT-LM engine wedged — every later request then hangs until the app is restarted.
+    /// There's no reliable way to "unstick" it in place, so we drop the engine and let the
+    /// next call reinitialise a fresh one.
+    private func resetEngine() {
+        logger.notice("Resetting Gemma engine after a failed/timed-out generation; it will rebuild on the next request.")
+        engine = nil
+        engineModelID = nil
+        engineState = .notReady
+    }
+
     // MARK: - Enhancement
 
     func enhance(_ text: String, withSystemPrompt systemPrompt: String, timeout: TimeInterval = 30) async throws -> String {
         guard let model = selectedModel, isDownloaded(model) else {
             throw GemmaError.modelNotDownloaded
+        }
+
+        // Single-flight: the in-process engine runs one generation at a time. A second
+        // concurrent request (e.g. a new recording started mid-enhancement) would contend for
+        // the same engine and corrupt both, so reject rather than overlap.
+        guard !isGenerating else {
+            throw GemmaError.busy
         }
 
         if engine == nil || engineState != .ready {
@@ -335,28 +360,47 @@ class GemmaService: ObservableObject {
             userText = text
         }
 
-        return try await withThrowingTaskGroup(of: String.self) { group in
-            group.addTask {
-                let convConfig = ConversationConfig(
-                    systemMessage: Message(systemPrompt, role: .system)
-                )
-                let conversation = try await engine.createConversation(with: convConfig)
-                var result = ""
-                for try await chunk in conversation.sendMessageStream(Message(userText)) {
-                    result += chunk.toString
+        // Local inference is compute-bound with no network latency, so the caller's
+        // network-oriented timeout (7s by default) is far too short and kills healthy long
+        // dictations mid-decode — which is what wedges the engine. Give generation a generous,
+        // length-aware budget instead; resetEngine() below is the safety net for a genuinely
+        // hung engine.
+        let localBudget = min(300, max(60, Double(userText.count) / 12))
+        let effectiveTimeout = max(timeout, localBudget)
+
+        isGenerating = true
+        defer { isGenerating = false }
+
+        do {
+            return try await withThrowingTaskGroup(of: String.self) { group in
+                group.addTask {
+                    let convConfig = ConversationConfig(
+                        systemMessage: Message(systemPrompt, role: .system)
+                    )
+                    let conversation = try await engine.createConversation(with: convConfig)
+                    var result = ""
+                    for try await chunk in conversation.sendMessageStream(Message(userText)) {
+                        result += chunk.toString
+                    }
+                    return result
                 }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: UInt64(effectiveTimeout * 1_000_000_000))
+                    throw GemmaError.timeout
+                }
+                guard let result = try await group.next() else {
+                    group.cancelAll()
+                    throw GemmaError.initializationFailed("No result returned from engine")
+                }
+                group.cancelAll()
                 return result
             }
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
-                throw GemmaError.timeout
-            }
-            guard let result = try await group.next() else {
-                group.cancelAll()
-                throw GemmaError.initializationFailed("No result returned from engine")
-            }
-            group.cancelAll()
-            return result
+        } catch {
+            // Timed out or errored mid-generation. A cancelled native generation can leave the
+            // engine wedged, so tear it down — the next call rebuilds a clean engine and recovers
+            // automatically (this previously required an app restart).
+            resetEngine()
+            throw error
         }
     }
 }
@@ -422,6 +466,7 @@ enum GemmaError: Error, LocalizedError {
     case downloadFailed(String)
     case initializationFailed(String)
     case timeout
+    case busy
 
     var errorDescription: String? {
         switch self {
@@ -433,6 +478,8 @@ enum GemmaError: Error, LocalizedError {
             return "Engine initialisation failed: \(msg)"
         case .timeout:
             return "Local model enhancement timed out"
+        case .busy:
+            return "The local model is already processing another request."
         }
     }
 }
