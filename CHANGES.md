@@ -4,6 +4,15 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.10.2 — 2026-06-14
+
+#### Fixed
+- When Siloquy launches at login, it now starts in the background with just the
+  menu-bar icon — no Dock icon — like other startup menu-bar apps. Opening it
+  manually still shows the window and Dock icon as before.
+
+---
+
 ### 0.10.1 — 2026-06-14
 
 #### Fixed
