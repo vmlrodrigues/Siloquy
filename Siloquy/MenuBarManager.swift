@@ -48,6 +48,9 @@ class MenuBarManager: ObservableObject {
 
     @objc private func windowDidBecomeKey(_ notification: Notification) {
         guard isMenuBarOnly else { return }
+        // During a login-item launch we keep the app in the background; don't let the
+        // briefly-created window flip us to .regular (which would show a Dock icon).
+        guard !WindowManager.shared.suppressInitialWindow else { return }
         guard let window = notification.object as? NSWindow,
               window.level == .normal,
               !window.styleMask.contains(.nonactivatingPanel) else { return }

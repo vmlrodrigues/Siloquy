@@ -12,6 +12,10 @@ class WindowManager: NSObject {
     private let logger = Logger(subsystem: "com.victorrodrigues.siloquy", category: "WindowManager")
     private weak var mainWindow: NSWindow?
     private var didApplyInitialPlacement = false
+    /// Set when the app was launched as a login item: configureWindow then keeps the
+    /// auto-created main window hidden (no Dock icon) so the app starts in the background.
+    /// Cleared the moment the window is shown explicitly (showMainWindow).
+    var suppressInitialWindow = false
 
     private override init() {
         super.init()
@@ -41,8 +45,17 @@ class WindowManager: NSObject {
         window.setFrameAutosaveName(Self.mainWindowAutosaveName)
         applyInitialPlacementIfNeeded(to: window)
         registerMainWindowIfNeeded(window)
-        window.orderFrontRegardless()
-        clearInitialFocus(from: window)
+
+        if suppressInitialWindow {
+            // Login-item launch: keep the app in the background — no window, no Dock icon.
+            // The window stays registered so the menu bar can show it on demand later.
+            logger.notice("configureWindow: login-item launch — keeping main window hidden")
+            NSApp.setActivationPolicy(.accessory)
+            window.orderOut(nil)
+        } else {
+            window.orderFrontRegardless()
+            clearInitialFocus(from: window)
+        }
     }
     
     func configureOnboardingPanel(_ window: NSWindow) {
@@ -73,6 +86,8 @@ class WindowManager: NSObject {
     }
     
     func showMainWindow() -> NSWindow? {
+        // An explicit show cancels any pending login-item suppression.
+        suppressInitialWindow = false
         guard let window = resolveMainWindow() else {
             return nil
         }
