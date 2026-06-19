@@ -77,7 +77,7 @@ Builds with the Developer ID Application certificate, packages as a DMG, submits
 
 Requires one-time setup before first use:
 - A **Developer ID Application** certificate installed in your keychain
-- An **App Store Connect API key** stored as a named keychain profile (`siloquy-notarization`)
+- An **App Store Connect API key** (`.p8`) referenced from `.env` (`NOTARY_KEY` / `NOTARY_KEY_ID` / `NOTARY_ISSUER` — see `.env.example`)
 - `create-dmg` installed (`brew install create-dmg`)
 
 See `holding/DISTRIBUTION_SETUP.md` for step-by-step instructions.

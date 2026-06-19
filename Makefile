@@ -15,7 +15,6 @@ VERSION ?= $(shell cat $(CURDIR)/VERSION 2>/dev/null || echo "0.0.0")
 RELEASE_SIGN_IDENTITY    := Developer ID Application: Victor Rodrigues (9N354A3UZK)
 RELEASE_TEAM             := 9N354A3UZK
 RELEASE_PROFILE_UUID     := f8dcb4b0-e37c-4257-9642-bc80baf94376
-NOTARIZE_PROFILE         := siloquy-notarization
 RELEASE_DERIVED_DATA     := $(CURDIR)/.release-build
 RELEASE_STAGING          := $(CURDIR)/.release-staging
 DMG_NAME                 := Siloquy.dmg
@@ -152,6 +151,12 @@ release: check setup
 	@security find-identity -v -p codesigning | grep -q "$(RELEASE_SIGN_IDENTITY)" || \
 		{ echo "Error: Developer ID Application certificate not found in keychain."; \
 		  echo "Expected: \"$(RELEASE_SIGN_IDENTITY)\""; exit 1; }
+	@set -a; . "$(CURDIR)/.env" 2>/dev/null; set +a; \
+		if [ -z "$$NOTARY_KEY" ] || [ -z "$$NOTARY_KEY_ID" ] || [ -z "$$NOTARY_ISSUER" ]; then \
+			echo "Error: notarisation needs NOTARY_KEY / NOTARY_KEY_ID / NOTARY_ISSUER in .env (copy .env.example)"; exit 1; \
+		elif [ ! -f "$$NOTARY_KEY" ]; then \
+			echo "Error: NOTARY_KEY file not found: $$NOTARY_KEY"; exit 1; \
+		fi
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo "  Building Siloquy $(VERSION) for distribution"
@@ -219,8 +224,11 @@ release: check setup
 		"$(RELEASE_STAGING)/"
 
 	@echo "→ Submitting DMG for notarisation (this takes a few minutes)..."
+	@set -a; . "$(CURDIR)/.env"; set +a; \
 	xcrun notarytool submit "$(DMG_NAME)" \
-		--keychain-profile "$(NOTARIZE_PROFILE)" \
+		--key "$$NOTARY_KEY" \
+		--key-id "$$NOTARY_KEY_ID" \
+		--issuer "$$NOTARY_ISSUER" \
 		--wait
 
 	@echo "→ Stapling notarisation ticket..."
