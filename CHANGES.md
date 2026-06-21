@@ -4,6 +4,17 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.10.3 — 2026-06-19
+
+#### Fixed
+- iCloud sync of your dictionary (word replacements and custom vocabulary)
+  across machines now works. CloudKit requires the Push Notifications
+  entitlement for its change tracking, and the release build was missing it —
+  so sync silently never started. Added the `aps-environment` entitlement and a
+  provisioning profile that authorises it.
+
+---
+
 ### 0.10.2 — 2026-06-14
 
 #### Fixed
