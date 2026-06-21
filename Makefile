@@ -14,7 +14,7 @@ VERSION ?= $(shell cat $(CURDIR)/VERSION 2>/dev/null || echo "0.0.0")
 # ── Release configuration ─────────────────────────────────────────────────────
 RELEASE_SIGN_IDENTITY    := Developer ID Application: Victor Rodrigues (9N354A3UZK)
 RELEASE_TEAM             := 9N354A3UZK
-RELEASE_PROFILE_UUID     := f8dcb4b0-e37c-4257-9642-bc80baf94376
+RELEASE_PROFILE_UUID     := 2300f085-37f9-4fad-bcb9-977048445ad2
 RELEASE_DERIVED_DATA     := $(CURDIR)/.release-build
 RELEASE_STAGING          := $(CURDIR)/.release-staging
 DMG_NAME                 := Siloquy.dmg
