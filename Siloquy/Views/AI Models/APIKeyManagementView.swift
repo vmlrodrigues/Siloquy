@@ -515,6 +515,15 @@ private struct GemmaLocalSetupView: View {
                 actionButtons(for: model, state: state)
             }
 
+            // What it's good for
+            if !model.blurb.isEmpty {
+                Text(model.blurb)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, 22)
+            }
+
             // Progress bar (downloading only)
             if case .downloading(let progress) = state {
                 VStack(alignment: .leading, spacing: 2) {
