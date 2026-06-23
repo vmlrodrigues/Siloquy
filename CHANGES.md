@@ -4,6 +4,18 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.10.5 — 2026-06-24
+
+#### Added
+- Gemma 4 E4B is now available as an optional local enhancement model —
+  higher quality, especially for other languages, at a larger download
+  (3.4 GB) and more memory than the default. Download it from
+  Settings → AI Models. The default model stays Gemma 4 E2B.
+- The local model picker now shows a short note on what each model is best
+  for.
+
+---
+
 ### 0.10.4 — 2026-06-23
 
 #### Fixed
