@@ -7,7 +7,38 @@
         <link>https://github.com/vmlrodrigues/Siloquy</link>
         <description>Siloquy release updates</description>
         <language>en</language>
-                                                                        <item>
+                                                                                <item>
+            <title>Siloquy 0.10.5</title>
+            <pubDate>Tue, 23 Jun 2026 18:55:25 +0000</pubDate>
+            <sparkle:version>0.10.5</sparkle:version>
+            <sparkle:shortVersionString>0.10.5</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+    <style>
+      body { background:#fff; color:#1d1d1f; margin:0; padding:14px 16px;
+             font:13px/1.5 -apple-system, system-ui, sans-serif; }
+      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:0 0 .4em; }
+      h3 { font-size:.8em; font-weight:700; text-transform:uppercase;
+           letter-spacing:.05em; color:#86868b; margin:1.1em 0 .35em; }
+      ul { margin:.2em 0 .9em; padding-left:1.25em; }
+      li { margin:.35em 0; }
+      code { font-family:ui-monospace, SFMono-Regular, monospace; font-size:.88em;
+             background:#f0f0f2; padding:.08em .35em; border-radius:4px; }
+    </style>
+    <h2>0.10.5</h2>
+    <h3>Added</h3>
+    <ul>
+      <li>Gemma 4 E4B is now available as an optional local enhancement model — higher quality, especially for other languages, at a larger download (3.4 GB) and more memory than the default. Download it from Settings → AI Models. The default model stays Gemma 4 E2B.</li>
+      <li>The local model picker now shows a short note on what each model is best for.</li>
+    </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.10.5/Siloquy.dmg"
+                sparkle:edSignature="R7JgpDX5xELgDgrk+oOAr1yFdEyrDvHVvYfVTpeGdIvWbiLglUdlN8BmW/pYX1LiAfii893RCMeTkhl96ESPBA=="
+                length="56953618"
+                type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Siloquy 0.10.4</title>
             <pubDate>Tue, 23 Jun 2026 11:10:37 +0000</pubDate>
             <sparkle:version>0.10.4</sparkle:version>
