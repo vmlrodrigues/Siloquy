@@ -7,7 +7,38 @@
         <link>https://github.com/vmlrodrigues/Siloquy</link>
         <description>Siloquy release updates</description>
         <language>en</language>
-                                                                <item>
+                                                                        <item>
+            <title>Siloquy 0.10.4</title>
+            <pubDate>Tue, 23 Jun 2026 11:10:37 +0000</pubDate>
+            <sparkle:version>0.10.4</sparkle:version>
+            <sparkle:shortVersionString>0.10.4</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+    <style>
+      body { background:#fff; color:#1d1d1f; margin:0; padding:14px 16px;
+             font:13px/1.5 -apple-system, system-ui, sans-serif; }
+      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:0 0 .4em; }
+      h3 { font-size:.8em; font-weight:700; text-transform:uppercase;
+           letter-spacing:.05em; color:#86868b; margin:1.1em 0 .35em; }
+      ul { margin:.2em 0 .9em; padding-left:1.25em; }
+      li { margin:.35em 0; }
+      code { font-family:ui-monospace, SFMono-Regular, monospace; font-size:.88em;
+             background:#f0f0f2; padding:.08em .35em; border-radius:4px; }
+    </style>
+    <h2>0.10.4</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>iCloud sync of your dictionary (word replacements and custom vocabulary) across machines now works. v0.10.3 declared the iCloud entitlements but was missing <code>com.apple.application-identifier</code>, so CloudKit couldn&#x27;t initialise the container and sync never started; this adds it.</li>
+      <li>The in-app update window now shows clean, formatted release notes instead of rendering the GitHub release web page.</li>
+    </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.10.4/Siloquy.dmg"
+                sparkle:edSignature="+l7lCwmH2miKnK4O02Zvf1fVCuu5L2qU2whLO4B71fGmmDtNOUSHOHR+D1L09JDnB2sCa9lXhpRZlQs7BzBxCg=="
+                length="56954744"
+                type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Siloquy 0.10.3</title>
             <pubDate>Sun, 21 Jun 2026 12:54:47 +0000</pubDate>
             <sparkle:version>0.10.3</sparkle:version>
