@@ -4,6 +4,18 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.10.4 — 2026-06-23
+
+#### Fixed
+- iCloud sync of your dictionary (word replacements and custom vocabulary)
+  across machines now works. v0.10.3 declared the iCloud entitlements but was
+  missing `com.apple.application-identifier`, so CloudKit couldn't initialise
+  the container and sync never started; this adds it.
+- The in-app update window now shows clean, formatted release notes instead of
+  rendering the GitHub release web page.
+
+---
+
 ### 0.10.3 — 2026-06-19
 
 #### Fixed
