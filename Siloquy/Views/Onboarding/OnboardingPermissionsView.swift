@@ -352,14 +352,21 @@ struct OnboardingPermissionsView: View {
             }
             
         case .screenRecording:
-            // First try to request permission programmatically
-            CGRequestScreenCaptureAccess()
-            
-            // Also open system preferences as fallback
-            if let prefpaneURL = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                NSWorkspace.shared.open(prefpaneURL)
+            // On the first ask, CGRequestScreenCaptureAccess() shows the system dialog
+            // ("Siloquy would like to record your screen…"). Opening System Settings at
+            // the same time races with that dialog and prevents it from being dismissed.
+            // Track whether we've already shown the dialog: if yes, the dialog won't
+            // re-appear (macOS only shows it once), so send the user to Settings instead.
+            let alreadyAsked = UserDefaults.standard.bool(forKey: "screenRecordingPermissionRequested")
+            UserDefaults.standard.set(true, forKey: "screenRecordingPermissionRequested")
+            if alreadyAsked {
+                if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                    NSWorkspace.shared.open(url)
+                }
+            } else {
+                CGRequestScreenCaptureAccess()
             }
-            
+
             // Start checking for permission status
             Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { timer in
                 if CGPreflightScreenCaptureAccess() {
