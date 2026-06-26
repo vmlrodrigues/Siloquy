@@ -4,6 +4,25 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.11.0 — 2026-06-27
+
+#### Added
+- Recommended settings: onboarding now ends with a "One last thing" step that
+  applies a set of sensible defaults in one click, and Settings → General has a
+  new "Recommended Settings…" button that does the same any time. The default
+  enhancement model is unchanged.
+- The onboarding Keyboard Shortcuts step now also sets up the enhancement
+  toggle, pre-assigned to Right Option (⌥). You still choose your own recording
+  shortcut, and you can change or clear the enhancement shortcut.
+
+#### Fixed
+- On a fresh install, the Screen Recording onboarding step no longer opens
+  System Settings at the same moment macOS shows its own permission dialog —
+  the two were racing and left the dialog stuck. The dialog now appears on its
+  own the first time; later attempts open System Settings instead.
+
+---
+
 ### 0.10.5 — 2026-06-24
 
 #### Added
