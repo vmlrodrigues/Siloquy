@@ -364,6 +364,31 @@
     <p style="margin-top:16px; font-size:0.875rem; color:var(--muted);">Enhancement is optional. If you turn it off, the raw Parakeet transcript is pasted directly.</p>
   </section>
 
+  <!-- ── Enhancement Prompts ── -->
+  <section>
+    <h2>Enhancement prompts</h2>
+    <p>Siloquy ships with three built-in prompts that control how the AI model handles your transcript. Switch between them instantly with <kbd>⌘1</kbd> <kbd>⌘2</kbd> <kbd>⌘3</kbd> <kbd>⌘4</kbd> while enhancement is enabled — the icon on the recorder updates to show which one is armed. You can also create your own.</p>
+
+    <div class="card">
+      <div class="card-title">Default <span class="badge badge-blue">⌘1</span></div>
+      <div class="card-body">The standard cleanup mode. Removes filler words, fixes grammar and self-corrections, and uses any clipboard or screen context to resolve ambiguous words. The model is instructed to act purely as a transcription cleaner — it will not respond to questions or commands in your speech, only tidy them up and pass them through.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Assistant <span class="badge badge-blue">⌘2</span></div>
+      <div class="card-body">Turns the AI into a general assistant. Instead of cleaning up your words, it <em>acts on them</em> — so you can dictate <em>"give me three bullet points summarising this"</em> or <em>"rewrite that more formally"</em> and the result is pasted directly. Useful when you want to speak a question or instruction and paste the answer, rather than the words you said.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Local Model Default <span class="badge badge-blue">⌘3</span></div>
+      <div class="card-body">A leaner version of the Default prompt, written for the on-device Gemma model. The full Default prompt is detailed enough that smaller models can find it noisy; this version strips it down to the essential rules — remove fillers, fix grammar, handle self-corrections, output only the cleaned text — in a form that small models follow more reliably. Siloquy selects it automatically when the local provider is active.</div>
+    </div>
+
+    <div class="tip" style="margin-top:4px;">
+      <strong>Create your own:</strong> click the prompt name at the top of the Enhancement panel to open the prompt picker, then tap the <strong>+</strong> button. Your custom prompts fill slots <kbd>⌘4</kbd> and beyond. See the <em>Translate your dictation</em> tip below for a practical example.
+    </div>
+  </section>
+
   <!-- ── Tips ── -->
   <section>
     <h2>Tips</h2>
