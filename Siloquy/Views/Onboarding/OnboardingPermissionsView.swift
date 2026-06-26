@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import AppKit
+import Carbon.HIToolbox
 
 struct OnboardingPermission: Identifiable {
     let id = UUID()
@@ -70,8 +71,8 @@ struct OnboardingPermissionsView: View {
             type: .screenRecording
         ),
         OnboardingPermission(
-            title: "Keyboard Shortcut",
-            description: "Set up a keyboard shortcut to quickly access Siloquy from anywhere.",
+            title: "Keyboard Shortcuts",
+            description: "Set the key that starts and stops recording. Enhancement toggles AI cleanup on or off — Right Option is set up for you.",
             icon: "keyboard",
             type: .keyboardShortcut
         )
@@ -508,26 +509,51 @@ struct OnboardingPermissionsView: View {
 
     @ViewBuilder
     private func shortcutView(onConfigured: @escaping (Bool) -> Void) -> some View {
-        HStack(spacing: 12) {
-            Spacer()
+        VStack(spacing: 18) {
+            // Recording trigger — the user picks this; advancing is gated on it.
+            HStack(spacing: 12) {
+                Text("Start / Stop Recording:")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+                    .frame(width: 200, alignment: .trailing)
 
-            Text("Shortcut:")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundColor(.white.opacity(0.8))
+                ShortcutRecorder(action: .primaryRecording) {
+                    recordingShortcutManager.primaryRecordingShortcut = .custom
+                    recordingShortcutManager.updateShortcutStatus()
+                    onConfigured(ShortcutStore.shortcut(for: .primaryRecording) != nil)
+                }
+                .controlSize(.large)
 
-            ShortcutRecorder(action: .primaryRecording) {
-                recordingShortcutManager.primaryRecordingShortcut = .custom
-                recordingShortcutManager.updateShortcutStatus()
-                onConfigured(ShortcutStore.shortcut(for: .primaryRecording) != nil)
+                Spacer()
             }
-            .controlSize(.large)
 
-            Spacer()
+            // Enhancement toggle — optional, pre-assigned to Right Option below.
+            HStack(spacing: 12) {
+                Text("Toggle Enhancement:")
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundColor(.white.opacity(0.8))
+                    .frame(width: 200, alignment: .trailing)
+
+                ShortcutRecorder(action: .toggleEnhancement)
+                    .controlSize(.large)
+
+                Spacer()
+            }
         }
         .padding()
         .onAppear {
             recordingShortcutManager.primaryRecordingShortcut = .custom
             onConfigured(ShortcutStore.shortcut(for: .primaryRecording) != nil)
+
+            // Pre-assign Right Option to the enhancement toggle if nothing is bound yet.
+            // The recorder observes ShortcutStore changes, so it shows the new binding
+            // immediately; the user can change or clear it here or in Settings.
+            if ShortcutStore.shortcut(for: .toggleEnhancement) == nil {
+                ShortcutStore.setShortcut(
+                    .modifierOnly(keyCode: UInt16(kVK_RightOption), modifierFlags: [.option]),
+                    for: .toggleEnhancement
+                )
+            }
         }
     }
 }
