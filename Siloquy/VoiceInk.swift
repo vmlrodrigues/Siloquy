@@ -351,6 +351,7 @@ struct VoiceInkApp: App {
                     .environmentObject(fluidAudioModelManager)
                     .environmentObject(transcriptionModelManager)
                     .environmentObject(recorderUIManager)
+                    .environmentObject(menuBarManager)
                     .environmentObject(aiService)
                     .environmentObject(enhancementService)
                     .frame(minWidth: 880, minHeight: 780)

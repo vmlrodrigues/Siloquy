@@ -22,6 +22,7 @@ struct SettingsView: View {
     @AppStorage("clipboardRestoreDelay") private var clipboardRestoreDelay = 2.0
     @AppStorage(PasteMethod.userDefaultsKey) private var pasteMethodRawValue = PasteMethod.standard.rawValue
     @State private var showResetOnboardingAlert = false
+    @State private var showRecommendedSettingsSheet = false
     @State private var hasCancelRecordingShortcut = ShortcutStore.shortcut(for: .cancelRecorder) != nil
     @State private var cancelRecordingShortcutRecorderResetID = 0
 
@@ -260,6 +261,10 @@ struct SettingsView: View {
                     Button("Reset Onboarding") {
                         showResetOnboardingAlert = true
                     }
+
+                    Button("Recommended Settings…") {
+                        showRecommendedSettingsSheet = true
+                    }
                 }
             }
 
@@ -327,6 +332,11 @@ struct SettingsView: View {
             }
         } message: {
             Text("You'll see the introduction screens again the next time you launch the app.")
+        }
+        .sheet(isPresented: $showRecommendedSettingsSheet) {
+            RecommendedSettingsSheet(isPresented: $showRecommendedSettingsSheet)
+                .environmentObject(menuBarManager)
+                .environmentObject(recorderUIManager)
         }
     }
 
@@ -501,6 +511,86 @@ struct ExperimentalSection: View {
         } header: {
             Text("Experimental")
         }
+    }
+}
+
+// MARK: - Recommended Settings Sheet
+
+struct RecommendedSettingsSheet: View {
+    @Binding var isPresented: Bool
+    @EnvironmentObject private var menuBarManager: MenuBarManager
+    @EnvironmentObject private var recorderUIManager: RecorderUIManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Header
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Recommended Settings")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Text("These settings will be applied immediately. You can change any of them afterwards.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding([.horizontal, .top], 24)
+            .padding(.bottom, 20)
+
+            Divider()
+
+            // Settings list
+            ScrollView {
+                VStack(spacing: 0) {
+                    ForEach(RecommendedSettings.items, id: \.title) { item in
+                        HStack(spacing: 14) {
+                            Image(systemName: item.icon)
+                                .frame(width: 22)
+                                .foregroundColor(.accentColor)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.title)
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(item.description)
+                                    .font(.system(size: 12))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+
+                        Divider()
+                            .padding(.leading, 60)
+                    }
+                }
+            }
+
+            Divider()
+
+            // Buttons
+            HStack {
+                Button("Cancel") { isPresented = false }
+                    .keyboardShortcut(.cancelAction)
+
+                Spacer()
+
+                Button("Apply") {
+                    RecommendedSettings.apply(
+                        menuBarManager: menuBarManager,
+                        recorderUIManager: recorderUIManager
+                    )
+                    isPresented = false
+                }
+                .keyboardShortcut(.defaultAction)
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(20)
+        }
+        .frame(width: 420, height: 520)
     }
 }
 
