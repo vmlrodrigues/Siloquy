@@ -191,6 +191,24 @@ Required for models ≥ ~500 MB in sandboxed apps. Available on all paid Apple D
 
 ---
 
+## Issue Tracking
+
+**Every bug fix and every enhancement must have a GitHub issue.** The repo
+(`vmlrodrigues/Siloquy`) has issues enabled and is the source of truth for
+planned and completed work — it replaced the old `ROADMAP.md`.
+
+- Create the issue **before** starting the work where practical. At the latest,
+  it must exist and be linked **before the release** that ships the change.
+- Label it `bug` or `enhancement`.
+- Reference the issue in the commit(s) that implement it (e.g. `Implements #5`).
+- Leave it **open until the release ships**, then close it with a comment naming
+  the version and commit — e.g. "Shipped in v0.11.1 (commit ddb1da1)."
+
+This is a behavioural rule, not something auto-enforced: raise the issue as part
+of doing the work.
+
+---
+
 ## Commit Message Convention
 
 Follow [Conventional Commits](https://www.conventionalcommits.org/):
