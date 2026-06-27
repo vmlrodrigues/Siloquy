@@ -4,6 +4,15 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.11.1 — 2026-06-27
+
+#### Changed
+- The "Recommended Settings…" sheet now shows which settings will actually
+  change versus the ones that already match your current setup, with a count
+  in the header. Apply is disabled when everything already matches.
+
+---
+
 ### 0.11.0 — 2026-06-27
 
 #### Added
