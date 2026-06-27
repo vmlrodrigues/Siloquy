@@ -521,6 +521,8 @@ struct RecommendedSettingsSheet: View {
     @EnvironmentObject private var menuBarManager: MenuBarManager
     @EnvironmentObject private var recorderUIManager: RecorderUIManager
 
+    private var changeCount: Int { RecommendedSettings.pendingChangeCount }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
@@ -528,7 +530,7 @@ struct RecommendedSettingsSheet: View {
                 Text("Recommended Settings")
                     .font(.title2)
                     .fontWeight(.bold)
-                Text("These settings will be applied immediately. You can change any of them afterwards.")
+                Text(headerSubtitle)
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             }
@@ -541,27 +543,7 @@ struct RecommendedSettingsSheet: View {
             ScrollView {
                 VStack(spacing: 0) {
                     ForEach(RecommendedSettings.items, id: \.title) { item in
-                        HStack(spacing: 14) {
-                            Image(systemName: item.icon)
-                                .frame(width: 22)
-                                .foregroundColor(.accentColor)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title)
-                                    .font(.system(size: 13, weight: .semibold))
-                                Text(item.description)
-                                    .font(.system(size: 12))
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.accentColor)
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.vertical, 10)
+                        row(for: item)
 
                         Divider()
                             .padding(.leading, 60)
@@ -578,7 +560,7 @@ struct RecommendedSettingsSheet: View {
 
                 Spacer()
 
-                Button("Apply") {
+                Button(applyTitle) {
                     RecommendedSettings.apply(
                         menuBarManager: menuBarManager,
                         recorderUIManager: recorderUIManager
@@ -587,10 +569,61 @@ struct RecommendedSettingsSheet: View {
                 }
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.borderedProminent)
+                .disabled(changeCount == 0)
             }
             .padding(20)
         }
-        .frame(width: 420, height: 520)
+        .frame(width: 440, height: 540)
+    }
+
+    private var headerSubtitle: String {
+        switch changeCount {
+        case 0:  return "Everything already matches the recommended values."
+        case 1:  return "1 setting will change. The rest already match."
+        default: return "\(changeCount) settings will change. The rest already match."
+        }
+    }
+
+    private var applyTitle: String {
+        changeCount == 0 ? "Apply" : "Apply \(changeCount) Change\(changeCount == 1 ? "" : "s")"
+    }
+
+    @ViewBuilder
+    private func row(for item: RecommendedSettings.Item) -> some View {
+        let alreadySet = item.isAlreadySet()
+
+        HStack(spacing: 14) {
+            Image(systemName: item.icon)
+                .frame(width: 22)
+                .foregroundColor(alreadySet ? .secondary : .accentColor)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(item.title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(alreadySet ? .secondary : .primary)
+                Text(item.description)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            if alreadySet {
+                HStack(spacing: 4) {
+                    Image(systemName: "checkmark")
+                    Text("Already set")
+                }
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+            } else {
+                Text("Will change")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 10)
+        .opacity(alreadySet ? 0.65 : 1)
     }
 }
 
