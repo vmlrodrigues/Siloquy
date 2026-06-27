@@ -7,7 +7,37 @@
         <link>https://github.com/vmlrodrigues/Siloquy</link>
         <description>Siloquy release updates</description>
         <language>en</language>
-                                                                                        <item>
+                                                                                                <item>
+            <title>Siloquy 0.11.1</title>
+            <pubDate>Sat, 27 Jun 2026 07:19:39 +0000</pubDate>
+            <sparkle:version>0.11.1</sparkle:version>
+            <sparkle:shortVersionString>0.11.1</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+    <style>
+      body { background:#fff; color:#1d1d1f; margin:0; padding:14px 16px;
+             font:13px/1.5 -apple-system, system-ui, sans-serif; }
+      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:0 0 .4em; }
+      h3 { font-size:.8em; font-weight:700; text-transform:uppercase;
+           letter-spacing:.05em; color:#86868b; margin:1.1em 0 .35em; }
+      ul { margin:.2em 0 .9em; padding-left:1.25em; }
+      li { margin:.35em 0; }
+      code { font-family:ui-monospace, SFMono-Regular, monospace; font-size:.88em;
+             background:#f0f0f2; padding:.08em .35em; border-radius:4px; }
+    </style>
+    <h2>0.11.1</h2>
+    <h3>Changed</h3>
+    <ul>
+      <li>The &quot;Recommended Settings…&quot; sheet now shows which settings will actually change versus the ones that already match your current setup, with a count in the header. Apply is disabled when everything already matches.</li>
+    </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.11.1/Siloquy.dmg"
+                sparkle:edSignature="511ulc/86hW9R1dA+Lc7aqs/VQq8+HVxjPjirgBFnAKF/Mk4FADepJK+p7LwnHhqiU7vBslK7xZP2puA0rNOBQ=="
+                length="57025887"
+                type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Siloquy 0.11.0</title>
             <pubDate>Fri, 26 Jun 2026 21:46:44 +0000</pubDate>
             <sparkle:version>0.11.0</sparkle:version>
