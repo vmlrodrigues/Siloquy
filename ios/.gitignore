@@ -1,0 +1,9 @@
+# The Xcode project is generated from project.yml by XcodeGen.
+# Regenerate with:  cd ios && xcodegen generate
+Siloquy.xcodeproj/
+
+# Xcode local artifacts
+xcuserdata/
+*.xcuserstate
+.DS_Store
+build/

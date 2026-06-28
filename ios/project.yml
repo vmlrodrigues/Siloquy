@@ -1,0 +1,43 @@
+# XcodeGen spec for the Siloquy iOS app (Phase 1).
+# Regenerate the .xcodeproj with:  cd ios && xcodegen generate
+#
+# Native stack only — no third-party dependencies:
+#   • Speech (SpeechAnalyzer / SpeechTranscriber) for on-device transcription
+#   • FoundationModels for on-device cleanup
+# Requires iOS 26 + an Apple-Intelligence device (iPhone 15 Pro and later).
+
+name: Siloquy
+options:
+  bundleIdPrefix: com.victorrodrigues
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""            # ← set your Team in Xcode (Signing & Capabilities)
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+
+targets:
+  Siloquy:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Siloquy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.victorrodrigues.siloquy.ios
+        PRODUCT_NAME: Siloquy
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"          # iPhone only
+        INFOPLIST_KEY_CFBundleDisplayName: Siloquy
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Siloquy uses the microphone to capture your dictation — processed entirely on your device."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Siloquy transcribes your speech entirely on your device."
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
