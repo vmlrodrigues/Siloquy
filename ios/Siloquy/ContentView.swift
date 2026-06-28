@@ -8,6 +8,7 @@ struct ContentView: View {
     @ObservedObject private var launch = DictationLaunch.shared
     @State private var lastHandledRequestID = 0
     @Query(sort: \DictationEntry.createdAt, order: .reverse) private var history: [DictationEntry]
+    @AppStorage("historyRetention") private var retentionRaw = HistoryRetention.month.rawValue
 
     private let unavailableMessage = EnhancementService.unavailableMessage
 
@@ -38,6 +39,7 @@ struct ContentView: View {
         // view existed, so .onChange won't catch it).
         .task {
             handleActionButton(launch.requestID)
+            HistoryMaintenance.prune(modelContext, retention: HistoryRetention(rawValue: retentionRaw) ?? .month)
         }
     }
 
@@ -153,7 +155,11 @@ struct ContentView: View {
 
 struct HistoryView: View {
     @Environment(\.modelContext) private var modelContext
+    @AppStorage("historyRetention") private var retentionRaw = HistoryRetention.month.rawValue
+    @State private var copiedID: PersistentIdentifier?
     let entries: [DictationEntry]
+
+    private var retention: HistoryRetention { HistoryRetention(rawValue: retentionRaw) ?? .month }
 
     var body: some View {
         List {
@@ -162,17 +168,29 @@ struct HistoryView: View {
                                        description: Text("Your past dictations will appear here."))
             }
             ForEach(entries) { entry in
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(entry.displayText)
-                        .lineLimit(4)
-                    Text(entry.createdAt, format: .dateTime.month().day().hour().minute())
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Button {
+                    copy(entry)
+                } label: {
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(entry.displayText)
+                                .lineLimit(4)
+                                .foregroundStyle(.primary)
+                            Text(entry.createdAt, format: .dateTime.month().day().hour().minute())
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 0)
+                        if copiedID == entry.persistentModelID {
+                            Label("Copied", systemImage: "checkmark.circle.fill")
+                                .labelStyle(.iconOnly)
+                                .foregroundStyle(.green)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
-                .swipeActions {
-                    Button("Copy") { UIPasteboard.general.string = entry.displayText }
-                        .tint(.blue)
-                }
+                .buttonStyle(.plain)
             }
             .onDelete { offsets in
                 for index in offsets { modelContext.delete(entries[index]) }
@@ -180,5 +198,37 @@ struct HistoryView: View {
         }
         .navigationTitle("History")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Picker("Keep history for", selection: $retentionRaw) {
+                        ForEach(HistoryRetention.allCases) { option in
+                            Text(option.label).tag(option.rawValue)
+                        }
+                    }
+                    if !entries.isEmpty {
+                        Divider()
+                        Button("Clear All History", systemImage: "trash", role: .destructive) {
+                            for entry in entries { modelContext.delete(entry) }
+                        }
+                    }
+                } label: {
+                    Label("Options", systemImage: "ellipsis.circle")
+                }
+            }
+        }
+        .onChange(of: retentionRaw) { _, _ in
+            HistoryMaintenance.prune(modelContext, retention: retention)
+        }
+    }
+
+    private func copy(_ entry: DictationEntry) {
+        UIPasteboard.general.string = entry.displayText
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        withAnimation { copiedID = entry.persistentModelID }
+        let id = entry.persistentModelID
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            if copiedID == id { withAnimation { copiedID = nil } }
+        }
     }
 }
