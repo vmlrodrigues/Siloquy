@@ -1,4 +1,5 @@
 import Foundation
+import SwiftData
 import ActivityKit
 import UIKit
 import AudioToolbox
@@ -152,6 +153,18 @@ final class BackgroundDictationController: ObservableObject {
         await updateActivity(status: "Cleaning up…")
         let output = await enhancement.enhance(trimmed)
         diag.log("  stop: enhanced \(output.count) chars")
+
+        // Persist to history. This singleton has no @Environment(\.modelContext),
+        // so it writes through the shared container and must save explicitly
+        // (a hand-made context doesn't autosave like the one SwiftUI injects).
+        let historyContext = Persistence.container.mainContext
+        historyContext.insert(DictationEntry(rawText: trimmed, enhancedText: output, usedEnhancement: output != trimmed))
+        do {
+            try historyContext.save()
+            diag.log("  stop: saved to history ✅")
+        } catch {
+            diag.log("  stop: history save FAILED ❌ \(error.localizedDescription)")
+        }
 
         // Best-effort in-app write (works when foreground); the wrapping Shortcut's
         // "Copy to Clipboard" action is what lands it in the background. We also

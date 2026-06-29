@@ -9,7 +9,7 @@ struct SiloquyApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: DictationEntry.self)
+        .modelContainer(Persistence.container)
         // Warm the mic pipeline while foreground so the first Action Button press
         // records reliably from the background.
         .onChange(of: scenePhase) { _, phase in
