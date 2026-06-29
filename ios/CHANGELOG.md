@@ -4,9 +4,9 @@ The iOS companion app. The macOS app's changelog lives in [CHANGES.md](../CHANGE
 
 ---
 
-### 0.1.0 — 2026-06-29
+### 0.1.1 — 2026-06-29
 
-First TestFlight build of the Siloquy iOS companion app.
+First complete TestFlight build of the Siloquy iOS companion app.
 
 #### Added
 - On-device dictation: record, transcribe with SpeechAnalyzer, refine with
