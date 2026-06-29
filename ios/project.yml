@@ -17,8 +17,8 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: "BWSYTSDVGC"  # personal team (dev installs). Switch to the paid
-                                    # team (9N354A3UZK) for TestFlight/distribution.
+    DEVELOPMENT_TEAM: "9N354A3UZK"  # paid Developer Program team (Victor Rodrigues) —
+                                    # required for TestFlight/App Store distribution.
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
 
@@ -44,6 +44,8 @@ targets:
       path: Siloquy/Info.plist
       properties:
         CFBundleDisplayName: Siloquy
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         ITSAppUsesNonExemptEncryption: false
         UILaunchScreen:
           UIColorName: LaunchBackground
@@ -71,6 +73,9 @@ targets:
       path: SiloquyWidget/Info.plist
       properties:
         CFBundleDisplayName: Siloquy
+        # Must match the host app's version/build or App Store upload validation fails.
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 

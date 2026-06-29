@@ -9,3 +9,6 @@ xcuserdata/
 *.xcuserstate
 .DS_Store
 build/
+
+# TestFlight upload secrets (the .p8 lives outside the repo)
+testflight.config

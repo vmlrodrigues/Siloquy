@@ -1,0 +1,9 @@
+# Copy this to "testflight.config" (gitignored) and fill in your App Store Connect
+# API key details. Create a key at:
+#   App Store Connect → Users and Access → Integrations → App Store Connect API
+#   → generate a key with the "App Manager" role → download the .p8 (one-time only).
+
+ASC_KEY_ID="XXXXXXXXXX"
+ASC_ISSUER_ID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# Keep the .p8 OUTSIDE the repo (you can only download it once):
+ASC_KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_XXXXXXXXXX.p8"
