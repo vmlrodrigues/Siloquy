@@ -44,7 +44,10 @@ targets:
       path: Siloquy/Info.plist
       properties:
         CFBundleDisplayName: Siloquy
-        UILaunchScreen: {}
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchLogo
         UIApplicationSupportsIndirectInputEvents: true
         NSMicrophoneUsageDescription: "Siloquy uses the microphone to capture your dictation — processed entirely on your device."
         NSSpeechRecognitionUsageDescription: "Siloquy transcribes your speech entirely on your device."

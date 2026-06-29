@@ -8,6 +8,8 @@ struct ContentView: View {
     @ObservedObject private var launch = DictationLaunch.shared
     @ObservedObject private var bgDictation = BackgroundDictationController.shared
     @State private var lastHandledRequestID = 0
+    @AppStorage("hasSeenOnboarding") private var hasSeenOnboarding = false
+    @State private var showOnboarding = false
     @Query(sort: \DictationEntry.createdAt, order: .reverse) private var history: [DictationEntry]
     @AppStorage("historyRetention") private var retentionRaw = HistoryRetention.month.rawValue
 
@@ -23,6 +25,11 @@ struct ContentView: View {
             .navigationTitle("Siloquy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { showOnboarding = true } label: {
+                        Image(systemName: "questionmark.circle")
+                    }
+                }
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink {
                         DiagnosticsView()
@@ -44,6 +51,9 @@ struct ContentView: View {
         .fullScreenCover(isPresented: Binding(get: { bgDictation.isRecording }, set: { _ in })) {
             RecordingOverlay()
         }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView()
+        }
         // Warm path: a press while the app is already running.
         .onChange(of: launch.requestID) { _, newID in
             handleActionButton(newID)
@@ -51,6 +61,7 @@ struct ContentView: View {
         // Cold path: a press that launched the app (the bump happened before this
         // view existed, so .onChange won't catch it).
         .task {
+            if !hasSeenOnboarding { showOnboarding = true }
             handleActionButton(launch.requestID)
             HistoryMaintenance.prune(modelContext, retention: HistoryRetention(rawValue: retentionRaw) ?? .month)
         }
