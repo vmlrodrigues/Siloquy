@@ -1,6 +1,8 @@
-# The Xcode project is generated from project.yml by XcodeGen.
-# Regenerate with:  cd ios && xcodegen generate
+# The Xcode project and per-target Info.plists are generated from
+# project.yml by XcodeGen. Regenerate with:  cd ios && xcodegen generate
 Siloquy.xcodeproj/
+Siloquy/Info.plist
+SiloquyWidget/Info.plist
 
 # Xcode local artifacts
 xcuserdata/

@@ -1,9 +1,9 @@
-# XcodeGen spec for the Siloquy iOS app (Phase 1).
+# XcodeGen spec for the Siloquy iOS app.
 # Regenerate the .xcodeproj with:  cd ios && xcodegen generate
 #
-# Native stack only — no third-party dependencies:
-#   • Speech (SpeechAnalyzer / SpeechTranscriber) for on-device transcription
-#   • FoundationModels for on-device cleanup
+# Two targets:
+#   • Siloquy        — the app (Speech + FoundationModels, on-device)
+#   • SiloquyWidget  — widget extension hosting the dictation Live Activity (Dynamic Island)
 # Requires iOS 26 + an Apple-Intelligence device (iPhone 15 Pro and later).
 
 name: Siloquy
@@ -17,7 +17,8 @@ settings:
   base:
     SWIFT_VERSION: "5.0"
     CODE_SIGN_STYLE: Automatic
-    DEVELOPMENT_TEAM: ""            # ← set your Team in Xcode (Signing & Capabilities)
+    DEVELOPMENT_TEAM: "BWSYTSDVGC"  # personal team (dev installs). Switch to the paid
+                                    # team (9N354A3UZK) for TestFlight/distribution.
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
 
@@ -28,16 +29,60 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: Siloquy
+      - path: Shared
+    dependencies:
+      - target: SiloquyWidget
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.victorrodrigues.siloquy.ios
         PRODUCT_NAME: Siloquy
-        GENERATE_INFOPLIST_FILE: YES
-        TARGETED_DEVICE_FAMILY: "1"          # iPhone only
-        INFOPLIST_KEY_CFBundleDisplayName: Siloquy
-        INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Siloquy uses the microphone to capture your dictation — processed entirely on your device."
-        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Siloquy transcribes your speech entirely on your device."
+        TARGETED_DEVICE_FAMILY: "1"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+    info:
+      path: Siloquy/Info.plist
+      properties:
+        CFBundleDisplayName: Siloquy
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        NSMicrophoneUsageDescription: "Siloquy uses the microphone to capture your dictation — processed entirely on your device."
+        NSSpeechRecognitionUsageDescription: "Siloquy transcribes your speech entirely on your device."
+        NSSupportsLiveActivities: true
+        UIBackgroundModes:
+          - audio
+
+  SiloquyWidget:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: SiloquyWidget
+      - path: Shared
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.victorrodrigues.siloquy.ios.widget
+        PRODUCT_NAME: SiloquyWidget
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: SiloquyWidget/Info.plist
+      properties:
+        CFBundleDisplayName: Siloquy
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+
+# Explicit shared scheme so "Siloquy" (the app) is always the one you run —
+# building it also builds + embeds the widget extension. Survives regeneration.
+schemes:
+  Siloquy:
+    build:
+      targets:
+        Siloquy: all
+    run:
+      config: Debug
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

@@ -122,6 +122,36 @@ final class SpeechTranscriptionService: ObservableObject {
         }
     }
 
+    /// Transcribe a recorded audio file on-device. The background dictation path
+    /// records to a file (the live mic engine can't start backgrounded) and calls
+    /// this on stop. Reuses the same on-device model as the live path — no extra
+    /// permission prompt.
+    func transcribeFile(_ url: URL) async throws -> String {
+        let transcriber = SpeechTranscriber(
+            locale: locale,
+            transcriptionOptions: [],
+            reportingOptions: [],
+            attributeOptions: []
+        )
+        try await ensureModelInstalled(for: transcriber)
+
+        let audioFile = try AVAudioFile(forReading: url)
+        let analyzer = SpeechAnalyzer(modules: [transcriber])
+
+        let collector = Task { () -> String in
+            var text = ""
+            for try await result in transcriber.results {
+                let piece = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
+                if !piece.isEmpty { text = text.isEmpty ? piece : text + " " + piece }
+            }
+            return text
+        }
+
+        _ = try await analyzer.analyzeSequence(from: audioFile)
+        try await analyzer.finalizeAndFinishThroughEndOfInput()
+        return (try? await collector.value) ?? ""
+    }
+
     private func configureAudioSession() throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .spokenAudio,

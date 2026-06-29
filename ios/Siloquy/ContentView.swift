@@ -6,6 +6,7 @@ struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var vm = DictationViewModel()
     @ObservedObject private var launch = DictationLaunch.shared
+    @ObservedObject private var bgDictation = BackgroundDictationController.shared
     @State private var lastHandledRequestID = 0
     @Query(sort: \DictationEntry.createdAt, order: .reverse) private var history: [DictationEntry]
     @AppStorage("historyRetention") private var retentionRaw = HistoryRetention.month.rawValue
@@ -22,6 +23,13 @@ struct ContentView: View {
             .navigationTitle("Siloquy")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink {
+                        DiagnosticsView()
+                    } label: {
+                        Image(systemName: "ladybug")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink {
                         HistoryView(entries: history)
@@ -30,6 +38,11 @@ struct ContentView: View {
                     }
                 }
             }
+        }
+        // Slim "Recording…" screen shown while the background flow is active —
+        // instead of the full app — so the Action Button launch is unobtrusive.
+        .fullScreenCover(isPresented: Binding(get: { bgDictation.isRecording }, set: { _ in })) {
+            RecordingOverlay()
         }
         // Warm path: a press while the app is already running.
         .onChange(of: launch.requestID) { _, newID in
@@ -148,6 +161,76 @@ struct ContentView: View {
         }
         .buttonStyle(.borderedProminent)
         .tint(vm.isRecording ? .red : .accentColor)
+    }
+}
+
+// MARK: - Recording overlay (the slim launch screen)
+
+struct RecordingOverlay: View {
+    @ObservedObject private var bgDictation = BackgroundDictationController.shared
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+            VStack(spacing: 24) {
+                Image(systemName: "waveform")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.red)
+                    .symbolEffect(.variableColor.iterative, isActive: true)
+                Text("Recording…")
+                    .font(.title2.weight(.semibold))
+                Text("Switch back to your app — the Dynamic Island shows progress and a Stop button. Or stop here.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 44)
+                Button {
+                    Task { await bgDictation.stopIfRecording(trigger: "OverlayButton") }
+                } label: {
+                    Label("Stop", systemImage: "stop.fill")
+                        .font(.headline)
+                        .frame(maxWidth: 220, minHeight: 52)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.red)
+            }
+        }
+    }
+}
+
+// MARK: - Diagnostics
+
+struct DiagnosticsView: View {
+    @ObservedObject private var diag = DiagnosticLog.shared
+
+    var body: some View {
+        List {
+            Section {
+                if diag.lines.isEmpty {
+                    Text("No background-dictation activity logged yet. Bind the Action Button to \"Background Dictate,\" press it, speak, press again — then come back here.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                } else {
+                    ForEach(Array(diag.lines.enumerated().reversed()), id: \.offset) { _, line in
+                        Text(line)
+                            .font(.system(.caption, design: .monospaced))
+                            .textSelection(.enabled)
+                    }
+                }
+            } header: {
+                Text("Background dictation log (newest first)")
+            }
+        }
+        .navigationTitle("Diagnostics")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button("Clear", role: .destructive) { diag.clear() }
+                    .disabled(diag.lines.isEmpty)
+            }
+        }
+        .onAppear { diag.refresh() }
+        .refreshable { diag.refresh() }
     }
 }
 
