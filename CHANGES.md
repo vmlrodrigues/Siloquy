@@ -2,6 +2,9 @@
 
 Changes made to this fork relative to upstream [VoiceInk](https://github.com/Beingpax/VoiceInk) by Prakash Joshi Pax.
 
+> **This is the macOS app's changelog.** The iOS app has its own at
+> [ios/CHANGELOG.md](ios/CHANGELOG.md).
+
 ---
 
 ### 0.11.1 — 2026-06-27
