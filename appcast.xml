@@ -7,7 +7,37 @@
         <link>https://github.com/vmlrodrigues/Siloquy</link>
         <description>Siloquy release updates</description>
         <language>en</language>
-                                                                                                <item>
+                                                                                                        <item>
+            <title>Siloquy 0.11.2</title>
+            <pubDate>Sun, 05 Jul 2026 01:32:53 +0000</pubDate>
+            <sparkle:version>0.11.2</sparkle:version>
+            <sparkle:shortVersionString>0.11.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+    <style>
+      body { background:#fff; color:#1d1d1f; margin:0; padding:14px 16px;
+             font:13px/1.5 -apple-system, system-ui, sans-serif; }
+      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:0 0 .4em; }
+      h3 { font-size:.8em; font-weight:700; text-transform:uppercase;
+           letter-spacing:.05em; color:#86868b; margin:1.1em 0 .35em; }
+      ul { margin:.2em 0 .9em; padding-left:1.25em; }
+      li { margin:.35em 0; }
+      code { font-family:ui-monospace, SFMono-Regular, monospace; font-size:.88em;
+             background:#f0f0f2; padding:.08em .35em; border-radius:4px; }
+    </style>
+    <h2>0.11.2</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>With &quot;Hide Dock Icon&quot; and &quot;Launch at Login&quot; both enabled, the app could come up with a visible Dock icon after a reboot. Menu-bar-only mode now starts hidden no matter how the app was launched; a normal double-click launch still opens the window, focused, as before. (#10)</li>
+    </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.11.2/Siloquy.dmg"
+                sparkle:edSignature="/FvQrRxfHwfIhoerV4VXnbBrSBb6Gl3UGO/IfDhCZDvnt3tDpzN1nboWrH37ZdhM6BfmeFR1eLL3kglKw2Z2Dw=="
+                length="57020983"
+                type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Siloquy 0.11.1</title>
             <pubDate>Sat, 27 Jun 2026 07:19:39 +0000</pubDate>
             <sparkle:version>0.11.1</sparkle:version>
