@@ -36,7 +36,9 @@ class WindowManager: NSObject {
         window.titleVisibility = .hidden
         window.backgroundColor = .windowBackgroundColor
         window.isReleasedWhenClosed = false
-        window.title = "Siloquy"
+        // CFBundleName is "Siloquy Dev" in `make local` builds — keeps Mission Control
+        // and the window switcher honest about which build this is.
+        window.title = (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String) ?? "Siloquy"
         window.collectionBehavior = [.fullScreenPrimary]
         window.level = .normal
         window.isOpaque = true
@@ -47,11 +49,15 @@ class WindowManager: NSObject {
         registerMainWindowIfNeeded(window)
 
         if suppressInitialWindow {
-            // Login-item launch: keep the app in the background — no window, no Dock icon.
-            // The window stays registered so the menu bar can show it on demand later.
-            logger.notice("configureWindow: login-item launch — keeping main window hidden")
+            // Background (login-item / menu-bar-only) launch: keep the app in the
+            // background — no window, no Dock icon. The window stays registered so the
+            // menu bar can show it on demand later. The flag is consumed here: it only
+            // guards the initial auto-created window, and leaving it set would block
+            // windowDidBecomeKey from restoring the Dock icon on a later reopen.
+            logger.notice("configureWindow: background launch — keeping main window hidden")
             NSApp.setActivationPolicy(.accessory)
             window.orderOut(nil)
+            suppressInitialWindow = false
         } else {
             window.orderFrontRegardless()
             clearInitialFocus(from: window)

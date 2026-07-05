@@ -394,6 +394,11 @@ struct VoiceInkApp: App {
             }(NSImage(named: "menuBarIcon")!)
 
             Image(nsImage: image)
+            #if LOCAL_BUILD
+            // Dev build (`make local`): label the menu-bar item so it's distinguishable
+            // from the release app's icon at a glance.
+            Text("DEV")
+            #endif
         }
         .menuBarExtraStyle(.menu)
 
