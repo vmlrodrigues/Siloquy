@@ -7,6 +7,16 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.11.2 — 2026-07-05
+
+#### Fixed
+- With "Hide Dock Icon" and "Launch at Login" both enabled, the app could come
+  up with a visible Dock icon after a reboot. Menu-bar-only mode now starts
+  hidden no matter how the app was launched; a normal double-click launch still
+  opens the window, focused, as before. (#10)
+
+---
+
 ### 0.11.1 — 2026-06-27
 
 #### Changed
