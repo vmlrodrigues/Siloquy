@@ -4,6 +4,17 @@ The iOS companion app. The macOS app's changelog lives in [CHANGES.md](../CHANGE
 
 ---
 
+### 0.1.2 — 2026-07-05
+
+#### Fixed
+- Action Button background dictation could intermittently fail to start recording
+  (~1 in 4 presses), needing a re-press. The recorder now pre-arms the microphone
+  and re-activates the audio session between retries, rather than retrying against
+  the same half-ready session. Start failures now also record the audio route,
+  permission, and hardware-ready state, to pinpoint any remaining cases.
+
+---
+
 ### 0.1.1 — 2026-06-29
 
 First complete TestFlight build of the Siloquy iOS companion app.
