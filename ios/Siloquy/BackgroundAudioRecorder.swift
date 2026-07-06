@@ -24,6 +24,15 @@ final class BackgroundAudioRecorder {
         AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
     ]
 
+    private static var recordPermissionString: String {
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted: return "granted"
+        case .denied: return "denied"
+        case .undetermined: return "undetermined"
+        @unknown default: return "?"
+        }
+    }
+
     /// Warm the mic pipeline in the foreground (called when the app is active) with a
     /// brief throwaway recording, so the first real background `record()` doesn't have
     /// to cold-start the hardware — which is intermittently slow (seconds) to settle.
@@ -42,8 +51,12 @@ final class BackgroundAudioRecorder {
         try? session.setActive(false)
     }
 
-    /// Start recording. The first background `record()` is reliable once `prime()` has
-    /// warmed the pipeline in the foreground; the retry below covers the occasional miss.
+    /// Start recording. `prepareToRecord()` pre-arms the mic hardware; the retry loop
+    /// re-activates the session between tries, because the usual background failure is the
+    /// session coming up half-ready and a bare `record()` retry on the same half-ready
+    /// session never recovers. On exhaustion it throws a rich diagnostic (route, permission,
+    /// prepared/reactivation state) so a later log pull reveals the cause without a live
+    /// capture.
     func start() async throws {
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playAndRecord, mode: .spokenAudio,
@@ -54,22 +67,42 @@ final class BackgroundAudioRecorder {
             .appendingPathComponent("bg-dictation.m4a")
         try? FileManager.default.removeItem(at: url)
 
+        var lastPrepared = false          // captured for the failure diagnostic
+        var reactivateError: String?
+
         func attempt() -> Bool {
-            guard let r = try? AVAudioRecorder(url: url, settings: Self.settings), r.record() else { return false }
+            guard let r = try? AVAudioRecorder(url: url, settings: Self.settings) else { return false }
+            // prepareToRecord() pre-allocates the mic hardware; record() alone must do that
+            // synchronously and is likelier to bail if the input route hasn't settled
+            // (e.g. a Bluetooth HFP mic coming up in the background).
+            lastPrepared = r.prepareToRecord()
+            guard r.record() else { return false }
             recorder = r
             fileURL = url
             return true
         }
 
-        // record() occasionally returns false on the first try right after the session
-        // activates; retry with growing settle gaps to catch it.
         if attempt() { return }
         for delayMs in [250, 600, 1200] {
             try? await Task.sleep(nanoseconds: UInt64(delayMs) * 1_000_000)
+            // A bare record() retry on the same half-ready session never recovers, so cycle
+            // the session to give the input route a clean second chance. Deactivate is
+            // best-effort; the reactivation error is the one that matters (and gets logged).
+            try? session.setActive(false)
+            do {
+                try session.setActive(true)
+                reactivateError = nil
+            } catch {
+                reactivateError = error.localizedDescription
+            }
             if attempt() { return }
         }
+
+        let route = session.currentRoute.inputs.map(\.portType.rawValue).joined(separator: ",")
         throw RecorderError.couldNotStart(
-            "inputAvail=\(session.isInputAvailable) otherAudio=\(session.isOtherAudioPlaying)")
+            "inputAvail=\(session.isInputAvailable) otherAudio=\(session.isOtherAudioPlaying) "
+            + "prepared=\(lastPrepared) route=[\(route.isEmpty ? "none" : route)] "
+            + "perm=\(Self.recordPermissionString) reactivateErr=\(reactivateError ?? "none")")
     }
 
     /// Stops recording; returns the file URL and its byte size.
