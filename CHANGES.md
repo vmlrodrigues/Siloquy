@@ -7,6 +7,31 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.12.0 — 2026-07-09
+
+#### Added
+- **Your statistics now sync across your Macs.** Sessions, words,
+  words-per-minute, and keystrokes saved sync over iCloud and combine across
+  every Mac you dictate on. The dashboard gains a Devices section: a per-device
+  split on each metric, each Mac's own words-per-minute, and an
+  "All devices / This Mac" scope toggle. A machine you've switched off can be
+  archived — and later restored — so it drops out of your combined totals
+  without losing its history. None of this appears on a single-Mac setup, so
+  nothing changes unless you actually use more than one Mac. (#2)
+
+#### Changed
+- Enhancement now has a single "New dictations start" control — **Enhanced**
+  (stays on until you turn it off) or **Raw** (each dictation starts
+  un-enhanced; opt in per dictation with the ⌥ shortcut) — replacing the old
+  sticky global toggle. Power Mode and trigger words still take precedence.
+  (#14)
+
+#### Fixed
+- Removed the dead "Learn more" links from info tips that pointed at the
+  upstream author's documentation, which doesn't apply to this fork. (#15)
+
+---
+
 ### 0.11.2 — 2026-07-05
 
 #### Fixed
