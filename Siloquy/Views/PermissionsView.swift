@@ -111,7 +111,6 @@ struct PermissionCard: View {
     let buttonAction: () -> Void
     let checkPermission: () -> Void
     var infoTipMessage: String?
-    var infoTipLink: String?
     @State private var isRefreshing = false
 
     var body: some View {
@@ -134,11 +133,7 @@ struct PermissionCard: View {
                         Text(title)
                             .font(.headline)
                         if let message = infoTipMessage {
-                            if let link = infoTipLink, !link.isEmpty {
-                                InfoTip(message, learnMoreURL: link)
-                            } else {
-                                InfoTip(message)
-                            }
+                            InfoTip(message)
                         }
                     }
                     Text(description)
@@ -296,8 +291,7 @@ struct PermissionsView: View {
                             }
                         },
                         checkPermission: { permissionManager.checkScreenRecordingPermission() },
-                        infoTipMessage: "Siloquy captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
-                        infoTipLink: "https://tryvoiceink.com/docs/contextual-awareness"
+                        infoTipMessage: "Siloquy captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored."
                     )
 
                     // Input Monitoring Permission

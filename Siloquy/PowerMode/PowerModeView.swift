@@ -80,8 +80,7 @@ struct PowerModeView: View {
                                     .foregroundColor(.primary)
                                 
                                 InfoTip(
-                                    "Automatically apply custom configurations based on the app/website you are using.",
-                                    learnMoreURL: "https://tryvoiceink.com/docs/power-mode"
+                                    "Automatically apply custom configurations based on the app/website you are using."
                                 )
                             }
                             

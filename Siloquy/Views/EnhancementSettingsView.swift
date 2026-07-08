@@ -45,8 +45,7 @@ struct EnhancementSettingsView: View {
                     HStack(spacing: 4) {
                         Text("Enable Enhancement")
                         InfoTip(
-                            "AI enhancement lets you pass the transcribed audio through LLMs to post-process using different prompts suitable for different use cases like e-mails, summary, writing, etc.",
-                            learnMoreURL: "https://tryvoiceink.com/docs/enhancements-configuring-models"
+                            "AI enhancement lets you pass the transcribed audio through LLMs to post-process using different prompts suitable for different use cases like e-mails, summary, writing, etc."
                         )
                     }
                 }

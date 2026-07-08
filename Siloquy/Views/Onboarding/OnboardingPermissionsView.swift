@@ -135,8 +135,7 @@ struct OnboardingPermissionsView: View {
                                     
                                     if permissions[currentPermissionIndex].type == .screenRecording {
                                         InfoTip(
-                                            "Siloquy captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored.",
-                                            learnMoreURL: "https://tryvoiceink.com/docs/contextual-awareness"
+                                            "Siloquy captures on-screen text to understand the context of your voice input, which significantly improves transcription accuracy. Your privacy is important: this data is processed locally and is not stored."
                                         )
                                     }
                                 }

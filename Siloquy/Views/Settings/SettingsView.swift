@@ -364,7 +364,6 @@ struct ExpandableSettingsRow<Content: View>: View {
     @Binding var isEnabled: Bool
     let label: String
     var infoMessage: String? = nil
-    var infoURL: String? = nil
     @ViewBuilder let content: () -> Content
 
     @State private var isHandlingToggleChange = false
@@ -377,11 +376,7 @@ struct ExpandableSettingsRow<Content: View>: View {
                     HStack(spacing: 4) {
                         Text(label)
                         if let message = infoMessage {
-                            if let url = infoURL {
-                                InfoTip(message, learnMoreURL: url)
-                            } else {
-                                InfoTip(message)
-                            }
+                            InfoTip(message)
                         }
                     }
                 }
@@ -446,8 +441,7 @@ struct PowerModeSection: View {
                 isExpanded: $isExpanded,
                 isEnabled: toggleBinding,
                 label: "Power Mode",
-                infoMessage: "Apply custom settings based on active app or website.",
-                infoURL: "https://tryvoiceink.com/docs/power-mode"
+                infoMessage: "Apply custom settings based on active app or website."
             ) {
                 Toggle(isOn: $powerModePersistSettings) {
                     HStack(spacing: 4) {
