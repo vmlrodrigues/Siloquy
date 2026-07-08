@@ -6,7 +6,10 @@ struct MetricCard: View {
     let value: String
     let detail: String?
     let color: Color
-    
+    /// Optional content shown below the detail line — e.g. a per-device split bar
+    /// or per-Mac breakdown on the multi-device dashboard.
+    var footer: AnyView? = nil
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .center, spacing: 12) {
@@ -20,18 +23,18 @@ struct MetricCard: View {
                         .foregroundColor(color)
                 }
                 .frame(width: 34, height: 34)
-                
+
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
-            
+
             Text(value)
                 .font(.system(size: 24, weight: .black, design: .rounded))
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
-            
+
             if let detail, !detail.isEmpty {
                 Text(detail)
                     .font(.system(size: 11))
@@ -39,6 +42,10 @@ struct MetricCard: View {
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let footer {
+                footer
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)

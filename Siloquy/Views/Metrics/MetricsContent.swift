@@ -3,6 +3,11 @@ import SwiftData
 import Foundation
 import os
 
+private enum DashboardScope: Hashable {
+    case allDevices
+    case thisMac
+}
+
 private final class DashboardMetricsCache: @unchecked Sendable {
     static let shared = DashboardMetricsCache()
 
@@ -63,11 +68,20 @@ struct MetricsContent: View {
     @State private var metricsTask: Task<Void, Never>?
     @State private var isModelStatsPanelPresented = false
     @State private var isAccessibilityEnabled = AXIsProcessTrusted()
+    @State private var scope: DashboardScope = .allDevices
 
-    // Combined totals (active devices only) drive the hero banner and metric cards.
-    private var totalCount: Int { aggregate.totalSessions }
-    private var totalWords: Int { aggregate.totalWords }
-    private var totalDuration: TimeInterval { aggregate.totalDuration }
+    // The hero and metric cards honour the scope toggle: all active devices combined,
+    // or just the Mac being viewed.
+    private var totalCount: Int { scope == .thisMac ? (currentDevice?.sessionCount ?? 0) : aggregate.totalSessions }
+    private var totalWords: Int { scope == .thisMac ? (currentDevice?.totalWords ?? 0) : aggregate.totalWords }
+    private var totalDuration: TimeInterval { scope == .thisMac ? (currentDevice?.totalDuration ?? 0) : aggregate.totalDuration }
+
+    private var currentDevice: DeviceStats? { aggregate.devices.first { $0.isCurrentDevice } }
+
+    // Multi-device chrome only appears when there's more than one device to show.
+    private var showConsolidation: Bool { aggregate.activeDevices.count > 1 }
+    private var showRoster: Bool { aggregate.devices.count > 1 }
+    private var showSplits: Bool { showConsolidation && scope == .allDevices }
 
     init(modelContext: ModelContext, licenseState: LicenseViewModel.LicenseState) {
         self.modelContext = modelContext
@@ -91,9 +105,14 @@ struct MetricsContent: View {
                             }
 
                             heroSection
+
+                            if hasLoadedMetricsSnapshot && showConsolidation {
+                                scopeControlRow
+                            }
+
                             metricsSection
 
-                            if hasLoadedMetricsSnapshot && !aggregate.devices.isEmpty {
+                            if hasLoadedMetricsSnapshot && showRoster {
                                 devicesSection
                             }
 
@@ -302,7 +321,8 @@ struct MetricsContent: View {
                 title: "Sessions Recorded",
                 value: hasLoadedMetricsSnapshot ? "\(totalCount)" : "–",
                 detail: "Siloquy sessions completed",
-                color: .purple
+                color: .purple,
+                footer: showSplits ? splitBar { Double($0.sessionCount) } : nil
             )
 
             MetricCard(
@@ -310,9 +330,10 @@ struct MetricsContent: View {
                 title: "Words Dictated",
                 value: hasLoadedMetricsSnapshot ? Formatters.formattedNumber(totalWords) : "–",
                 detail: "words generated",
-                color: Color(nsColor: .controlAccentColor)
+                color: Color(nsColor: .controlAccentColor),
+                footer: showSplits ? splitBar { Double($0.totalWords) } : nil
             )
-            
+
             MetricCard(
                 icon: "speedometer",
                 title: "Words Per Minute",
@@ -320,17 +341,72 @@ struct MetricsContent: View {
                     ? String(format: "%.1f", averageWordsPerMinute)
                     : "–",
                 detail: "Siloquy vs. typing by hand",
-                color: .yellow
+                color: .yellow,
+                footer: showSplits ? perMacWordsPerMinuteFooter : nil
             )
-            
+
             MetricCard(
                 icon: "keyboard.fill",
                 title: "Keystrokes Saved",
                 value: hasLoadedMetricsSnapshot ? Formatters.formattedNumber(totalKeystrokesSaved) : "–",
                 detail: "fewer keystrokes",
-                color: .orange
+                color: .orange,
+                footer: showSplits ? splitBar { Double($0.keystrokesSaved) } : nil
             )
         }
+    }
+
+    private var scopeControlRow: some View {
+        HStack(spacing: 9) {
+            Text(scopeCaption)
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+
+            HStack(spacing: 4) {
+                ForEach(aggregate.activeDevices) { device in
+                    Circle()
+                        .fill(deviceColor(for: device))
+                        .frame(width: 8, height: 8)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Picker("", selection: $scope) {
+                Text("All devices").tag(DashboardScope.allDevices)
+                Text("This Mac").tag(DashboardScope.thisMac)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+        }
+    }
+
+    private var scopeCaption: String {
+        switch scope {
+        case .allDevices: return "Combined across \(aggregate.activeDevices.count) Macs"
+        case .thisMac: return "Showing this Mac only"
+        }
+    }
+
+    /// A per-device split bar (segment widths proportional to each active device's value).
+    private func splitBar(_ value: @escaping (DeviceStats) -> Double) -> AnyView {
+        AnyView(
+            DeviceSplitBar(segments: aggregate.activeDevices.map {
+                DeviceSplitBar.Segment(color: deviceColor(for: $0), value: value($0))
+            })
+        )
+    }
+
+    /// WPM is a rate, not a sum, so it shows the weighted average plus each Mac's own figure.
+    private var perMacWordsPerMinuteFooter: AnyView {
+        var text = Text("Weighted avg · ").foregroundColor(.secondary)
+        for (index, device) in aggregate.activeDevices.enumerated() {
+            if index > 0 { text = text + Text(" / ").foregroundColor(.secondary) }
+            text = text + Text("\(Int(device.wordsPerMinute.rounded()))").foregroundColor(deviceColor(for: device))
+        }
+        text = text + Text(" per Mac").foregroundColor(.secondary)
+        return AnyView(text.font(.system(size: 11)))
     }
 
     private var devicesSection: some View {
@@ -449,8 +525,12 @@ struct MetricsContent: View {
 
         let wordsText = Formatters.formattedNumber(totalWords)
         let sessionText = totalCount == 1 ? "session" : "sessions"
+        let base = "Dictated \(wordsText) words across \(totalCount) \(sessionText)."
 
-        return "Dictated \(wordsText) words across \(totalCount) \(sessionText)."
+        if showSplits {
+            return base + " Combined from \(aggregate.activeDevices.count) Macs."
+        }
+        return base
     }
     
     private var heroGradient: LinearGradient {
@@ -486,6 +566,30 @@ struct MetricsContent: View {
         Int(Double(totalWords) * 5.0)
     }
     
+}
+
+private struct DeviceSplitBar: View {
+    struct Segment {
+        let color: Color
+        let value: Double
+    }
+    let segments: [Segment]
+
+    var body: some View {
+        let total = max(segments.reduce(0) { $0 + $1.value }, 1)
+        let gap: CGFloat = 2
+        GeometryReader { geo in
+            let available = max(0, geo.size.width - gap * CGFloat(max(segments.count - 1, 0)))
+            HStack(spacing: gap) {
+                ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(segment.color)
+                        .frame(width: available * CGFloat(segment.value / total))
+                }
+            }
+        }
+        .frame(height: 5)
+    }
 }
 
 private struct DeviceStatRow: View {
