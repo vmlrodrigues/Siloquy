@@ -1,0 +1,10 @@
+// CloudKit test build settings. Mirrors the dev build (arm64, LOCAL_BUILD, .dev bundle id)
+// but adds the CLOUDKIT_TEST flag so the stats store syncs to the CloudKit *Development*
+// environment. Signing is deliberately left to the Makefile's automatic-signing args —
+// CloudKit needs a real provisioning profile, not the ad-hoc identity `make local` uses.
+
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = $(inherited) LOCAL_BUILD CLOUDKIT_TEST
+ARCHS = arm64
+VALID_ARCHS = arm64
+PRODUCT_BUNDLE_IDENTIFIER = com.victorrodrigues.siloquy.dev
+INFOPLIST_KEY_CFBundleDisplayName = Siloquy CKTest

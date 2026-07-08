@@ -237,11 +237,20 @@ struct VoiceInkApp: App {
 
             // Recorder session metrics configuration
             let statsSchema = Schema([SessionMetric.self, ArchivedDevice.self])
+            // Stats sync is enabled only in the CloudKit test build for now — it targets
+            // the CloudKit *Development* environment (dev-signed), isolated from the
+            // production Macs. Release stays local until the schema is deployed to
+            // Production and #2 ships; then broaden this condition to cover release.
+            #if CLOUDKIT_TEST
+            let statsCloudKit: ModelConfiguration.CloudKitDatabase = .private("iCloud.com.victorrodrigues.siloquy")
+            #else
+            let statsCloudKit: ModelConfiguration.CloudKitDatabase = .none
+            #endif
             let statsConfig = ModelConfiguration(
                 "stats",
                 schema: statsSchema,
                 url: statsStoreURL,
-                cloudKitDatabase: .none
+                cloudKitDatabase: statsCloudKit
             )
 
             // Initialize container
