@@ -3,61 +3,46 @@ import SwiftData
 import Foundation
 import os
 
-private struct DashboardMetricsSummary: Equatable, Sendable {
-    var totalCount: Int = 0
-    var totalWords: Int = 0
-    var totalDuration: TimeInterval = 0
-}
-
 private final class DashboardMetricsCache: @unchecked Sendable {
     static let shared = DashboardMetricsCache()
 
     private let lock = NSLock()
-    private var summary: DashboardMetricsSummary?
+    private var aggregate: DeviceStatsAggregate?
 
     private init() {}
 
-    func currentSummary() -> DashboardMetricsSummary? {
+    func current() -> DeviceStatsAggregate? {
         lock.lock()
         defer { lock.unlock() }
-        return summary
+        return aggregate
     }
 
-    func update(_ summary: DashboardMetricsSummary) {
+    func update(_ aggregate: DeviceStatsAggregate) {
         lock.lock()
-        self.summary = summary
+        self.aggregate = aggregate
         lock.unlock()
     }
 }
 
 private enum DashboardMetricsLoader {
-    static func load(from modelContainer: ModelContainer) async throws -> DashboardMetricsSummary {
+    static func load(
+        from modelContainer: ModelContainer,
+        localDeviceID: String,
+        localDeviceName: String
+    ) async throws -> DeviceStatsAggregate {
         let task = Task.detached(priority: .utility) {
             try Task.checkCancellation()
 
             let backgroundContext = ModelContext(modelContainer)
-            let count = try backgroundContext.fetchCount(FetchDescriptor<SessionMetric>())
-
-            try Task.checkCancellation()
-
-            var descriptor = FetchDescriptor<SessionMetric>()
-            descriptor.propertiesToFetch = [\.wordCount, \.audioDuration]
-
-            var words = 0
-            var duration: TimeInterval = 0
-
-            try backgroundContext.enumerate(descriptor) { metric in
-                words += metric.wordCount
-                duration += metric.audioDuration
-            }
-
-            try Task.checkCancellation()
-
-            return DashboardMetricsSummary(
-                totalCount: count,
-                totalWords: words,
-                totalDuration: duration
+            let aggregate = try DeviceStatsAggregator.aggregate(
+                in: backgroundContext,
+                localDeviceID: localDeviceID,
+                localDeviceName: localDeviceName
             )
+
+            try Task.checkCancellation()
+
+            return aggregate
         }
 
         return try await withTaskCancellationHandler {
@@ -73,23 +58,24 @@ struct MetricsContent: View {
     let modelContext: ModelContext
     let licenseState: LicenseViewModel.LicenseState
 
-    @State private var totalCount: Int = 0
-    @State private var totalWords: Int = 0
-    @State private var totalDuration: TimeInterval = 0
+    @State private var aggregate: DeviceStatsAggregate = .empty
     @State private var hasLoadedMetricsSnapshot: Bool = false
     @State private var metricsTask: Task<Void, Never>?
     @State private var isModelStatsPanelPresented = false
     @State private var isAccessibilityEnabled = AXIsProcessTrusted()
 
+    // Combined totals (active devices only) drive the hero banner and metric cards.
+    private var totalCount: Int { aggregate.totalSessions }
+    private var totalWords: Int { aggregate.totalWords }
+    private var totalDuration: TimeInterval { aggregate.totalDuration }
+
     init(modelContext: ModelContext, licenseState: LicenseViewModel.LicenseState) {
         self.modelContext = modelContext
         self.licenseState = licenseState
 
-        let cachedSummary = DashboardMetricsCache.shared.currentSummary()
-        _totalCount = State(initialValue: cachedSummary?.totalCount ?? 0)
-        _totalWords = State(initialValue: cachedSummary?.totalWords ?? 0)
-        _totalDuration = State(initialValue: cachedSummary?.totalDuration ?? 0)
-        _hasLoadedMetricsSnapshot = State(initialValue: cachedSummary != nil)
+        let cached = DashboardMetricsCache.shared.current()
+        _aggregate = State(initialValue: cached ?? .empty)
+        _hasLoadedMetricsSnapshot = State(initialValue: cached != nil)
     }
 
     var body: some View {
@@ -106,6 +92,11 @@ struct MetricsContent: View {
 
                             heroSection
                             metricsSection
+
+                            if hasLoadedMetricsSnapshot && !aggregate.devices.isEmpty {
+                                devicesSection
+                            }
+
                             HStack(alignment: .top, spacing: 18) {
                                 HelpAndResourcesSection()
                                 DashboardPromotionsSection(licenseState: licenseState)
@@ -195,23 +186,25 @@ struct MetricsContent: View {
     
     private func loadMetricsEfficiently() async {
         do {
-            let summary = try await DashboardMetricsLoader.load(from: modelContext.container)
+            let loaded = try await DashboardMetricsLoader.load(
+                from: modelContext.container,
+                localDeviceID: DeviceIdentity.id,
+                localDeviceName: DeviceIdentity.name
+            )
 
             guard !Task.isCancelled else {
                 return
             }
 
-            let shouldAcceptSummary = summary.totalCount > 0 || !SessionMetricMigrationService.shared.isRunning
+            let shouldAccept = loaded.totalSessions > 0 || !SessionMetricMigrationService.shared.isRunning
 
             await MainActor.run {
-                guard shouldAcceptSummary else {
+                guard shouldAccept else {
                     return
                 }
 
-                self.totalCount = summary.totalCount
-                self.totalWords = summary.totalWords
-                self.totalDuration = summary.totalDuration
-                DashboardMetricsCache.shared.update(summary)
+                self.aggregate = loaded
+                DashboardMetricsCache.shared.update(loaded)
                 self.hasLoadedMetricsSnapshot = true
             }
         } catch is CancellationError {
@@ -340,6 +333,86 @@ struct MetricsContent: View {
         }
     }
 
+    private var devicesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "laptopcomputer")
+                    .foregroundColor(.secondary)
+                Text("Devices")
+                    .font(.system(size: 16, weight: .semibold))
+                if aggregate.activeDevices.count > 1 {
+                    Text("\(aggregate.activeDevices.count)")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(Color.secondary.opacity(0.15)))
+                }
+                Spacer()
+            }
+
+            VStack(spacing: 10) {
+                ForEach(aggregate.devices) { device in
+                    DeviceStatRow(
+                        device: device,
+                        color: deviceColor(for: device),
+                        onArchive: { archiveDevice(device) },
+                        onRestore: { restoreDevice(device) }
+                    )
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Stable per-device accent. The current Mac is always teal; others get a
+    /// deterministic colour from the palette (djb2 over the deviceID, so it
+    /// never changes between launches or reorderings).
+    private func deviceColor(for device: DeviceStats) -> Color {
+        if device.isCurrentDevice {
+            return Color(red: 45 / 255, green: 212 / 255, blue: 191 / 255) // #2DD4BF
+        }
+        let palette: [Color] = [
+            Color(red: 251 / 255, green: 113 / 255, blue: 133 / 255), // #FB7185 rose
+            Color(red: 167 / 255, green: 139 / 255, blue: 250 / 255), // #A78BFA violet
+            Color(red: 251 / 255, green: 191 / 255, blue: 36 / 255),  // #FBBF24 amber
+            Color(red: 56 / 255,  green: 189 / 255, blue: 248 / 255)  // #38BDF8 sky
+        ]
+        let hash = device.deviceID.utf8.reduce(UInt32(5381)) { ($0 &* 33) &+ UInt32($1) }
+        return palette[Int(hash % UInt32(palette.count))]
+    }
+
+    private func archiveDevice(_ device: DeviceStats) {
+        let tombstone = ArchivedDevice(
+            deviceID: device.deviceID,
+            deviceName: device.deviceName,
+            archivedAt: Date()
+        )
+        modelContext.insert(tombstone)
+        persistDeviceChangeAndReload()
+    }
+
+    private func restoreDevice(_ device: DeviceStats) {
+        let targetID = device.deviceID
+        let descriptor = FetchDescriptor<ArchivedDevice>(
+            predicate: #Predicate { $0.deviceID == targetID }
+        )
+        if let existing = try? modelContext.fetch(descriptor) {
+            for record in existing { modelContext.delete(record) }
+        }
+        persistDeviceChangeAndReload()
+    }
+
+    private func persistDeviceChangeAndReload() {
+        do {
+            try modelContext.save()
+        } catch {
+            logger.error("Failed to persist device archive change: \(error.localizedDescription, privacy: .public)")
+        }
+        metricsTask?.cancel()
+        metricsTask = Task { await loadMetricsEfficiently() }
+    }
+
     private var footerActionsView: some View {
         HStack(spacing: 12) {
             Button(action: {
@@ -413,6 +486,106 @@ struct MetricsContent: View {
         Int(Double(totalWords) * 5.0)
     }
     
+}
+
+private struct DeviceStatRow: View {
+    let device: DeviceStats
+    let color: Color
+    let onArchive: () -> Void
+    let onRestore: () -> Void
+
+    /// A non-current device that hasn't recorded in over 30 days — a hint that it may
+    /// be worth archiving. The current Mac is never stale.
+    private var isStale: Bool {
+        guard !device.isCurrentDevice, !device.isArchived else { return false }
+        return device.lastActive < Date().addingTimeInterval(-30 * 24 * 60 * 60)
+    }
+
+    private var statLine: String {
+        let sessions = "\(device.sessionCount) \(device.sessionCount == 1 ? "session" : "sessions")"
+        let words = "\(Formatters.formattedNumber(device.totalWords)) words"
+        if device.wordsPerMinute > 0 {
+            return "\(sessions) · \(words) · \(String(format: "%.0f", device.wordsPerMinute)) WPM"
+        }
+        return "\(sessions) · \(words)"
+    }
+
+    private var lastActiveText: String {
+        guard device.lastActive > .distantPast else { return "No sessions yet" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return "Active \(formatter.localizedString(for: device.lastActive, relativeTo: Date()))"
+    }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 14) {
+            Circle()
+                .fill(color)
+                .frame(width: 10, height: 10)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(device.deviceName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+                    if device.isCurrentDevice { badge("This Mac", Color(nsColor: .controlAccentColor)) }
+                    if device.isArchived {
+                        badge("Archived", .secondary)
+                    } else if isStale {
+                        badge("Stale", .orange)
+                    }
+                }
+                Text(statLine)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                Text(lastActiveText)
+                    .font(.system(size: 11))
+                    .foregroundColor(Color.secondary.opacity(0.7))
+            }
+
+            Spacer(minLength: 8)
+
+            actionButton
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(nsColor: .controlBackgroundColor))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
+        )
+        .opacity(device.isArchived ? 0.55 : 1)
+    }
+
+    @ViewBuilder private var actionButton: some View {
+        if device.isArchived {
+            Button("Restore", action: onRestore)
+                .buttonStyle(.plain)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundColor(Color(nsColor: .controlAccentColor))
+                .help("Restore this device to your combined totals")
+        } else if !device.isCurrentDevice {
+            Button(action: onArchive) {
+                Image(systemName: "archivebox")
+                    .font(.system(size: 13))
+                    .foregroundColor(.secondary)
+            }
+            .buttonStyle(.plain)
+            .help("Archive this device — removes it from your combined totals (reversible)")
+        }
+    }
+
+    private func badge(_ text: String, _ tint: Color) -> some View {
+        Text(text)
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundColor(tint)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(tint.opacity(0.14)))
+    }
 }
 
 private enum Formatters {
