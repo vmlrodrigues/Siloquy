@@ -242,7 +242,9 @@ struct VoiceInkApp: App {
             // production Macs. Release stays local until the schema is deployed to
             // Production and #2 ships; then broaden this condition to cover release.
             #if CLOUDKIT_TEST
-            let statsCloudKit: ModelConfiguration.CloudKitDatabase = .private("iCloud.com.victorrodrigues.siloquy")
+            // Test build uses its own container (matching the .dev bundle id) so it's fully
+            // isolated from the release container. Release will use the real container.
+            let statsCloudKit: ModelConfiguration.CloudKitDatabase = .private("iCloud.com.victorrodrigues.siloquy.dev")
             #else
             let statsCloudKit: ModelConfiguration.CloudKitDatabase = .none
             #endif
