@@ -30,7 +30,7 @@ For notarized distribution (outside App Store), a **Developer ID Application** c
 
 **Build commands:**
 ```bash
-make local    # builds ad-hoc, then re-signs with Apple Development cert → ~/Downloads/Siloquy.app
+make local    # builds ad-hoc, then re-signs with Apple Development cert → .dist/Siloquy Dev.app
 make build    # unsigned build to Xcode DerivedData
 ```
 
