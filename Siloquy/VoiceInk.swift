@@ -256,10 +256,17 @@ struct VoiceInkApp: App {
             )
 
             // Initialize container
-            return try ModelContainer(
+            let container = try ModelContainer(
                 for: schema,
                 configurations: transcriptConfig, dictionaryConfig, statsConfig
             )
+
+            // Stamp any pre-attribution session metrics with this Mac's identity *before*
+            // CloudKit could export them — otherwise another Mac would import them as its
+            // own. Synchronous here, so it completes before the first mirror export.
+            SessionMetricDeviceBackfill.runIfNeeded(container: container)
+
+            return container
         } catch {
             logger.error("❌ Failed to create persistent ModelContainer: \(error.localizedDescription, privacy: .public)")
             return nil
