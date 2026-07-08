@@ -169,6 +169,11 @@ class VoiceInkEngine: NSObject, ObservableObject {
                             self.recordingState = .recording
                             self.logger.notice("toggleRecord: recording started successfully, state=recording")
 
+                            // Start each dictation un-enhanced when the user opted in. Runs before
+                            // Power Mode config and (later) trigger-word detection, so either can
+                            // still enable enhancement for this dictation.
+                            self.enhancementService?.applyPerDictationEnhancementDefault()
+
                             await ActiveWindowService.shared.applyConfiguration(powerModeId: powerModeId)
 
                             if self.recordingState == .recording,

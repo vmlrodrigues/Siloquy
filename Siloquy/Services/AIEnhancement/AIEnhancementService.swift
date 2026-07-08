@@ -24,6 +24,14 @@ class AIEnhancementService: ObservableObject {
         }
     }
 
+    /// When true, every new dictation starts with enhancement forced off and the user
+    /// opts in per dictation. Persisted so it survives launches.
+    @Published var resetEnhancementPerDictation: Bool {
+        didSet {
+            UserDefaults.standard.set(resetEnhancementPerDictation, forKey: "resetEnhancementPerDictation")
+        }
+    }
+
     @Published var useClipboardContext: Bool {
         didSet {
             UserDefaults.standard.set(useClipboardContext, forKey: "useClipboardContext")
@@ -90,6 +98,7 @@ class AIEnhancementService: ObservableObject {
         self.customVocabularyService = CustomVocabularyService.shared
 
         self.isEnhancementEnabled = UserDefaults.standard.bool(forKey: "isAIEnhancementEnabled")
+        self.resetEnhancementPerDictation = UserDefaults.standard.bool(forKey: "resetEnhancementPerDictation")
         self.useClipboardContext = UserDefaults.standard.bool(forKey: "useClipboardContext")
         self.useScreenCaptureContext = UserDefaults.standard.bool(forKey: "useScreenCaptureContext")
         let savedVariant = UserDefaults.standard.string(forKey: "englishVariant") ?? ""
@@ -117,6 +126,14 @@ class AIEnhancementService: ObservableObject {
         )
 
         initializePredefinedPrompts()
+    }
+
+    /// Force enhancement off at the start of a new dictation when the user opted into
+    /// "start each dictation with enhancement off". Called before Power Mode config and
+    /// trigger-word detection, so either can still enable it for the current dictation.
+    func applyPerDictationEnhancementDefault() {
+        guard resetEnhancementPerDictation, isEnhancementEnabled else { return }
+        isEnhancementEnabled = false
     }
 
     deinit {

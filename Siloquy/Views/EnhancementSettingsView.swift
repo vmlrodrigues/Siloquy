@@ -38,18 +38,39 @@ struct EnhancementSettingsView: View {
         }
     }
 
+    /// The enhancement default is a single choice: Enhanced (enhancement stays on until you
+    /// turn it off) or Raw (each dictation starts off; opt in per dictation). The picker is
+    /// false = Enhanced, true = Raw, mapped onto the live state plus the per-dictation reset
+    /// flag — so the control can never contradict itself the way two separate toggles did.
+    private var enhancementDefaultBinding: Binding<Bool> {
+        Binding(
+            get: { enhancementService.resetEnhancementPerDictation },
+            set: { startsRaw in
+                enhancementService.resetEnhancementPerDictation = startsRaw
+                enhancementService.isEnhancementEnabled = !startsRaw
+            }
+        )
+    }
+
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $enhancementService.isEnhancementEnabled) {
+                VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 4) {
-                        Text("Enable Enhancement")
+                        Text("New dictations start")
                         InfoTip(
-                            "AI enhancement lets you pass the transcribed audio through LLMs to post-process using different prompts suitable for different use cases like e-mails, summary, writing, etc."
+                            "Enhanced: every dictation is cleaned up by AI. Raw: dictations stay exactly as spoken. Either way, the enhancement shortcut (⌥) flips just the current dictation, and Power Mode or a trigger word can still turn it on."
                         )
+                        Spacer()
                     }
+                    Picker("New dictations start", selection: enhancementDefaultBinding) {
+                        Text("Enhanced").tag(false)
+                        Text("Raw").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .labelsHidden()
                 }
-                .toggleStyle(.switch)
+                .padding(.vertical, 2)
             } header: {
                 HStack {
                     Text("General")
@@ -71,7 +92,6 @@ struct EnhancementSettingsView: View {
             }
 
             APIKeyManagementView()
-                .opacity(enhancementService.isEnhancementEnabled ? 1.0 : 0.8)
 
             Section {
                 ReorderablePromptGrid(
@@ -109,7 +129,6 @@ struct EnhancementSettingsView: View {
                     .help("Add new prompt")
                 }
             }
-            .opacity(enhancementService.isEnhancementEnabled ? 1.0 : 0.8)
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
