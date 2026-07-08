@@ -15,6 +15,8 @@ final class SessionMetric {
     var powerModeName: String?
     var aiEnhancementModelName: String?
     var enhancementDuration: TimeInterval?
+    var deviceID: String?
+    var deviceName: String?
 
     init(
         transcriptionId: UUID,
@@ -27,7 +29,9 @@ final class SessionMetric {
         speedFactor: Double?,
         powerModeName: String?,
         aiEnhancementModelName: String?,
-        enhancementDuration: TimeInterval?
+        enhancementDuration: TimeInterval?,
+        deviceID: String? = nil,
+        deviceName: String? = nil
     ) {
         self.id = UUID()
         self.transcriptionId = transcriptionId
@@ -41,5 +45,9 @@ final class SessionMetric {
         self.powerModeName = powerModeName
         self.aiEnhancementModelName = aiEnhancementModelName
         self.enhancementDuration = enhancementDuration
+        // Stamp the record with its origin machine so synced stats can be attributed
+        // per-device and aggregated in the UI. Defaults to this Mac unless explicitly set.
+        self.deviceID = deviceID ?? DeviceIdentity.id
+        self.deviceName = deviceName ?? DeviceIdentity.name
     }
 }

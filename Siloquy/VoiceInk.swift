@@ -69,7 +69,8 @@ struct VoiceInkApp: App {
             Transcription.self,
             VocabularyWord.self,
             WordReplacement.self,
-            SessionMetric.self
+            SessionMetric.self,
+            ArchivedDevice.self
         ])
         var initializationFailed = false
         let resolvedContainer: ModelContainer
@@ -235,7 +236,7 @@ struct VoiceInkApp: App {
             )
 
             // Recorder session metrics configuration
-            let statsSchema = Schema([SessionMetric.self])
+            let statsSchema = Schema([SessionMetric.self, ArchivedDevice.self])
             let statsConfig = ModelConfiguration(
                 "stats",
                 schema: statsSchema,
@@ -272,7 +273,7 @@ struct VoiceInkApp: App {
                 isStoredInMemoryOnly: true
             )
 
-            let statsSchema = Schema([SessionMetric.self])
+            let statsSchema = Schema([SessionMetric.self, ArchivedDevice.self])
             let statsConfig = ModelConfiguration(
                 "stats",
                 schema: statsSchema,
