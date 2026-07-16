@@ -23,3 +23,7 @@ VALID_ARCHS = arm64
 // iCloud/CloudKit is intentionally absent on the dev build.
 PRODUCT_BUNDLE_IDENTIFIER = com.victorrodrigues.siloquy.dev
 INFOPLIST_KEY_CFBundleDisplayName = Siloquy Dev
+
+// Distinct dev-build app icon (red DEV banner) so it is obvious at a
+// glance which build is running. Release keeps the default AppIcon.
+ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon-Dev
