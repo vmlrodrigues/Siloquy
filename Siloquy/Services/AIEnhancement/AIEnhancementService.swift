@@ -218,6 +218,17 @@ class AIEnhancementService: ObservableObject {
 
         let finalContextSection = allContextSections + customVocabularySection + languageSection
 
+        // For the Local (On-device) provider, the default prompt is baked in per
+        // model — the selected model silently gets the prompt that measured best
+        // with it (#22). A user-created custom prompt still takes precedence.
+        let usesDefaultPrompt = activePrompt == nil
+            || activePrompt?.id == PredefinedPrompts.defaultPromptId
+            || activePrompt?.id == PredefinedPrompts.localModelPromptId
+        if aiService.selectedProvider == .gemmaLocal, usesDefaultPrompt {
+            let modelID = GemmaService.currentSelectedModelID
+            return PredefinedPrompts.localModelPromptText(forModelID: modelID) + finalContextSection
+        }
+
         if let activePrompt = activePrompt {
             if activePrompt.id == PredefinedPrompts.assistantPromptId {
                 return activePrompt.promptText + finalContextSection

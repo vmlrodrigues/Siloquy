@@ -101,6 +101,13 @@ class GemmaService: ObservableObject {
         ),
     ]
 
+    /// Selected local model id, readable from any isolation context —
+    /// UserDefaults-backed so nonisolated callers (history recording #19,
+    /// prompt resolution #22) see the engine's real selection.
+    nonisolated static var currentSelectedModelID: String {
+        UserDefaults.standard.string(forKey: "localModelSelectedID") ?? catalog.first!.id
+    }
+
     // MARK: - Published state
 
     /// Download state for each model, keyed by LocalModel.id
