@@ -209,28 +209,34 @@ extension CustomPrompt {
                     .offset(x: -15, y: -15)
                     .blur(radius: 2)
                 
-                // Icon with enhanced effects
-                Image(systemName: icon)
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: isSelected ?
-                                [Color.white, Color.white.opacity(0.9)] :
-                                [Color.primary.opacity(0.9), Color.primary.opacity(0.7)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
+                // A translation prompt shows its country flag; every other prompt shows
+                // its SF Symbol icon (#25).
+                if let flag = targetLanguage.flatMap({ TranslationLanguage.language(forID: $0)?.flag }) {
+                    Text(flag)
+                        .font(.system(size: 24))
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: isSelected ?
+                                    [Color.white, Color.white.opacity(0.9)] :
+                                    [Color.primary.opacity(0.9), Color.primary.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
                         )
-                    )
-                    .shadow(
-                        color: isSelected ?
-                            Color.white.opacity(0.5) : Color.clear,
-                        radius: 4
-                    )
-                    .shadow(
-                        color: isSelected ?
-                            Color.accentColor.opacity(0.5) : Color.clear,
-                        radius: 3
-                    )
+                        .shadow(
+                            color: isSelected ?
+                                Color.white.opacity(0.5) : Color.clear,
+                            radius: 4
+                        )
+                        .shadow(
+                            color: isSelected ?
+                                Color.accentColor.opacity(0.5) : Color.clear,
+                            radius: 3
+                        )
+                }
             }
             .frame(width: 48, height: 48)
             .overlay(alignment: .topLeading) {

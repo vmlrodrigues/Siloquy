@@ -189,7 +189,7 @@ struct PromptEditorView: View {
             Section {
                 Picker("Language", selection: $translationLanguageID) {
                     ForEach(availableTranslationLanguages) { lang in
-                        Text(lang.displayName).tag(Optional(lang.id))
+                        Text("\(lang.flag)  \(lang.displayName)").tag(Optional(lang.id))
                     }
                 }
             } header: {

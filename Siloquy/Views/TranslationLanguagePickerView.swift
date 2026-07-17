@@ -86,6 +86,8 @@ struct TranslationLanguagePickerView: View {
                         HStack(spacing: 10) {
                             Image(systemName: selected.contains(lang.id) ? "checkmark.circle.fill" : "circle")
                                 .foregroundColor(selected.contains(lang.id) ? .accentColor : .secondary)
+                            Text(lang.flag)
+                                .font(.system(size: 18))
                             Text(lang.displayName)
                                 .foregroundColor(.primary)
                             Spacer()
