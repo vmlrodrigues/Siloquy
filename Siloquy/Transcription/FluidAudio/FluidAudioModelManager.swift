@@ -140,17 +140,11 @@ class FluidAudioModelManager: ObservableObject {
     private func updateDownloadProgress(_ progress: DownloadUtils.DownloadProgress, for modelName: String, downloadID: UUID) {
         guard activeDownloadIDs[modelName] == downloadID else { return }
 
-        // Drive the bar by file count while downloading, not the byte fraction. Parakeet is
-        // ~22 files of very different sizes and FluidAudio only advances the byte fraction as
-        // each file completes — so the byte bar sticks at a low % while the one large model
-        // file downloads, then jumps. File count moves more evenly, step by step.
-        let fraction: Double
-        switch progress.phase {
-        case .downloading(let completed, let total) where total > 0:
-            fraction = Double(completed) / Double(total)
-        default:
-            fraction = min(max(progress.fractionCompleted, 0.0), 1.0)
-        }
+        // Drive the bar by FluidAudio's byte-weighted fraction, which advances smoothly with
+        // bytes even while a single large file downloads. (This used to use the file count,
+        // but Parakeet's one big model file is most of the total bytes, so the count froze on
+        // it and the download looked stuck at e.g. "6/22 files" for a minute or more. #27)
+        let fraction = min(max(progress.fractionCompleted, 0.0), 1.0)
 
         downloadStatuses[modelName] = FluidAudioDownloadStatus(
             fractionCompleted: fraction,
@@ -166,7 +160,10 @@ class FluidAudioModelManager: ObservableObject {
             guard totalFiles > 0 else {
                 return "Checking cached models..."
             }
-            return "Downloading models: \(completedFiles)/\(totalFiles) files"
+            // The download phase spans fractionCompleted 0.0–0.5; show it as 0–100% so the
+            // text keeps moving through the one large file instead of freezing on the count.
+            let pct = Int((min(max(progress.fractionCompleted, 0), 0.5) / 0.5) * 100)
+            return "Downloading models: \(completedFiles)/\(totalFiles) files · \(pct)%"
         case .compiling(let modelName):
             guard !modelName.isEmpty else {
                 return "Finalizing models..."
