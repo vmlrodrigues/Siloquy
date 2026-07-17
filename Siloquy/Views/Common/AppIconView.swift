@@ -8,7 +8,10 @@ struct AppIconView: View {
                 .frame(width: 160, height: 160)
                 .blur(radius: 30)
             
-            if let image = NSImage(named: "AppIcon") {
+            // Use the running app's actual icon. NSImage(named: "AppIcon") returns nil in the
+            // dev build, where the designated app icon is AppIcon-Dev — so the About screen
+            // showed nothing. applicationIconImage is whatever this build actually uses.
+            if let image = NSApp.applicationIconImage ?? NSImage(named: "AppIcon") {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fit)

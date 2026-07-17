@@ -81,7 +81,7 @@ struct ContentView: View {
                 Section {
                     // App Header
                     HStack(spacing: 6) {
-                        if let appIcon = NSImage(named: "AppIcon") {
+                        if let appIcon = NSApp.applicationIconImage ?? NSImage(named: "AppIcon") {
                             Image(nsImage: appIcon)
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
