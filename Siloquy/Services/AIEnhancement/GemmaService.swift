@@ -89,16 +89,6 @@ class GemmaService: ObservableObject {
             downloadURL: URL(string: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm")!,
             fileSizeBytes: 2_588_147_712
         ),
-        LocalModel(
-            id: "qwen3-0.6b-int4",
-            displayName: "Qwen3 0.6B",
-            detail: "497 MB · not recommended",
-            blurb: "Smallest and fastest, but unreliable in our testing — it can drop, garble, or invent text. Only for severely memory-constrained Macs; check every output.",
-            filename: "qwen3_0_6b_mixed_int4.litertlm",
-            downloadURL: URL(string: "https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/qwen3_0_6b_mixed_int4.litertlm")!,
-            fileSizeBytes: 497_664_000,
-            messageSuffix: " /no_think"   // disable Qwen3's chain-of-thought mode
-        ),
     ]
 
     /// Selected local model id, readable from any isolation context —
@@ -166,10 +156,15 @@ class GemmaService: ObservableObject {
     // MARK: - Init
 
     nonisolated init() {
+        // Migrate selections pointing at removed catalog entries (e.g. Qwen3,
+        // removed in #23) back to the catalog default so enhancement keeps working.
         let savedID = UserDefaults.standard.string(forKey: "localModelSelectedID")
-                      ?? Self.catalog.first?.id
-                      ?? "gemma4-e2b"
-        _selectedModelID = Published(initialValue: savedID)
+        let validID = savedID.flatMap { id in Self.catalog.first(where: { $0.id == id })?.id }
+                      ?? Self.catalog.first!.id
+        if validID != savedID {
+            UserDefaults.standard.set(validID, forKey: "localModelSelectedID")
+        }
+        _selectedModelID = Published(initialValue: validID)
 
         Task { @MainActor [weak self] in
             guard let self else { return }

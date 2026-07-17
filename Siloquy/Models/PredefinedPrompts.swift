@@ -53,9 +53,8 @@ enum PredefinedPrompts {
         Output only the polished text. Nothing else.
         """
 
-    /// Minimal prompt for small local models (tuned on Gemma 4 E2B; also used
-    /// for Qwen3). Long prompts make small models corrupt output, so keep this
-    /// short and literal.
+    /// Minimal prompt for small local models (tuned on Gemma 4 E2B). Long
+    /// prompts make small models corrupt output, so keep this short and literal.
     private static let localPromptLight = """
         Fix the dictated text below so it reads as typed prose.
         Remove filler words (um, uh, like, you know, kind of, sort of), stutters, and false starts.
