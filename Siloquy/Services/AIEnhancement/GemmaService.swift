@@ -114,6 +114,9 @@ class GemmaService: ObservableObject {
     private var engine: Engine?
     private var engineModelID: String?          // model the current engine was built from
     private var downloadTasks: [String: Task<Void, Error>] = [:]
+    /// The live URLSession per active download, kept reachable so cancelDownload can actually
+    /// stop the network transfer (cancelling the Swift Task alone does not) — #30.
+    private var downloadSessions: [String: URLSession] = [:]
     private var isGenerating = false            // single-flight: the engine runs one generation at a time
     private let logger = Logger(subsystem: "com.victorrodrigues.siloquy", category: "GemmaService")
 
@@ -218,6 +221,10 @@ class GemmaService: ObservableObject {
     func cancelDownload(for model: LocalModel) {
         downloadTasks[model.id]?.cancel()
         downloadTasks[model.id] = nil
+        // Actually stop the transfer. Cancelling the Swift Task leaves the URLSession
+        // download running, so progress kept advancing and Cancel did nothing (#30).
+        downloadSessions[model.id]?.invalidateAndCancel()
+        downloadSessions[model.id] = nil
         downloadStates[model.id] = .notDownloaded
     }
 
@@ -225,21 +232,37 @@ class GemmaService: ObservableObject {
         try FileManager.default.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
         downloadStates[model.id] = .downloading(0)
 
-        let downloadedURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
-            let delegate = ModelDownloadDelegate(
-                continuation: continuation,
-                onProgress: { [weak self] progress in
-                    Task { @MainActor [weak self] in
-                        self?.downloadStates[model.id] = .downloading(progress)
+        let downloadedURL: URL
+        do {
+            downloadedURL = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<URL, Error>) in
+                let delegate = ModelDownloadDelegate(
+                    continuation: continuation,
+                    onProgress: { [weak self] progress in
+                        Task { @MainActor [weak self] in
+                            // Ignore late callbacks after a cancel (session cleared) so a
+                            // stale tick can't overwrite the "not downloaded" state.
+                            guard let self, self.downloadSessions[model.id] != nil else { return }
+                            self.downloadStates[model.id] = .downloading(progress)
+                        }
                     }
-                }
-            )
-            let config = URLSessionConfiguration.default
-            config.timeoutIntervalForResource = 3600
-            let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-            delegate.session = session
-            session.downloadTask(with: model.downloadURL).resume()
+                )
+                let config = URLSessionConfiguration.default
+                config.timeoutIntervalForResource = 3600
+                let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
+                delegate.session = session
+                downloadSessions[model.id] = session
+                session.downloadTask(with: model.downloadURL).resume()
+            }
+        } catch {
+            downloadSessions[model.id] = nil
+            // An invalidated/cancelled session surfaces as URLError.cancelled — treat it as a
+            // cancellation so the catch in startDownload returns to "not downloaded" cleanly.
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                throw CancellationError()
+            }
+            throw error
         }
+        downloadSessions[model.id] = nil
 
         try Task.checkCancellation()
 
