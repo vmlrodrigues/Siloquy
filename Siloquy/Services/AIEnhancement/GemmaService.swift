@@ -72,28 +72,28 @@ class GemmaService: ObservableObject {
 
     nonisolated static let catalog: [LocalModel] = [
         LocalModel(
-            id: "gemma4-e2b",
-            displayName: "Gemma 4 E2B",
-            detail: "2.4 GB · Google · recommended",
-            blurb: "Best all-rounder — fast on any Apple Silicon Mac and well-suited to grammar and disfluency cleanup. Recommended for most people.",
-            filename: "gemma4-e2b-it.litertlm",
-            downloadURL: URL(string: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm")!,
-            fileSizeBytes: 2_588_147_712
-        ),
-        LocalModel(
             id: "gemma4-e4b",
             displayName: "Gemma 4 E4B",
-            detail: "3.4 GB · Google · higher quality",
-            blurb: "Higher quality, especially for other languages and translation, at roughly 2× the size, memory, and time per dictation. Best on Macs with 16 GB or more of RAM.",
+            detail: "3.4 GB · Google · recommended",
+            blurb: "The recommended model — clearly the strongest dictation cleanup in our testing. Needs ~4 GB of free memory; best on Macs with 16 GB or more.",
             filename: "gemma4-e4b-it.litertlm",
             downloadURL: URL(string: "https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/resolve/main/gemma-4-E4B-it.litertlm")!,
             fileSizeBytes: 3_659_530_240
         ),
         LocalModel(
+            id: "gemma4-e2b",
+            displayName: "Gemma 4 E2B",
+            detail: "2.4 GB · Google · low-RAM fallback",
+            blurb: "Lighter and faster for lower-memory Macs. Less reliable than E4B — give its output a quick glance, and pair it with a simple prompt.",
+            filename: "gemma4-e2b-it.litertlm",
+            downloadURL: URL(string: "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm")!,
+            fileSizeBytes: 2_588_147_712
+        ),
+        LocalModel(
             id: "qwen3-0.6b-int4",
             displayName: "Qwen3 0.6B",
-            detail: "497 MB · mixed int4 · fast",
-            blurb: "Smallest and fastest, with the lowest memory use. Good for older or low-memory Macs; quality is below the Gemma models.",
+            detail: "497 MB · not recommended",
+            blurb: "Smallest and fastest, but unreliable in our testing — it can drop, garble, or invent text. Only for severely memory-constrained Macs; check every output.",
             filename: "qwen3_0_6b_mixed_int4.litertlm",
             downloadURL: URL(string: "https://huggingface.co/litert-community/Qwen3-0.6B/resolve/main/qwen3_0_6b_mixed_int4.litertlm")!,
             fileSizeBytes: 497_664_000,

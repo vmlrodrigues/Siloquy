@@ -83,7 +83,7 @@ enum AIProvider: String, CaseIterable {
         case .assemblyAI:
             return "universal-3-pro"
         case .gemmaLocal:
-            return "Gemma 4 E2B"
+            return "Gemma 4 E4B"
         case .ollama:
             return UserDefaults.standard.string(forKey: "ollamaSelectedModel") ?? "mistral"
         case .localCLI:
