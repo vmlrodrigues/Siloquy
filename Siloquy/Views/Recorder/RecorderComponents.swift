@@ -36,7 +36,13 @@ struct RecorderToggleButton: View {
                     Image(systemName: icon).font(.system(size: 13))
                 }
             }
-            .foregroundColor(disabled ? .white.opacity(0.3) : (isEnabled ? .white : .white.opacity(0.6)))
+            .foregroundColor(.white)
+            // When enhancement is off for this dictation (e.g. Raw mode), desaturate and dim
+            // the whole icon so it clearly reads as inactive. foregroundColor alone can't do
+            // this: an emoji icon (a translation flag) ignores it and would stay full-colour,
+            // falsely signalling that translation is active (#32).
+            .grayscale(isEnabled ? 0 : 1)
+            .opacity(disabled ? 0.3 : (isEnabled ? 1.0 : 0.4))
         }
         .buttonStyle(PlainButtonStyle())
         .disabled(disabled)
