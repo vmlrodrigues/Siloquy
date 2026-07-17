@@ -4,6 +4,13 @@ The iOS companion app. The macOS app's changelog lives in [CHANGES.md](../CHANGE
 
 ---
 
+### 0.1.3 — 2026-07-18
+
+#### Changed
+- New app icon, matching the redesigned macOS app.
+
+---
+
 ### 0.1.2 — 2026-07-05
 
 #### Fixed
