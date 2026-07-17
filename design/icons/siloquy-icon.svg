@@ -1,0 +1,46 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0.2" y1="0" x2="0.8" y2="1">
+      <stop offset="0" stop-color="#3A3431"/><stop offset="0.55" stop-color="#241A15"/><stop offset="1" stop-color="#130E0B"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.42" r="0.52">
+      <stop offset="0" stop-color="#D98A45" stop-opacity="0.55"/><stop offset="0.7" stop-color="#C97A3C" stop-opacity="0.10"/><stop offset="1" stop-color="#C97A3C" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="sheen" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.10"/><stop offset="0.45" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="mic" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#FBD79E"/><stop offset="0.45" stop-color="#E1A05B"/><stop offset="1" stop-color="#A85E28"/>
+    </linearGradient>
+    <linearGradient id="micEdge" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.5"/><stop offset="0.25" stop-color="#FFFFFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="drop" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="18"/>
+      <feOffset dy="14" result="o"/><feComponentTransfer><feFuncA type="linear" slope="0.45"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <clipPath id="squircle"><rect x="100" y="100" width="824" height="824" rx="185"/></clipPath>
+  </defs>
+
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#bg)"/>
+  <g clip-path="url(#squircle)">
+    <rect x="100" y="100" width="824" height="824" fill="url(#glow)"/>
+    <rect x="100" y="100" width="824" height="430" fill="url(#sheen)"/>
+  </g>
+  <rect x="101" y="101" width="822" height="822" rx="184" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+
+  <g filter="url(#drop)">
+    <g fill="none" stroke="url(#mic)" stroke-linecap="round">
+      <path d="M360 468 A152 152 0 0 0 664 468" stroke-width="32"/>
+      <line x1="512" y1="620" x2="512" y2="716" stroke-width="32"/>
+      <line x1="450" y1="716" x2="574" y2="716" stroke-width="32"/>
+    </g>
+    <rect x="435" y="296" width="154" height="278" rx="77" fill="url(#mic)"/>
+    <rect x="435" y="296" width="154" height="278" rx="77" fill="url(#micEdge)"/>
+    <g stroke="#5A3418" stroke-opacity="0.32" stroke-width="9" stroke-linecap="round">
+      <line x1="470" y1="358" x2="554" y2="358"/><line x1="470" y1="405" x2="554" y2="405"/><line x1="470" y1="452" x2="554" y2="452"/>
+    </g>
+    <ellipse cx="482" cy="345" rx="26" ry="52" fill="#FFFFFF" opacity="0.28"/>
+  </g>
+</svg>
