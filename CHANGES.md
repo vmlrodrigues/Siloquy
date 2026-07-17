@@ -7,6 +7,21 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.13.1 — 2026-07-17
+
+#### Changed
+- **A fresh app icon** — a cleaner, more premium take on the microphone,
+  keeping the warm copper identity. (#35)
+
+#### Fixed
+- The recorder's prompt icon now greys out when enhancement is off for a
+  dictation, so a translation flag no longer looks active when it isn't. (#32)
+- The update dialog renders bold text in the release notes, and now shows the
+  cumulative changes since your installed version — not just the newest
+  release's notes. (#7, #31)
+
+---
+
 ### 0.13.0 — 2026-07-17
 
 #### Added
