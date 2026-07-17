@@ -103,7 +103,12 @@ struct FluidAudioModelCardView: View {
         Group {
             if let status = fluidAudioModelManager.downloadStatus(for: model) {
                 VStack(alignment: .leading, spacing: 6) {
-                    HStack {
+                    HStack(spacing: 6) {
+                        // Always-animating so the download never looks stuck while one large
+                        // model file streams and the bar can't advance (#27).
+                        ProgressView()
+                            .controlSize(.small)
+
                         Text(status.message)
                             .lineLimit(1)
 

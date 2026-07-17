@@ -86,9 +86,16 @@ struct OnboardingModelDownloadView: View {
                                 ProgressView(value: progress)
                                     .progressViewStyle(.linear)
                                     .tint(Color.accentColor)
-                                Text(message)
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
+                                HStack(spacing: 6) {
+                                    // Always-animating so it never looks stuck while one large
+                                    // model file downloads and the bar can't advance (#27).
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .tint(.white)
+                                    Text(message)
+                                        .font(.caption)
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
                             }
                             .transition(.opacity)
                         }
