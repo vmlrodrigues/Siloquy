@@ -116,7 +116,7 @@ struct EnhancementSettingsView: View {
                 .padding(.vertical, 8)
             } header: {
                 HStack {
-                    Text("Enhancement Prompts")
+                    Text("Enhancement & Translation Prompts")
                     Spacer()
                     Menu {
                         Button {
