@@ -27,36 +27,34 @@ def _inline(text):
     return out
 
 
-def _extract_section(version, changes_path):
-    """Return the body lines of the `### <version>` section of CHANGES.md, or None."""
+def _extract_from(version, changes_path):
+    """Return CHANGES.md lines from the `### <version>` heading to the end of the file —
+    that version plus every older one below it — so the update dialog can show cumulative
+    notes for a user several releases behind (#7). Returns None if the version isn't found.
+    """
     try:
         with open(changes_path) as f:
             lines = f.read().splitlines()
     except OSError:
         return None
-    body, in_section = [], False
-    for line in lines:
+    for i, line in enumerate(lines):
         if line.startswith("### "):
-            if in_section:
-                break  # reached the next version
             tokens = line[4:].split()
             if tokens and tokens[0] == version:
-                in_section = True
-            continue
-        if in_section:
-            if line.startswith("---"):
-                break  # section separator
-            body.append(line)
-    return body if in_section else None
+                return lines[i:]
+    return None
 
 
 def render_notes_html(version, changes_path):
     """Build the inline release-notes HTML embedded in the appcast <description>.
 
-    Renders the version's CHANGES.md section: `#### X` -> <h3>, `- y` (with
-    wrapped continuation lines) -> <li>, `` `code` `` -> <code>.
+    Renders the given version's CHANGES.md section AND every older one below it
+    (cumulative), so a user several releases behind sees everything new since the
+    version they had — not just the newest release (#7). `### <version>` -> <h2>,
+    `#### X` -> <h3>, `- y` (with wrapped continuations) -> <li>, `` `code` `` ->
+    <code>, **bold** -> <strong>.
     """
-    body = _extract_section(version, changes_path)
+    lines = _extract_from(version, changes_path)
     parts, in_list, bullet = [], False, None
 
     def flush():
@@ -65,13 +63,21 @@ def render_notes_html(version, changes_path):
             parts.append(f"      <li>{_inline(bullet.strip())}</li>")
             bullet = None
 
-    for line in (body or []):
+    def close_list():
+        nonlocal in_list
+        if in_list:
+            parts.append("    </ul>")
+            in_list = False
+
+    for line in (lines or []):
         s = line.strip()
-        if s.startswith("#### "):
+        if s.startswith("### "):
             flush()
-            if in_list:
-                parts.append("    </ul>")
-                in_list = False
+            close_list()
+            parts.append(f"    <h2>{_inline(s[4:].strip())}</h2>")
+        elif s.startswith("#### "):
+            flush()
+            close_list()
             parts.append(f"    <h3>{_inline(s[5:].strip())}</h3>")
         elif s.startswith("- "):
             flush()
@@ -79,13 +85,15 @@ def render_notes_html(version, changes_path):
                 parts.append("    <ul>")
                 in_list = True
             bullet = s[2:]
+        elif s.startswith("---"):
+            flush()
+            close_list()  # version separator; the next <h2> marks the boundary
         elif s == "":
             flush()
         elif bullet is not None:
             bullet += " " + s  # continuation of the current bullet
     flush()
-    if in_list:
-        parts.append("    </ul>")
+    close_list()
 
     body_html = "\n".join(parts) if parts else "    <p>See the changelog for details.</p>"
 
@@ -94,15 +102,16 @@ def render_notes_html(version, changes_path):
         "    <style>\n"
         "      body { background:#fff; color:#1d1d1f; margin:0; padding:14px 16px;\n"
         "             font:13px/1.5 -apple-system, system-ui, sans-serif; }\n"
-        "      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:0 0 .4em; }\n"
+        "      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:1.4em 0 .4em; }\n"
+        "      h2:first-of-type { margin-top:.1em; }\n"
         "      h3 { font-size:.8em; font-weight:700; text-transform:uppercase;\n"
         "           letter-spacing:.05em; color:#86868b; margin:1.1em 0 .35em; }\n"
         "      ul { margin:.2em 0 .9em; padding-left:1.25em; }\n"
         "      li { margin:.35em 0; }\n"
         "      code { font-family:ui-monospace, SFMono-Regular, monospace; font-size:.88em;\n"
         "             background:#f0f0f2; padding:.08em .35em; border-radius:4px; }\n"
+        "      strong { font-weight:700; }\n"
         "    </style>\n"
-        f"    <h2>{html.escape(version)}</h2>\n"
         f"{body_html}\n"
     )
 
