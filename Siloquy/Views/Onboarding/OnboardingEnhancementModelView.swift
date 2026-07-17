@@ -13,7 +13,10 @@ struct OnboardingEnhancementModelView: View {
     @State private var isModelSet = false
     @State private var showRecommendedSettings = false
 
-    private let model = GemmaService.catalog.first { $0.id == "gemma4-e2b" }!
+    // Download the recommended model, which is also the default selection
+    // (catalog.first). They must match, or performDownload won't initialise the
+    // engine and first-run enhancement stays broken (#26).
+    private let model = GemmaService.catalog.first!
 
     private var downloadState: DownloadState {
         gemmaService.downloadStates[model.id] ?? .notDownloaded
