@@ -16,8 +16,15 @@ from datetime import datetime, timezone
 
 
 def _inline(text):
-    """Escape HTML, then turn `code` spans into <code>…</code>."""
-    return re.sub(r"`([^`]+)`", r"<code>\1</code>", html.escape(text))
+    """Escape HTML, then render `code` spans and **bold** into inline tags.
+
+    Sparkle shows the appcast <description> as HTML, so markdown emphasis has to
+    be converted or it renders as literal asterisks in the update dialog.
+    """
+    out = html.escape(text)
+    out = re.sub(r"`([^`]+)`", r"<code>\1</code>", out)
+    out = re.sub(r"\*\*([^*]+)\*\*", r"<strong>\1</strong>", out)
+    return out
 
 
 def _extract_section(version, changes_path):
