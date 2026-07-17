@@ -157,7 +157,9 @@ enum AIProvider: String, CaseIterable {
         case .assemblyAI:
             return ["universal-3-pro"]
         case .gemmaLocal:
-            return ["Gemma 4 E2B"]
+            // Derive from the catalog so Power Modes and pickers can offer
+            // every local model, not a stale hardcoded list (#20).
+            return GemmaService.catalog.map(\.displayName)
         case .ollama:
             return []
         case .localCLI:
@@ -378,6 +380,18 @@ class AIService: ObservableObject {
         
         if selectedProvider == .ollama {
             updateSelectedOllamaModel(model)
+        }
+
+        if selectedProvider == .gemmaLocal {
+            // Power Modes (and any other caller) select local models by display
+            // name; propagate to GemmaService so the engine actually switches —
+            // without this the selection is a silent no-op (#20).
+            if let entry = GemmaService.catalog.first(where: { $0.displayName == model }) {
+                Task { @MainActor [weak self] in
+                    guard let self, self.gemmaService.isDownloaded(entry) else { return }
+                    await self.gemmaService.selectModel(entry)
+                }
+            }
         }
         
         objectWillChange.send()
