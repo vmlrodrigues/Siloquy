@@ -263,7 +263,7 @@ private struct ReorderablePromptGrid: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                    Text("Double-click to edit • Right-click for more options")
+                    Text("Drag to reorder (⌘1–⌘0) • Double-click to edit • Right-click for more options")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 }

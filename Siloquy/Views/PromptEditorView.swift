@@ -27,15 +27,31 @@ struct PromptEditorView: View {
     @State private var description: String
     @State private var triggerWords: [String]
     @State private var useSystemInstructions: Bool
+    @State private var translationLanguageID: String?
     @State private var showingIconPicker = false
-    
+
     private var isEditingPredefinedPrompt: Bool {
         if case .edit(let prompt) = mode {
             return prompt.isPredefined
         }
         return false
     }
-    
+
+    /// A translation prompt (#25) is edited by re-picking its language, not by hand-editing
+    /// the generated instruction text.
+    private var isEditingTranslationPrompt: Bool {
+        if case .edit(let prompt) = mode {
+            return prompt.isTranslation
+        }
+        return false
+    }
+
+    private var saveDisabled: Bool {
+        if isEditingPredefinedPrompt { return false }
+        if isEditingTranslationPrompt { return translationLanguageID == nil }
+        return title.isEmpty || promptText.isEmpty
+    }
+
     init(mode: Mode, onDismiss: (() -> Void)? = nil) {
         self.mode = mode
         self.onDismiss = onDismiss
@@ -47,6 +63,7 @@ struct PromptEditorView: View {
             _description = State(initialValue: "")
             _triggerWords = State(initialValue: [])
             _useSystemInstructions = State(initialValue: true)
+            _translationLanguageID = State(initialValue: nil)
         case .edit(let prompt):
             _title = State(initialValue: prompt.title)
             _promptText = State(initialValue: prompt.promptText)
@@ -54,6 +71,7 @@ struct PromptEditorView: View {
             _description = State(initialValue: prompt.description ?? "")
             _triggerWords = State(initialValue: prompt.triggerWords)
             _useSystemInstructions = State(initialValue: prompt.useSystemInstructions)
+            _translationLanguageID = State(initialValue: prompt.targetLanguage)
         }
     }
     
@@ -69,7 +87,7 @@ struct PromptEditorView: View {
         VStack(spacing: 0) {
             // Header
             HStack(spacing: 12) {
-                Text(isEditingPredefinedPrompt ? "Edit Trigger Words" : (mode == .add ? "New Prompt" : "Edit Prompt"))
+                Text(isEditingPredefinedPrompt ? "Edit Trigger Words" : (isEditingTranslationPrompt ? "Edit Translation" : (mode == .add ? "New Prompt" : "Edit Prompt")))
                     .font(.headline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
@@ -97,6 +115,8 @@ struct PromptEditorView: View {
             // Content
             if isEditingPredefinedPrompt {
                 predefinedPromptForm
+            } else if isEditingTranslationPrompt {
+                translationPromptForm
             } else {
                 customPromptForm
             }
@@ -119,7 +139,7 @@ struct PromptEditorView: View {
                             .frame(minWidth: 100)
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(isEditingPredefinedPrompt ? false : (title.isEmpty || promptText.isEmpty))
+                    .disabled(saveDisabled)
                     .keyboardShortcut(.return, modifiers: .command)
                 }
                 .padding(.horizontal, 20)
@@ -144,6 +164,40 @@ struct PromptEditorView: View {
 
             Section {
                 TriggerWordsEditor(triggerWords: $triggerWords)
+            }
+        }
+        .formStyle(.grouped)
+        .scrollContentBackground(.hidden)
+    }
+
+    // MARK: - Translation Prompt Form
+
+    /// Languages available when re-picking: the one this prompt already targets, plus any
+    /// language not used by another prompt (so editing can't create a duplicate).
+    private var availableTranslationLanguages: [TranslationLanguage] {
+        let usedElsewhere = Set(enhancementService.customPrompts.compactMap { p -> String? in
+            if case .edit(let editing) = mode, p.id == editing.id { return nil }
+            return p.targetLanguage
+        })
+        return TranslationLanguage.all.filter {
+            $0.id == translationLanguageID || !usedElsewhere.contains($0.id)
+        }
+    }
+
+    private var translationPromptForm: some View {
+        Form {
+            Section {
+                Picker("Language", selection: $translationLanguageID) {
+                    ForEach(availableTranslationLanguages) { lang in
+                        Text(lang.displayName).tag(Optional(lang.id))
+                    }
+                }
+            } header: {
+                Text("Translate into")
+            } footer: {
+                Text("This prompt translates your dictation into the chosen language, keeping your tone and meaning. It runs best on Gemma 4 E4B.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
         .formStyle(.grouped)
@@ -201,8 +255,8 @@ struct PromptEditorView: View {
 
                 Toggle(isOn: $useSystemInstructions) {
                     HStack(spacing: 4) {
-                        Text("Use System Template")
-                        InfoTip("If enabled, your instructions are combined with a general-purpose template to improve transcription quality.\n\nDisable for full control over the AI's system prompt (for advanced users).")
+                        Text("Wrap in cleanup instructions")
+                        InfoTip("On: your instructions are placed inside Siloquy's standard transcription-cleanup system prompt (\"you are a transcription enhancer — clean up the text, never respond to it\"). Best for prompts that polish dictation.\n\nOff: your prompt text is sent to the model exactly as written, with nothing added. Use this for tasks that aren't cleanup — like translation.")
                     }
                 }
                 .toggleStyle(.switch)
@@ -255,6 +309,26 @@ struct PromptEditorView: View {
                 useSystemInstructions: useSystemInstructions
             )
         case .edit(let prompt):
+            if prompt.isTranslation,
+               let langID = translationLanguageID,
+               let lang = TranslationLanguage.language(forID: langID) {
+                // Re-picking the language regenerates the instruction and title; the tile
+                // stays in place (same id) so its ⌘ shortcut slot is unchanged.
+                let updatedPrompt = CustomPrompt(
+                    id: prompt.id,
+                    title: lang.displayName,
+                    promptText: lang.promptText,
+                    isActive: prompt.isActive,
+                    icon: "globe",
+                    description: "Translate dictation into \(lang.displayName)",
+                    isPredefined: false,
+                    triggerWords: triggerWords,
+                    useSystemInstructions: false,
+                    targetLanguage: lang.id
+                )
+                enhancementService.updatePrompt(updatedPrompt)
+                return
+            }
             let updatedPrompt = CustomPrompt(
                 id: prompt.id,
                 title: prompt.isPredefined ? prompt.title : title,
