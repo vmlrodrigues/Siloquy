@@ -21,7 +21,22 @@ dependencies, no API keys**:
 > Mac, but **transcription quality and the real experience should be validated on
 > a physical device.**
 
-## Open & run on your iPhone
+## Run on your iPhone — without Xcode
+
+Once signing is set up (below), the fastest dev loop needs no GUI:
+
+```bash
+cd ios
+./run-device.sh              # build (Debug), install, and launch on the paired iPhone
+./run-device.sh --console    # …and stream the app's logs to the terminal
+```
+
+Xcode.app must be *installed* (it holds `xcodebuild`/`devicectl`) but never has to
+be open. Requires `testflight.config` (the App Store Connect API key — same file
+`testflight.sh` uses) so provisioning refreshes headlessly. Keep the phone
+unlocked and on the same Wi-Fi (or plugged in) so the install connection holds.
+
+## Open & run in Xcode
 
 ```bash
 cd ios
