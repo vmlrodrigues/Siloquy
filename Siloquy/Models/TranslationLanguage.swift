@@ -34,10 +34,12 @@ struct TranslationLanguage: Identifiable, Hashable {
         .init(id: "es", displayName: "Spanish", promptLanguage: "Spanish", flag: "🇪🇸"),
         .init(id: "de", displayName: "German", promptLanguage: "German", flag: "🇩🇪"),
         .init(id: "it", displayName: "Italian", promptLanguage: "Italian", flag: "🇮🇹"),
+        .init(id: "nl", displayName: "Dutch", promptLanguage: "Dutch", flag: "🇳🇱"),
+        .init(id: "zh", displayName: "Mandarin Chinese", promptLanguage: "Mandarin Chinese (Simplified)", flag: "🇨🇳"),
     ]
 
-    /// Enabled as tiles on first run.
-    static let defaultSeededIDs: [String] = ["pt-PT", "es", "de", "it"]
+    /// Enabled as tiles on first run. The rest are one tap away in the Add Translation picker.
+    static let defaultSeededIDs: [String] = ["pt-PT"]
 
     static func language(forID id: String) -> TranslationLanguage? {
         all.first { $0.id == id }

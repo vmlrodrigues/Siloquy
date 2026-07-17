@@ -114,7 +114,7 @@ struct TranslationLanguagePickerView: View {
         VStack(spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: "info.circle")
-                Text("Best on Gemma 4 E4B, which handles these well — including European and Brazilian Portuguese.")
+                Text("Best on Gemma 4 E4B, which handles these languages well. Each becomes its own tile with the next ⌘ shortcut.")
             }
             .font(.caption)
             .foregroundColor(.secondary)
