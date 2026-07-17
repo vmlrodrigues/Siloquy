@@ -108,3 +108,6 @@ GEMMA_INTEGRATION_FINDINGS.md
 holding/
 DEVELOPER.local.md
 .env
+
+# LLVM coverage artifacts (from profile-instrumented builds)
+*.profraw
