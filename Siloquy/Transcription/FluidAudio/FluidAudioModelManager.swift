@@ -160,10 +160,9 @@ class FluidAudioModelManager: ObservableObject {
             guard totalFiles > 0 else {
                 return "Checking cached models..."
             }
-            // The download phase spans fractionCompleted 0.0–0.5; show it as 0–100% so the
-            // text keeps moving through the one large file instead of freezing on the count.
-            let pct = Int((min(max(progress.fractionCompleted, 0), 0.5) / 0.5) * 100)
-            return "Downloading models: \(completedFiles)/\(totalFiles) files · \(pct)%"
+            // No percentage here — the card shows a single overall % of its own, and the
+            // spinner conveys liveness. Two differently-scaled percentages just confuse (#27).
+            return "Downloading models: \(completedFiles)/\(totalFiles) files"
         case .compiling(let modelName):
             guard !modelName.isEmpty else {
                 return "Finalizing models..."
