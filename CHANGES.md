@@ -7,6 +7,52 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.13.0 — 2026-07-17
+
+#### Added
+- **Translation.** Dictate in English and get the text back in another
+  language. Translation prompts now sit alongside your enhancement prompts,
+  each with its country flag. European Portuguese is ready out of the box; add
+  Spanish, German, Italian, Dutch, or Mandarin Chinese in one tap from the
+  ＋ menu. Each translation is a first-class prompt, so it takes a ⌘-number
+  shortcut like any other and can be reordered, and the recorder shows the
+  flag and a "Translating" status while it runs. It all runs on-device on
+  Gemma 4 E4B. (#25)
+- **Shortcut hints on prompts.** Every prompt tile shows its ⌘-number badge
+  (⌘1 through ⌘0), and the hint now says you can drag tiles to reorder — which
+  is what assigns the shortcut. (#25)
+
+#### Changed
+- **The on-device default prompt now adapts to the model you pick.** Gemma 4
+  E4B gets the full polishing prompt; the smaller Gemma 4 E2B gets a lighter
+  one it handles more reliably — automatically, with nothing to configure.
+  (#22)
+- **Gemma 4 E4B is now the recommended on-device model**, and the one a new
+  install downloads during onboarding. The picker is reworded to match: E4B for
+  quality, E2B as a lighter low-RAM fallback. (#21, #26)
+- The Recommended dictation models list is simplified to a single obvious
+  choice, Parakeet v2; the rest remain under Local, Cloud, and Custom. (#28)
+- The sidebar is clearer: "AI Models" is now "Dictation Models" and
+  "Enhancement" is now "AI Enhancement". (#29)
+
+#### Fixed
+- The transcription-model download no longer looks stuck on the large model
+  file — a live spinner shows it's working, and the progress bar advances
+  instead of freezing on the file count. (#27)
+- Cancelling an on-device model download now actually stops it, instead of
+  quietly running to completion. (#30)
+- History now records the on-device model that actually produced the
+  enhancement, instead of always showing the provider default. (#19)
+- Power Modes can now switch the on-device model; the choice was previously
+  ignored for the local provider. (#20)
+
+#### Removed
+- Qwen3 0.6B is no longer offered as an on-device model — it proved unreliable
+  for enhancement in testing. If you had it selected, you're moved to the
+  recommended model automatically. (#23)
+
+---
+
 ### 0.12.0 — 2026-07-09
 
 #### Added
