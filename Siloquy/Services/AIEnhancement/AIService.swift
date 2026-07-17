@@ -260,6 +260,17 @@ class AIService: ObservableObject {
     }
     
     var currentModel: String {
+        // The Local (On-device) model is selected in GemmaService (localModelSelectedID),
+        // not via selectedModels — derive the name from the engine's actual selection so
+        // history records the model that really ran (#19). Read via UserDefaults, not the
+        // @MainActor service, so this stays callable from any isolation context.
+        if selectedProvider == .gemmaLocal {
+            if let id = UserDefaults.standard.string(forKey: "localModelSelectedID"),
+               let model = GemmaService.catalog.first(where: { $0.id == id }) {
+                return model.displayName
+            }
+            return selectedProvider.defaultModel
+        }
         if let selectedModel = selectedModels[selectedProvider],
            !selectedModel.isEmpty,
            (selectedProvider == .ollama && !selectedModel.isEmpty) || availableModels.contains(selectedModel) {

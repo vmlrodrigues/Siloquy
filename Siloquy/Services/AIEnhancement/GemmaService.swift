@@ -70,7 +70,7 @@ class GemmaService: ObservableObject {
 
     // MARK: - Catalogue
 
-    static let catalog: [LocalModel] = [
+    nonisolated static let catalog: [LocalModel] = [
         LocalModel(
             id: "gemma4-e2b",
             displayName: "Gemma 4 E2B",
