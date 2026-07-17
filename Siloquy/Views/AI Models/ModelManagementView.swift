@@ -305,15 +305,10 @@ struct ModelManagementView: View {
     private var filteredModels: [any TranscriptionModel] {
         switch selectedFilter {
         case .recommended:
-            return transcriptionModelManager.allAvailableModels.filter {
-                let recommendedNames = ["ggml-base.en", "parakeet-tdt-0.6b-v2", "ggml-large-v3-turbo-q5_0", "whisper-large-v3-turbo"]
-                return recommendedNames.contains($0.name)
-            }.sorted { model1, model2 in
-                let recommendedOrder = ["ggml-base.en", "parakeet-tdt-0.6b-v2", "ggml-large-v3-turbo-q5_0", "whisper-large-v3-turbo"]
-                let index1 = recommendedOrder.firstIndex(of: model1.name) ?? Int.max
-                let index2 = recommendedOrder.firstIndex(of: model2.name) ?? Int.max
-                return index1 < index2
-            }
+            // Keep Recommended to a single obvious choice — Parakeet v2. Every other model
+            // is still available under Local (or Cloud/Custom). Simplicity over a menu of
+            // near-equivalent options.
+            return transcriptionModelManager.allAvailableModels.filter { $0.name == "parakeet-tdt-0.6b-v2" }
         case .local:
             return transcriptionModelManager.allAvailableModels.filter {
                 ($0.provider == .whisper || $0.provider == .nativeApple || $0.provider == .fluidAudio)
