@@ -5,6 +5,7 @@ struct EnhancementSettingsView: View {
     @EnvironmentObject private var enhancementService: AIEnhancementService
     @State private var isEditingPrompt = false
     @State private var isShowingSettings = false
+    @State private var isAddingTranslation = false
     @State private var selectedPromptForEdit: CustomPrompt?
     @State private var panelID = UUID()
 
@@ -13,10 +14,12 @@ struct EnhancementSettingsView: View {
     private enum PanelType {
         case promptEditor
         case settings
+        case translationPicker
     }
 
     private var activePanel: PanelType? {
         if isShowingSettings { return .settings }
+        if isAddingTranslation { return .translationPicker }
         if isEditingPrompt || selectedPromptForEdit != nil { return .promptEditor }
         return nil
     }
@@ -35,6 +38,7 @@ struct EnhancementSettingsView: View {
             isEditingPrompt = false
             selectedPromptForEdit = nil
             isShowingSettings = false
+            isAddingTranslation = false
         }
     }
 
@@ -114,10 +118,22 @@ struct EnhancementSettingsView: View {
                 HStack {
                     Text("Enhancement Prompts")
                     Spacer()
-                    Button {
-                        openPromptPanel()
-                        withAnimation(.smooth(duration: 0.3)) {
-                            isEditingPrompt = true
+                    Menu {
+                        Button {
+                            openPromptPanel()
+                            withAnimation(.smooth(duration: 0.3)) {
+                                isEditingPrompt = true
+                            }
+                        } label: {
+                            Label("New prompt", systemImage: "doc.badge.plus")
+                        }
+                        Button {
+                            openPromptPanel()
+                            withAnimation(.smooth(duration: 0.3)) {
+                                isAddingTranslation = true
+                            }
+                        } label: {
+                            Label("Add translation…", systemImage: "globe")
                         }
                     } label: {
                         Image(systemName: "plus.circle.fill")
@@ -125,8 +141,10 @@ struct EnhancementSettingsView: View {
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(.secondary)
                     }
-                    .buttonStyle(.plain)
-                    .help("Add new prompt")
+                    .menuStyle(.borderlessButton)
+                    .menuIndicator(.hidden)
+                    .fixedSize()
+                    .help("Add a prompt or translation")
                 }
             }
         }
@@ -143,6 +161,9 @@ struct EnhancementSettingsView: View {
                 switch activePanel {
                 case .settings:
                     EnhancementSettingsPanel(onDismiss: closePanel)
+                case .translationPicker:
+                    TranslationLanguagePickerView(onDismiss: closePanel)
+                        .id(panelID)
                 case .promptEditor:
                     Group {
                         if let prompt = selectedPromptForEdit {
@@ -176,6 +197,14 @@ private struct ReorderablePromptGrid: View {
 
     @State private var draggingItem: CustomPrompt?
 
+    /// The ⌘-number shortcut for a tile at this position — ⌘1…⌘9 then ⌘0 for the
+    /// tenth, nothing beyond. Mirrors MiniRecorderShortcutManager's positional mapping.
+    static func shortcutLabel(for index: Int) -> String? {
+        if index < 9 { return "⌘\(index + 1)" }
+        if index == 9 { return "⌘0" }
+        return nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             if enhancementService.customPrompts.isEmpty {
@@ -188,9 +217,10 @@ private struct ReorderablePromptGrid: View {
                 ]
 
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(enhancementService.customPrompts) { prompt in
+                    ForEach(Array(enhancementService.customPrompts.enumerated()), id: \.element.id) { index, prompt in
                         prompt.promptIcon(
                             isSelected: selectedPromptId == prompt.id,
+                            shortcutNumber: Self.shortcutLabel(for: index),
                             onTap: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     onPromptSelected(prompt)

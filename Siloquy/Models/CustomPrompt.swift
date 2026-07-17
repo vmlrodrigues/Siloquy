@@ -85,7 +85,15 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     let isPredefined: Bool
     let triggerWords: [String]
     let useSystemInstructions: Bool
-    
+    /// When non-nil, this is a built-in Translation prompt targeting the given language id
+    /// (see TranslationLanguage). Its promptText is a self-contained translation instruction,
+    /// so it is deletable and reorderable like any custom prompt (#25).
+    let targetLanguage: String?
+
+    /// A translation prompt replaces enhancement with "translate to X"; the enhancement
+    /// context appendix (custom vocabulary, English-variant rule) does not apply to it.
+    var isTranslation: Bool { targetLanguage != nil }
+
     init(
         id: UUID = UUID(),
         title: String,
@@ -95,7 +103,8 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         description: String? = nil,
         isPredefined: Bool = false,
         triggerWords: [String] = [],
-        useSystemInstructions: Bool = true
+        useSystemInstructions: Bool = true,
+        targetLanguage: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -106,10 +115,11 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         self.isPredefined = isPredefined
         self.triggerWords = triggerWords
         self.useSystemInstructions = useSystemInstructions
+        self.targetLanguage = targetLanguage
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, promptText, isActive, icon, description, isPredefined, triggerWords, useSystemInstructions
+        case id, title, promptText, isActive, icon, description, isPredefined, triggerWords, useSystemInstructions, targetLanguage
     }
 
     init(from decoder: Decoder) throws {
@@ -123,6 +133,7 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         isPredefined = try container.decode(Bool.self, forKey: .isPredefined)
         triggerWords = try container.decode([String].self, forKey: .triggerWords)
         useSystemInstructions = try container.decodeIfPresent(Bool.self, forKey: .useSystemInstructions) ?? true
+        targetLanguage = try container.decodeIfPresent(String.self, forKey: .targetLanguage)
     }
     
     var finalPromptText: String {
@@ -136,7 +147,7 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
 
 // MARK: - UI Extensions
 extension CustomPrompt {
-    func promptIcon(isSelected: Bool, onTap: @escaping () -> Void, onEdit: ((CustomPrompt) -> Void)? = nil, onDelete: ((CustomPrompt) -> Void)? = nil) -> some View {
+    func promptIcon(isSelected: Bool, shortcutNumber: String? = nil, onTap: @escaping () -> Void, onEdit: ((CustomPrompt) -> Void)? = nil, onDelete: ((CustomPrompt) -> Void)? = nil) -> some View {
         VStack(spacing: 8) {
             ZStack {
                 // Dynamic background with blur effect
@@ -222,7 +233,23 @@ extension CustomPrompt {
                     )
             }
             .frame(width: 48, height: 48)
-            
+            .overlay(alignment: .topLeading) {
+                // The ⌘-number shortcut that activates this prompt, in tile order (#25).
+                // Only the first ten tiles have one (⌘1…⌘9, ⌘0); the rest show nothing.
+                if let shortcutNumber = shortcutNumber {
+                    Text(shortcutNumber)
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundColor(isSelected ? .white : .secondary)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(
+                            Capsule().fill(isSelected ? Color.white.opacity(0.25) : Color(NSColor.controlBackgroundColor))
+                        )
+                        .overlay(Capsule().stroke(Color.secondary.opacity(0.25), lineWidth: 0.5))
+                        .offset(x: -4, y: -4)
+                }
+            }
+
             // Enhanced title styling
             VStack(spacing: 2) {
                 Text(title)
