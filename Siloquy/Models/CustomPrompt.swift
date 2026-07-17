@@ -94,6 +94,15 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     /// context appendix (custom vocabulary, English-variant rule) does not apply to it.
     var isTranslation: Bool { targetLanguage != nil }
 
+    /// The icon to show wherever this prompt appears: a translation prompt shows its
+    /// country flag emoji, everything else shows its SF Symbol name (#25).
+    var displayIcon: String {
+        if let lang = targetLanguage.flatMap({ TranslationLanguage.language(forID: $0) }) {
+            return lang.flag
+        }
+        return icon
+    }
+
     init(
         id: UUID = UUID(),
         title: String,

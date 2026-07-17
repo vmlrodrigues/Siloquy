@@ -139,7 +139,8 @@ struct NotchRecorderView<S: RecorderStateProvider & ObservableObject>: View {
                 RecorderStatusDisplay(
                     currentState: stateProvider.recordingState,
                     audioMeter: recorder.audioMeter,
-                    menuBarHeight: notchHeight
+                    menuBarHeight: notchHeight,
+                    isTranslation: enhancementService.activePrompt?.isTranslation ?? false
                 )
             }
             .padding(.trailing, displayState == .liveText ? 18 : 14)

@@ -69,10 +69,16 @@ struct EnhancementPromptRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 8) {
-                // Use the icon from the prompt
-                Image(systemName: prompt.icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(isDisabled ? .white.opacity(0.4) : .white.opacity(0.7))
+                // Use the icon from the prompt — a translation prompt shows its flag.
+                if prompt.displayIcon.unicodeScalars.contains(where: { !$0.isASCII }) {
+                    Text(prompt.displayIcon)
+                        .font(.system(size: 14))
+                        .opacity(isDisabled ? 0.4 : 1)
+                } else {
+                    Image(systemName: prompt.displayIcon)
+                        .font(.system(size: 14))
+                        .foregroundColor(isDisabled ? .white.opacity(0.4) : .white.opacity(0.7))
+                }
 
                 Text(prompt.title)
                     .foregroundColor(isDisabled ? .white.opacity(0.4) : .white.opacity(0.9))

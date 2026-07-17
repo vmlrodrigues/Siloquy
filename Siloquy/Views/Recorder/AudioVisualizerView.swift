@@ -70,6 +70,7 @@ struct ProcessingStatusDisplay: View {
     enum Mode {
         case transcribing
         case enhancing
+        case translating
     }
 
     let mode: Mode
@@ -79,6 +80,7 @@ struct ProcessingStatusDisplay: View {
         switch mode {
         case .transcribing: return "Transcribing"
         case .enhancing:    return "Enhancing"
+        case .translating:  return "Translating"
         }
     }
 
@@ -86,6 +88,7 @@ struct ProcessingStatusDisplay: View {
         switch mode {
         case .transcribing: return 0.18
         case .enhancing:    return 0.22
+        case .translating:  return 0.22
         }
     }
 

@@ -37,7 +37,8 @@ struct MiniRecorderView<S: RecorderStateProvider & ObservableObject>: View {
 
             RecorderStatusDisplay(
                 currentState: stateProvider.recordingState,
-                audioMeter: recorder.audioMeter
+                audioMeter: recorder.audioMeter,
+                isTranslation: enhancementService.activePrompt?.isTranslation ?? false
             )
 
             Spacer(minLength: 0)

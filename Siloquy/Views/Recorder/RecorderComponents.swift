@@ -161,7 +161,7 @@ struct RecorderPromptButton: View {
     var body: some View {
         RecorderToggleButton(
             isEnabled: enhancementService.isEnhancementEnabled,
-            icon: enhancementService.activePrompt?.icon ?? enhancementService.allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId })?.icon ?? "checkmark.seal.fill",
+            icon: enhancementService.activePrompt?.displayIcon ?? enhancementService.allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId })?.icon ?? "checkmark.seal.fill",
             disabled: false
         ) {
             if enhancementService.isEnhancementEnabled {
@@ -305,17 +305,21 @@ struct RecorderStatusDisplay: View {
     let currentState: RecordingState
     let audioMeter: AudioMeter
     let menuBarHeight: CGFloat?
+    /// When the active prompt is a translation, the "enhancing" step is really a
+    /// translation, so the status reads "Translating" instead (#25).
+    let isTranslation: Bool
 
-    init(currentState: RecordingState, audioMeter: AudioMeter, menuBarHeight: CGFloat? = nil) {
+    init(currentState: RecordingState, audioMeter: AudioMeter, menuBarHeight: CGFloat? = nil, isTranslation: Bool = false) {
         self.currentState = currentState
         self.audioMeter = audioMeter
         self.menuBarHeight = menuBarHeight
+        self.isTranslation = isTranslation
     }
 
     var body: some View {
         Group {
             if currentState == .enhancing {
-                ProcessingStatusDisplay(mode: .enhancing, color: .white).transition(.opacity)
+                ProcessingStatusDisplay(mode: isTranslation ? .translating : .enhancing, color: .white).transition(.opacity)
             } else if currentState == .transcribing {
                 ProcessingStatusDisplay(mode: .transcribing, color: .white).transition(.opacity)
             } else if currentState == .recording {
