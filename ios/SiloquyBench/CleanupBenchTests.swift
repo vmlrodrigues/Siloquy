@@ -38,9 +38,17 @@ struct CleanupBenchTests {
         ]
     }
 
-    @Test("baseline — as the app calls it today",
-          .evaluates(CleanupEvaluation(condition: .baseline, repeats: repeats, items: items), info: info))
-    func baseline() throws { try Self.record(.baseline) }
+    @Test("shipped prompt — as the app calls it today",
+          .evaluates(CleanupEvaluation(condition: .baseline, variant: .shipped, repeats: repeats, items: items), info: info))
+    func shipped() throws { try Self.record(.shipped) }
+
+    /// The regression run. The hardened prompt clears half the guardrail refusals, but
+    /// that was measured on the six failures alone. This runs it over the whole corpus
+    /// to check it does not quietly damage the hundred transcripts it was never aimed
+    /// at — the failure mode the macOS prompt study ran into.
+    @Test("hardened prompt — instruction/data boundary",
+          .evaluates(CleanupEvaluation(condition: .baseline, variant: .hardened, repeats: repeats, items: items), info: info))
+    func hardened() throws { try Self.record(.hardened) }
 
     /// The reasoning conditions from the original #39 plan are not runnable: the
     /// on-device model rejects `reasoningLevel` at runtime with "The selected model
@@ -76,12 +84,12 @@ struct CleanupBenchTests {
     /// Pulls the finished evaluation off `EvaluationContext`, prints it into the
     /// xcodebuild log, and writes the per-sample table into the app container so it
     /// can be pulled off the phone for the write-up.
-    private static func record(_ condition: BenchCondition) throws {
+    private static func record(_ variant: PromptVariant) throws {
         let result = EvaluationContext.current.result
 
         print("""
 
-        ══════════ \(condition.rawValue) ══════════
+        ══════════ \(variant.rawValue) ══════════
         corpus: \(BenchCorpus.isReal ? "real" : "SYNTHETIC — not reportable") (\(items.count) items × \(repeats) repeats)
         duration: \(String(format: "%.1f", result.duration))s
 
@@ -97,7 +105,7 @@ struct CleanupBenchTests {
         let reasoning = result.aggregateValue(.mean(of: Metric(MetricName.reasoningTokens)))
 
         print("""
-        RESULT \(condition.rawValue) \
+        RESULT \(variant.rawValue) \
         deterministic=\(pct(deterministic)) \
         changed=\(pct(changed)) \
         latency_mean=\(String(format: "%.2f", meanLatency))s \
@@ -107,8 +115,8 @@ struct CleanupBenchTests {
 
         """)
 
-        try write(result.detailed, named: "\(condition.rawValue)-detailed.csv")
-        try write(result.summary, named: "\(condition.rawValue)-summary.csv")
+        try write(result.detailed, named: "\(variant.rawValue)-detailed.csv")
+        try write(result.summary, named: "\(variant.rawValue)-summary.csv")
 
         #expect(items.isEmpty == false, "corpus was empty — nothing was measured")
     }

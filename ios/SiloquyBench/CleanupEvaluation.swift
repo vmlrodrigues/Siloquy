@@ -50,6 +50,9 @@ struct CleanupOutcome: Codable, Sendable, Equatable {
     /// refusal are completely different findings, and collapsing both into a count
     /// throws away the answer.
     var errors: [String] = []
+    /// How many times a call was throttled and retried. Not a failure — but if this is
+    /// large the run was fighting the rate limiter and its latency figures are suspect.
+    var rateLimitWaits: Int = 0
 
     /// How many *different* answers the model gave to the same input. This is the
     /// headline number: issue #38 found that on iOS 26 the model would clean a
@@ -112,11 +115,16 @@ struct CleanupEvaluation: Evaluation {
     typealias Sample = CleanupSample
     typealias Subject = ModelSubject<CleanupOutcome>
 
+    /// Rate-limit backoff is 2s doubling; six attempts covers about a minute of
+    /// throttling before a call is finally given up on.
+    static let maxRateLimitRetries = 6
+
     let condition: BenchCondition
+    let variant: PromptVariant
     let repeats: Int
     let items: [CorpusItem]
 
-    var name: String { "cleanup-\(condition.rawValue)" }
+    var name: String { "cleanup-\(variant.rawValue)-\(condition.rawValue)" }
 
     var dataset: ArrayLoader<CleanupSample> {
         ArrayLoader(samples: items.map(CleanupSample.init))
@@ -126,35 +134,65 @@ struct CleanupEvaluation: Evaluation {
         var outcome = CleanupOutcome(raw: sample.item.rawText)
         let clock = ContinuousClock()
 
-        for _ in 0..<repeats {
-            // Fresh session per attempt — matches `EnhancementService.attempt`, and
-            // keeps repeats independent rather than letting one prime the next.
-            let session = LanguageModelSession(instructions: EnhancementService.instructions)
-            let start = clock.now
-            do {
-                let response = try await session.respond(
-                    to: "Dictation to clean:\n\n\(sample.item.rawText)",
-                    generating: CleanedDictation.self,
-                    // `includeSchemaInPrompt: true` is the default for the
-                    // schema-generating overloads. Passing ContextOptions replaces
-                    // that default wholesale, so it has to be restated or the
-                    // reasoning conditions would silently differ from baseline in a
-                    // second way and confound the comparison.
-                    contextOptions: ContextOptions(
-                        includeSchemaInPrompt: true,
-                        reasoningLevel: condition.reasoningLevel
+        for repeatIndex in 0..<repeats {
+            // A run of several hundred calls trips the model's rate limiter. That is a
+            // property of hammering it in a loop, not of the prompt under test, so it
+            // must never land in `failures` — a throttled run once looked like a
+            // catastrophic prompt regression (223 "refusals") when nothing was wrong.
+            // Pace the calls, and back off rather than record a result.
+            if repeatIndex > 0 { try? await Task.sleep(for: .milliseconds(150)) }
+
+            var backoff = Duration.seconds(2)
+            var settled = false
+
+            for attempt in 0..<Self.maxRateLimitRetries {
+                // Fresh session per attempt — matches `EnhancementService.attempt`, and
+                // keeps repeats independent rather than letting one prime the next.
+                let session = LanguageModelSession(instructions: variant.instructions)
+                let start = clock.now
+                do {
+                    let response = try await session.respond(
+                        to: variant.prompt(sample.item.rawText),
+                        generating: CleanedDictation.self,
+                        // `includeSchemaInPrompt: true` is the default for the
+                        // schema-generating overloads. Passing ContextOptions replaces
+                        // that default wholesale, so it has to be restated or the
+                        // reasoning conditions would silently differ from baseline in a
+                        // second way and confound the comparison.
+                        contextOptions: ContextOptions(
+                            includeSchemaInPrompt: true,
+                            reasoningLevel: condition.reasoningLevel
+                        )
                     )
-                )
-                outcome.seconds.append(Self.seconds(clock.now - start))
-                outcome.texts.append(
-                    response.content.cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
-                )
-                outcome.inputTokens.append(response.usage.input.totalTokenCount)
-                outcome.outputTokens.append(response.usage.output.totalTokenCount)
-                outcome.reasoningTokens.append(response.usage.output.reasoningTokenCount)
-            } catch {
+                    outcome.seconds.append(Self.seconds(clock.now - start))
+                    outcome.texts.append(
+                        response.content.cleanedText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    )
+                    outcome.inputTokens.append(response.usage.input.totalTokenCount)
+                    outcome.outputTokens.append(response.usage.output.totalTokenCount)
+                    outcome.reasoningTokens.append(response.usage.output.reasoningTokenCount)
+                    settled = true
+                } catch let error as LanguageModelError {
+                    if case .rateLimited = error, attempt < Self.maxRateLimitRetries - 1 {
+                        outcome.rateLimitWaits += 1
+                        try? await Task.sleep(for: backoff)
+                        backoff *= 2
+                        continue
+                    }
+                    outcome.failures += 1
+                    outcome.errors.append(String(describing: error))
+                    settled = true
+                } catch {
+                    outcome.failures += 1
+                    outcome.errors.append(String(describing: error))
+                    settled = true
+                }
+                if settled { break }
+            }
+
+            if !settled {
                 outcome.failures += 1
-                outcome.errors.append(String(describing: error))
+                outcome.errors.append("rate limited through \(Self.maxRateLimitRetries) attempts")
             }
         }
 
@@ -162,9 +200,10 @@ struct CleanupEvaluation: Evaluation {
         // long, and if a condition is going to fail we want to know on sample one,
         // not forty minutes later. It also survives the test body being skipped when
         // the framework throws during aggregation.
-        print("BENCH \(condition.rawValue) \(sample.item.id) "
+        print("BENCH \(variant.rawValue) \(sample.item.id) "
               + "distinct=\(outcome.distinctTexts) failures=\(outcome.failures) "
               + "mean=\(String(format: "%.2f", outcome.meanSeconds))s"
+              + (outcome.rateLimitWaits > 0 ? " throttled=\(outcome.rateLimitWaits)" : "")
               + (outcome.errors.isEmpty ? "" : " ERROR=\(outcome.errors[0])"))
 
         return ModelSubject(value: outcome)
