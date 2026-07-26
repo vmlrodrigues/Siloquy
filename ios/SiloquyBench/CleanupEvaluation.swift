@@ -46,6 +46,10 @@ struct CleanupOutcome: Codable, Sendable, Equatable {
     var reasoningTokens: [Int] = []
     /// Repeats where the model threw — guardrail violation, context overflow, etc.
     var failures: Int = 0
+    /// Why they threw. Kept verbatim: an unsupported-option error and a guardrail
+    /// refusal are completely different findings, and collapsing both into a count
+    /// throws away the answer.
+    var errors: [String] = []
 
     /// How many *different* answers the model gave to the same input. This is the
     /// headline number: issue #38 found that on iOS 26 the model would clean a
@@ -150,8 +154,18 @@ struct CleanupEvaluation: Evaluation {
                 outcome.reasoningTokens.append(response.usage.output.reasoningTokenCount)
             } catch {
                 outcome.failures += 1
+                outcome.errors.append(String(describing: error))
             }
         }
+
+        // Printed per sample rather than collected at the end: a full matrix run is
+        // long, and if a condition is going to fail we want to know on sample one,
+        // not forty minutes later. It also survives the test body being skipped when
+        // the framework throws during aggregation.
+        print("BENCH \(condition.rawValue) \(sample.item.id) "
+              + "distinct=\(outcome.distinctTexts) failures=\(outcome.failures) "
+              + "mean=\(String(format: "%.2f", outcome.meanSeconds))s"
+              + (outcome.errors.isEmpty ? "" : " ERROR=\(outcome.errors[0])"))
 
         return ModelSubject(value: outcome)
     }

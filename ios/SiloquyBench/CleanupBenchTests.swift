@@ -1,7 +1,9 @@
 import Evaluations
 import Foundation
+import FoundationModels
 import TabularData
 import Testing
+@testable import Siloquy
 
 /// The iOS 27 on-device cleanup benchmark — issue #39.
 ///
@@ -40,17 +42,34 @@ struct CleanupBenchTests {
           .evaluates(CleanupEvaluation(condition: .baseline, repeats: repeats, items: items), info: info))
     func baseline() throws { try Self.record(.baseline) }
 
-    @Test("reasoningLevel .light",
-          .evaluates(CleanupEvaluation(condition: .light, repeats: repeats, items: items), info: info))
-    func light() throws { try Self.record(.light) }
+    /// The reasoning conditions from the original #39 plan are not runnable: the
+    /// on-device model rejects `reasoningLevel` at runtime with "The selected model
+    /// does not support reasoning", even though `ContextOptions` is model-agnostic
+    /// at the API level and compiles fine against any model.
+    ///
+    /// Kept as a one-shot probe rather than deleted, so that if a later beta enables
+    /// reasoning on-device this test starts failing and tells us to revisit. Running
+    /// the full corpus through it would just be 318 instant failures.
+    @Test("on-device model still rejects reasoningLevel")
+    func reasoningUnsupported() async throws {
+        let session = LanguageModelSession(instructions: EnhancementService.instructions)
+        var thrown: String?
+        do {
+            _ = try await session.respond(
+                to: "Dictation to clean:\n\num so I was thinking maybe we move it to Tuesday",
+                generating: CleanedDictation.self,
+                contextOptions: ContextOptions(includeSchemaInPrompt: true, reasoningLevel: .light)
+            )
+        } catch {
+            thrown = String(describing: error)
+        }
 
-    @Test("reasoningLevel .moderate",
-          .evaluates(CleanupEvaluation(condition: .moderate, repeats: repeats, items: items), info: info))
-    func moderate() throws { try Self.record(.moderate) }
-
-    @Test("reasoningLevel .deep",
-          .evaluates(CleanupEvaluation(condition: .deep, repeats: repeats, items: items), info: info))
-    func deep() throws { try Self.record(.deep) }
+        print("REASONING PROBE: \(thrown ?? "ACCEPTED — reasoning now works on-device")")
+        #expect(
+            thrown != nil,
+            "reasoningLevel is now accepted on-device — the .light/.moderate/.deep conditions are back in play, reopen #39"
+        )
+    }
 
     // MARK: -
 
