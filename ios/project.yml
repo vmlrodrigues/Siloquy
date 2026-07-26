@@ -57,6 +57,21 @@ targets:
         UIBackgroundModes:
           - audio
 
+  # Issue #39 — measures the iOS 27 on-device model. Requires iOS 27 because the
+  # Evaluations framework does; the app itself stays on 26.0.
+  SiloquyBench:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "27.0"
+    sources:
+      - path: SiloquyBench
+    dependencies:
+      - target: Siloquy
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.victorrodrigues.siloquy.ios.bench
+        GENERATE_INFOPLIST_FILE: YES
+
   SiloquyWidget:
     type: app-extension
     platform: iOS
@@ -88,6 +103,10 @@ schemes:
         Siloquy: all
     run:
       config: Debug
+    test:
+      config: Debug
+      targets:
+        - SiloquyBench
     profile:
       config: Release
     analyze:

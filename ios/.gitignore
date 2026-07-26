@@ -12,3 +12,7 @@ build/
 
 # TestFlight upload secrets (the .p8 lives outside the repo)
 testflight.config
+
+# Benchmark corpus — real dictation, never committed. Built by pulling the app's
+# store off the phone; the target falls back to synthetic samples without it.
+SiloquyBench/Fixtures/

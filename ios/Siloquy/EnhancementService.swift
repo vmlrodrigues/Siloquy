@@ -2,10 +2,13 @@ import Foundation
 import FoundationModels
 
 /// Structured output: forces the model to return ONLY the cleaned text
-/// (no "Sure, here's…" preamble). File-scoped so the @Generable-synthesized
-/// conformance can access it.
+/// (no "Sure, here's…" preamble).
+///
+/// Internal rather than fileprivate so the SiloquyBench target measures the schema
+/// the app actually ships — a copied `@Generable` type would drift, and the `@Guide`
+/// description is part of the prompt the model sees.
 @Generable
-fileprivate struct CleanedDictation {
+struct CleanedDictation {
     @Guide(description: "The dictation rewritten as clean, natural text: filler words and false starts removed, accidental repeated words collapsed, grammar/spelling/punctuation fixed, self-corrections applied. Plain text only — no quotes, no commentary, no explanation.")
     var cleanedText: String
 }
@@ -48,7 +51,10 @@ final class EnhancementService {
         return nil
     }
 
-    private static let instructions = """
+    /// `nonisolated` so the benchmark can read it off the main actor; internal so it
+    /// is measured rather than duplicated. Treat as the single source of truth for
+    /// the cleanup prompt.
+    nonisolated static let instructions = """
     You are a text-cleanup function for dictation — not a chat assistant. You \
     receive a raw speech-to-text transcript and rewrite it so it reads as if it \
     were carefully typed.
