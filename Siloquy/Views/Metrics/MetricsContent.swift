@@ -69,6 +69,9 @@ struct MetricsContent: View {
     @State private var isModelStatsPanelPresented = false
     @State private var isAccessibilityEnabled = AXIsProcessTrusted()
     @State private var scope: DashboardScope = .allDevices
+    /// Device awaiting delete confirmation. Deleting discards session history, so it is
+    /// offered only on already-archived devices and never happens on a single click.
+    @State private var devicePendingDeletion: DeviceStats?
 
     // The hero and metric cards honour the scope toggle: all active devices combined,
     // or just the Mac being viewed.
@@ -79,7 +82,7 @@ struct MetricsContent: View {
     private var currentDevice: DeviceStats? { aggregate.devices.first { $0.isCurrentDevice } }
 
     // Multi-device chrome only appears when there's more than one device to show.
-    private var showConsolidation: Bool { aggregate.activeDevices.count > 1 }
+    private var showConsolidation: Bool { aggregate.devices.count > 1 }
     private var showRoster: Bool { aggregate.devices.count > 1 }
     private var showSplits: Bool { showConsolidation && scope == .allDevices }
 
@@ -178,6 +181,22 @@ struct MetricsContent: View {
             }
         }
         .animation(.smooth(duration: 0.3), value: isModelStatsPanelPresented)
+        .alert(
+            "Delete \(devicePendingDeletion?.deviceName ?? "this Mac")'s history?",
+            isPresented: Binding(
+                get: { devicePendingDeletion != nil },
+                set: { if !$0 { devicePendingDeletion = nil } }
+            ),
+            presenting: devicePendingDeletion
+        ) { device in
+            Button("Delete Permanently", role: .destructive) {
+                deleteDevice(device)
+                devicePendingDeletion = nil
+            }
+            Button("Cancel", role: .cancel) { devicePendingDeletion = nil }
+        } message: { device in
+            Text("\(Formatters.formattedNumber(device.sessionCount)) sessions and \(Formatters.formattedNumber(device.totalWords)) words will be erased and removed from your totals. This can't be undone.\n\nIf you just want this Mac out of the way, leave it archived — its hours still count.")
+        }
     }
 
     private var accessibilityPermissionCallout: some View {
@@ -363,10 +382,11 @@ struct MetricsContent: View {
                 .foregroundColor(.secondary)
 
             HStack(spacing: 4) {
-                ForEach(aggregate.activeDevices) { device in
+                ForEach(aggregate.devices) { device in
                     Circle()
                         .fill(deviceColor(for: device))
                         .frame(width: 8, height: 8)
+                        .opacity(device.isArchived ? 0.4 : 1)
                 }
             }
 
@@ -384,7 +404,7 @@ struct MetricsContent: View {
 
     private var scopeCaption: String {
         switch scope {
-        case .allDevices: return "Combined across \(aggregate.activeDevices.count) Macs"
+        case .allDevices: return "Combined across \(aggregate.devices.count) Macs"
         case .thisMac: return "Showing this Mac only"
         }
     }
@@ -392,7 +412,7 @@ struct MetricsContent: View {
     /// A per-device split bar (segment widths proportional to each active device's value).
     private func splitBar(_ value: @escaping (DeviceStats) -> Double) -> AnyView {
         AnyView(
-            DeviceSplitBar(segments: aggregate.activeDevices.map {
+            DeviceSplitBar(segments: aggregate.devices.map {
                 DeviceSplitBar.Segment(color: deviceColor(for: $0), value: value($0))
             })
         )
@@ -401,7 +421,7 @@ struct MetricsContent: View {
     /// WPM is a rate, not a sum, so it shows the weighted average plus each Mac's own figure.
     private var perMacWordsPerMinuteFooter: AnyView {
         var text = Text("Weighted avg · ").foregroundColor(.secondary)
-        for (index, device) in aggregate.activeDevices.enumerated() {
+        for (index, device) in aggregate.devices.enumerated() {
             if index > 0 { text = text + Text(" / ").foregroundColor(.secondary) }
             text = text + Text("\(Int(device.wordsPerMinute.rounded()))").foregroundColor(deviceColor(for: device))
         }
@@ -416,8 +436,8 @@ struct MetricsContent: View {
                     .foregroundColor(.secondary)
                 Text("Devices")
                     .font(.system(size: 16, weight: .semibold))
-                if aggregate.activeDevices.count > 1 {
-                    Text("\(aggregate.activeDevices.count)")
+                if aggregate.devices.count > 1 {
+                    Text("\(aggregate.devices.count)")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 7)
@@ -433,7 +453,8 @@ struct MetricsContent: View {
                         device: device,
                         color: deviceColor(for: device),
                         onArchive: { archiveDevice(device) },
-                        onRestore: { restoreDevice(device) }
+                        onRestore: { restoreDevice(device) },
+                        onDelete: { devicePendingDeletion = device }
                     )
                 }
             }
@@ -476,6 +497,39 @@ struct MetricsContent: View {
         if let existing = try? modelContext.fetch(descriptor) {
             for record in existing { modelContext.delete(record) }
         }
+        persistDeviceChangeAndReload()
+    }
+
+    /// Permanently discard a device's session history.
+    ///
+    /// The counterpart to archiving: archiving tidies a retired Mac out of the list while
+    /// keeping its hours in the lifetime totals; deleting says the dictation should never
+    /// have counted — a test rig, a loaner, someone else's Mac. Irreversible, so it is
+    /// offered only on archived devices and only behind a confirmation.
+    private func deleteDevice(_ device: DeviceStats) {
+        let targetID = device.deviceID
+
+        let metrics = FetchDescriptor<SessionMetric>(
+            predicate: #Predicate { $0.deviceID == targetID }
+        )
+        var removed = 0
+        if let records = try? modelContext.fetch(metrics) {
+            for record in records {
+                modelContext.delete(record)
+                removed += 1
+            }
+        }
+
+        // Drop the tombstone too, so a device that starts recording again comes back
+        // clean rather than reappearing pre-archived.
+        let tombstones = FetchDescriptor<ArchivedDevice>(
+            predicate: #Predicate { $0.deviceID == targetID }
+        )
+        if let records = try? modelContext.fetch(tombstones) {
+            for record in records { modelContext.delete(record) }
+        }
+
+        logger.notice("Deleted \(removed, privacy: .public) session metrics for archived device")
         persistDeviceChangeAndReload()
     }
 
@@ -528,7 +582,7 @@ struct MetricsContent: View {
         let base = "Dictated \(wordsText) words across \(totalCount) \(sessionText)."
 
         if showSplits {
-            return base + " Combined from \(aggregate.activeDevices.count) Macs."
+            return base + " Combined from \(aggregate.devices.count) Macs."
         }
         return base
     }
@@ -597,6 +651,7 @@ private struct DeviceStatRow: View {
     let color: Color
     let onArchive: () -> Void
     let onRestore: () -> Void
+    let onDelete: () -> Void
 
     /// A non-current device that hasn't recorded in over 30 days — a hint that it may
     /// be worth archiving. The current Mac is never stale.
@@ -666,11 +721,20 @@ private struct DeviceStatRow: View {
 
     @ViewBuilder private var actionButton: some View {
         if device.isArchived {
-            Button("Restore", action: onRestore)
+            HStack(spacing: 12) {
+                Button("Restore", action: onRestore)
+                    .buttonStyle(.plain)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(Color(nsColor: .controlAccentColor))
+                    .help("Move this Mac back into the active list")
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
                 .buttonStyle(.plain)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundColor(Color(nsColor: .controlAccentColor))
-                .help("Restore this device to your combined totals")
+                .help("Delete this Mac's history permanently — removes it from your totals")
+            }
         } else if !device.isCurrentDevice {
             Button(action: onArchive) {
                 Image(systemName: "archivebox")
@@ -678,7 +742,7 @@ private struct DeviceStatRow: View {
                     .foregroundColor(.secondary)
             }
             .buttonStyle(.plain)
-            .help("Archive this device — removes it from your combined totals (reversible)")
+            .help("Archive this Mac — tidies it out of the list, keeps its hours in your totals")
         }
     }
 

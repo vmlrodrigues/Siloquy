@@ -27,8 +27,7 @@ struct DeviceStats: Identifiable, Equatable, Sendable {
     var keystrokesSaved: Int { Int(Double(totalWords) * 5.0) }
 }
 
-/// The full cross-device aggregation: every known device plus combined totals
-/// computed over the *active* (non-archived) devices only.
+/// The full cross-device aggregation: every known device plus combined lifetime totals.
 struct DeviceStatsAggregate: Equatable, Sendable {
     /// Every device that has recorded a session (plus any archived tombstone),
     /// sorted current-device-first, then most-recently-active first.
@@ -37,11 +36,16 @@ struct DeviceStatsAggregate: Equatable, Sendable {
     var activeDevices: [DeviceStats] { devices.filter { !$0.isArchived } }
     var archivedDevices: [DeviceStats] { devices.filter { $0.isArchived } }
 
-    // MARK: Combined totals — active devices only
+    // MARK: Combined totals — every device, archived included
 
-    var totalSessions: Int { activeDevices.reduce(0) { $0 + $1.sessionCount } }
-    var totalWords: Int { activeDevices.reduce(0) { $0 + $1.totalWords } }
-    var totalDuration: TimeInterval { activeDevices.reduce(0) { $0 + $1.totalDuration } }
+    // Archiving is a presentation choice: it tidies a retired Mac out of the device
+    // list. It is not a claim that the dictation never happened, so the lifetime
+    // figures keep counting it. Replacing a Mac should not erase the hours it saved.
+    // Removing a device from the totals is what Delete is for.
+
+    var totalSessions: Int { devices.reduce(0) { $0 + $1.sessionCount } }
+    var totalWords: Int { devices.reduce(0) { $0 + $1.totalWords } }
+    var totalDuration: TimeInterval { devices.reduce(0) { $0 + $1.totalDuration } }
 
     /// Combined WPM is the duration-weighted average — total words over total speaking
     /// time. Summing or averaging per-device WPM values would be wrong.
@@ -60,8 +64,8 @@ struct DeviceStatsAggregate: Equatable, Sendable {
 /// Every `SessionMetric` is attributed to a device via its `deviceID`. Records that
 /// predate per-device attribution (nil `deviceID`) are treated as belonging to the
 /// local Mac — on any given machine, its own un-attributed history is its own.
-/// Devices named in the `ArchivedDevice` tombstone table are flagged `isArchived` and
-/// excluded from combined totals, but still returned so the UI can offer un-archiving.
+/// Devices named in the `ArchivedDevice` tombstone table are flagged `isArchived` so the
+/// UI can group them separately, but they still count toward the combined lifetime totals.
 enum DeviceStatsAggregator {
 
     static func aggregate(
