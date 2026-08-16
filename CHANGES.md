@@ -7,6 +7,27 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.13.2 — 2026-08-16
+
+#### Fixed
+- **Archiving a Mac no longer erases its history from your totals.** Retiring a
+  machine used to wipe its whole contribution from the dashboard — hours, words
+  and sessions all vanished, in one case dropping Time Saved from 98 hours to 52.
+  Nothing was ever deleted, but a lifetime total that falls when you replace a
+  laptop isn't measuring a lifetime. Archived Macs now keep counting. (#41)
+
+#### Changed
+- **Archived Macs fold out of the way.** They collapse into a single row that
+  names them, expanding in place when you want it, so the device list shows the
+  Macs you actually use — and un-archiving one stays on the same screen. (#41)
+- **Deleting a Mac's history is now its own action**, sitting beside Restore on
+  an archived machine. It asks first, naming the exact sessions and words it will
+  erase. Use it for a test rig or a loaner whose dictation was never really
+  yours; for a Mac you've simply replaced, leave it archived and keep the
+  hours. (#41)
+
+---
+
 ### 0.13.1 — 2026-07-17
 
 #### Changed
