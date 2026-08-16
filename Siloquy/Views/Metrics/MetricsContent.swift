@@ -72,6 +72,8 @@ struct MetricsContent: View {
     /// Device awaiting delete confirmation. Deleting discards session history, so it is
     /// offered only on already-archived devices and never happens on a single click.
     @State private var devicePendingDeletion: DeviceStats?
+    /// Archived Macs stay folded away until asked for — they are retired, not interesting.
+    @State private var isArchivedGroupExpanded = false
 
     // The hero and metric cards honour the scope toggle: all active devices combined,
     // or just the Mac being viewed.
@@ -436,8 +438,10 @@ struct MetricsContent: View {
                     .foregroundColor(.secondary)
                 Text("Devices")
                     .font(.system(size: 16, weight: .semibold))
-                if aggregate.devices.count > 1 {
-                    Text("\(aggregate.devices.count)")
+                // Counts the Macs in the list. Archived ones are tucked into their own
+                // collapsed group below and carry their own count.
+                if aggregate.activeDevices.count > 1 {
+                    Text("\(aggregate.activeDevices.count)")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(.secondary)
                         .padding(.horizontal, 7)
@@ -448,7 +452,7 @@ struct MetricsContent: View {
             }
 
             VStack(spacing: 10) {
-                ForEach(aggregate.devices) { device in
+                ForEach(aggregate.activeDevices) { device in
                     DeviceStatRow(
                         device: device,
                         color: deviceColor(for: device),
@@ -457,9 +461,66 @@ struct MetricsContent: View {
                         onDelete: { devicePendingDeletion = device }
                     )
                 }
+
+                if !aggregate.archivedDevices.isEmpty { archivedGroup }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Archived Macs, folded away behind a single quiet row.
+    ///
+    /// They still count toward the totals, so they can't simply vanish — but they are
+    /// retired hardware and shouldn't take up space in the list every day. Collapsed by
+    /// default, one click to open, restore and delete live inside. No separate screen:
+    /// undoing a mistaken archive should not be a hunt.
+    private var archivedGroup: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                withAnimation(.smooth(duration: 0.22)) { isArchivedGroupExpanded.toggle() }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .rotationEffect(.degrees(isArchivedGroupExpanded ? 90 : 0))
+                    Image(systemName: "archivebox")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                    Text(archivedSummary)
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(isArchivedGroupExpanded ? "Hide archived Macs" : "Show archived Macs, and restore any you archived by mistake")
+
+            if isArchivedGroupExpanded {
+                ForEach(aggregate.archivedDevices) { device in
+                    DeviceStatRow(
+                        device: device,
+                        color: deviceColor(for: device),
+                        onArchive: { archiveDevice(device) },
+                        onRestore: { restoreDevice(device) },
+                        onDelete: { devicePendingDeletion = device }
+                    )
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    /// Names the archived Macs when there are few enough to read at a glance, so the row
+    /// is useful without being opened.
+    private var archivedSummary: String {
+        let archived = aggregate.archivedDevices
+        let count = archived.count
+        let noun = count == 1 ? "archived Mac" : "archived Macs"
+        guard count <= 2 else { return "\(count) \(noun)" }
+        return "\(count) \(noun) — \(archived.map(\.deviceName).joined(separator: ", "))"
     }
 
     /// Stable per-device accent. The current Mac is always teal; others get a
@@ -509,15 +570,31 @@ struct MetricsContent: View {
     private func deleteDevice(_ device: DeviceStats) {
         let targetID = device.deviceID
 
-        let metrics = FetchDescriptor<SessionMetric>(
-            predicate: #Predicate { $0.deviceID == targetID }
-        )
         var removed = 0
-        if let records = try? modelContext.fetch(metrics) {
+        do {
+            let metrics = FetchDescriptor<SessionMetric>(
+                predicate: #Predicate { $0.deviceID == targetID }
+            )
+            var records = try modelContext.fetch(metrics)
+
+            // `deviceID` is optional, so the predicate compares String? to String. That
+            // holds for every record written today, but a store with un-attributed rows
+            // would quietly match nothing — and a delete that silently removes zero rows
+            // looks exactly like a broken button. Fall back to filtering in memory rather
+            // than reporting a success that didn't happen.
+            if records.isEmpty && device.sessionCount > 0 {
+                logger.notice("Predicate matched no metrics for a device claiming \(device.sessionCount, privacy: .public) sessions; falling back to an in-memory scan.")
+                records = try modelContext.fetch(FetchDescriptor<SessionMetric>())
+                    .filter { $0.deviceID == targetID }
+            }
+
             for record in records {
                 modelContext.delete(record)
                 removed += 1
             }
+        } catch {
+            logger.error("Failed to fetch metrics for deletion: \(error.localizedDescription, privacy: .public)")
+            return
         }
 
         // Drop the tombstone too, so a device that starts recording again comes back
@@ -529,7 +606,10 @@ struct MetricsContent: View {
             for record in records { modelContext.delete(record) }
         }
 
-        logger.notice("Deleted \(removed, privacy: .public) session metrics for archived device")
+        logger.notice("Deleted \(removed, privacy: .public) of \(device.sessionCount, privacy: .public) expected session metrics for archived device")
+        // Collapse the group if that was the last archived Mac, so an empty
+        // disclosure row isn't left behind.
+        if aggregate.archivedDevices.count <= 1 { isArchivedGroupExpanded = false }
         persistDeviceChangeAndReload()
     }
 
@@ -701,6 +781,7 @@ private struct DeviceStatRow: View {
                     .font(.system(size: 11))
                     .foregroundColor(Color.secondary.opacity(0.7))
             }
+            .opacity(device.isArchived ? 0.6 : 1)
 
             Spacer(minLength: 8)
 
@@ -716,24 +797,24 @@ private struct DeviceStatRow: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.06), lineWidth: 1)
         )
-        .opacity(device.isArchived ? 0.55 : 1)
     }
 
     @ViewBuilder private var actionButton: some View {
         if device.isArchived {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 Button("Restore", action: onRestore)
                     .buttonStyle(.plain)
-                    .font(.system(size: 12, weight: .medium))
+                    .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(Color(nsColor: .controlAccentColor))
                     .help("Move this Mac back into the active list")
                 Button(action: onDelete) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 12))
-                        .foregroundColor(.secondary)
+                    Label("Delete", systemImage: "trash")
+                        .labelStyle(.titleAndIcon)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.red)
                 }
                 .buttonStyle(.plain)
-                .help("Delete this Mac's history permanently — removes it from your totals")
+                .help("Permanently erase this Mac's sessions and remove them from your totals")
             }
         } else if !device.isCurrentDevice {
             Button(action: onArchive) {
