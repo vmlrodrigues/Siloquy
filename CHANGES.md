@@ -7,6 +7,20 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.13.3 — 2026-08-16
+
+#### Fixed
+- **A selected local model that isn't downloaded now says so.** Choosing a model
+  filled its radio button and looked settled, while AI enhancement quietly did
+  nothing — the only clue was a Download button in the same row. The row now
+  states plainly that enhancement is off, and names another model if one is
+  already downloaded and ready. Selecting a model still never starts a download
+  on its own. (#46)
+- The app now ships the complete GNU GPL v3 text rather than only its preamble
+  and a link. No change to the licence — Siloquy was and remains GPL v3. (#45)
+
+---
+
 ### 0.13.2 — 2026-08-16
 
 #### Fixed
