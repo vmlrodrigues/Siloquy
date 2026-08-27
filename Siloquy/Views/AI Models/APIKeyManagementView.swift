@@ -515,6 +515,23 @@ private struct GemmaLocalSetupView: View {
                 actionButtons(for: model, state: state)
             }
 
+            // Selected but not on disk. The filled radio above is the loudest
+            // signal in the panel and reads as "active"; the only contrary hint
+            // is a Download button, which asks the reader to infer state from
+            // which buttons are absent. Say it outright instead — otherwise the
+            // first sign of trouble is enhancement quietly doing nothing.
+            if isSelected, case .notDownloaded = state {
+                Label {
+                    Text(unavailableSelectionMessage(for: model))
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .font(.caption)
+                .foregroundColor(.orange)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.leading, 22)
+            }
+
             // What it's good for
             if !model.blurb.isEmpty {
                 Text(model.blurb)
@@ -546,6 +563,19 @@ private struct GemmaLocalSetupView: View {
     }
 
     // MARK: - Action buttons per state
+
+    /// Explains that the selected model can't run, and points at the way out —
+    /// naming an already-downloaded alternative when one exists, so the reader
+    /// doesn't have to work out which of the other rows is usable.
+    private func unavailableSelectionMessage(for model: LocalModel) -> String {
+        let ready = GemmaService.catalog.first { other in
+            other.id != model.id && gemmaService.isDownloaded(other)
+        }
+        if let ready {
+            return "Not downloaded — AI enhancement is off. Download it, or select \(ready.displayName), which is ready to use."
+        }
+        return "Not downloaded — AI enhancement is off until you download this model."
+    }
 
     @ViewBuilder
     private func actionButtons(for model: LocalModel, state: DownloadState) -> some View {
