@@ -75,7 +75,10 @@ struct DictationLanguagesSection: View {
                 languageToRemove = nil
             }
         } message: { _ in
-            Text("Its shortcut will be cleared. The downloaded language model stays on your Mac, so adding it back later needs no download.")
+            // Careful not to over-promise: removing releases the locale's reservation,
+            // which is precisely what makes macOS willing to reclaim the model. It
+            // usually survives, but it is not ours to keep or to delete.
+            Text("Its shortcut will be cleared. The speech model belongs to macOS, which reclaims it when it needs the space — so re-adding this language often needs no download, and nothing can delete it on demand.")
         }
     }
 
