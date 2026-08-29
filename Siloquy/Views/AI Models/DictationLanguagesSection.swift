@@ -79,19 +79,35 @@ struct DictationLanguagesSection: View {
 
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 9) {
-                Text(language.flag)
-                Text(language.nativeName)
-                    .fontWeight(language == manager.current ? .semibold : .regular)
+                // Clicking the language switches to it. A shortcut is the fast path once
+                // you know it, but it cannot be the only path: nothing on screen would
+                // otherwise let you change language, and a shortcut you have not bound
+                // yet leaves you stuck.
+                Button {
+                    manager.select(language)
+                } label: {
+                    HStack(spacing: 9) {
+                        Text(language.flag)
+                        Text(language.nativeName)
+                            .fontWeight(language == manager.current ? .semibold : .regular)
+                            .foregroundColor(.primary)
 
-                if language == manager.current {
-                    Text("Active")
-                        .font(.caption2)
-                        .fontWeight(.medium)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.accentColor.opacity(0.18), in: Capsule())
-                        .foregroundColor(.accentColor)
+                        if language == manager.current {
+                            Text("Active")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.accentColor.opacity(0.18), in: Capsule())
+                                .foregroundColor(.accentColor)
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help(language == manager.current
+                      ? "Already dictating in \(language.nativeName)"
+                      : "Dictate in \(language.nativeName)")
 
                 Spacer(minLength: 12)
 

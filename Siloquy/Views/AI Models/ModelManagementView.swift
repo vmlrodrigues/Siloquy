@@ -4,7 +4,7 @@ import AppKit
 import UniformTypeIdentifiers
 
 enum ModelFilter: String, CaseIterable, Identifiable {
-    case recommended = "Recommended"
+    case downloaded = "Downloaded"
     case local = "Local"
     case cloud = "Cloud"
     case custom = "Custom"
@@ -23,7 +23,7 @@ struct ModelManagementView: View {
     @StateObject private var whisperPrompt = WhisperPrompt()
     @ObservedObject private var warmupCoordinator = WhisperModelWarmupCoordinator.shared
 
-    @State private var selectedFilter: ModelFilter = .recommended
+    @State private var selectedFilter: ModelFilter = .downloaded
     @State private var isShowingSettings = false
 
     private let settingsPanelWidth: CGFloat = 400
@@ -284,11 +284,14 @@ struct ModelManagementView: View {
 
     private var filteredModels: [any TranscriptionModel] {
         switch selectedFilter {
-        case .recommended:
-            // Keep Recommended to a single obvious choice — Parakeet v2. Every other model
-            // is still available under Local (or Cloud/Custom). Simplicity over a menu of
-            // near-equivalent options.
-            return transcriptionModelManager.allAvailableModels.filter { $0.name == "parakeet-tdt-0.6b-v2" }
+        case .downloaded:
+            // What is on this Mac and ready to use right now. Cloud and custom models
+            // are reachable under their own filters; nothing here needs fetching before
+            // it can transcribe. Replaces a "Recommended" pill pinned to one model,
+            // which stopped being meaningful once each language picks its own.
+            return transcriptionModelManager.usableModels.filter {
+                $0.provider == .whisper || $0.provider == .nativeApple || $0.provider == .fluidAudio
+            }
         case .local:
             return transcriptionModelManager.allAvailableModels.filter {
                 ($0.provider == .whisper || $0.provider == .nativeApple || $0.provider == .fluidAudio)
