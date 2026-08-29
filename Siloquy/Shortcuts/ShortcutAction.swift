@@ -11,6 +11,9 @@ enum ShortcutAction: Hashable {
     case quickAddToDictionary
     case toggleEnhancement
     case powerMode(UUID)
+    /// Switch the language you dictate in. Fires before recording — see
+    /// `DictationLanguageManager.select(_:)` for why it cannot apply mid-recording.
+    case dictationLanguage(String)
     case miniRecorderEscape
     case miniRecorderPrompt(Int)
     case miniRecorderPowerMode(Int)
@@ -50,6 +53,8 @@ enum ShortcutAction: Hashable {
             return "toggleEnhancement"
         case .powerMode(let id):
             return "powerMode_\(id.uuidString)"
+        case .dictationLanguage(let locale):
+            return "dictationLanguage_\(locale)"
         case .miniRecorderEscape:
             return "miniRecorderEscape"
         case .miniRecorderPrompt(let index):
@@ -85,6 +90,10 @@ enum ShortcutAction: Hashable {
             }
 
             return "Power Mode"
+        case .dictationLanguage(let locale):
+            // Endonym, so the row reads the way a speaker of that language expects.
+            let name = DictationLanguage.named(locale)?.nativeName ?? locale
+            return "Dictate in \(name)"
         case .miniRecorderEscape:
             return "Mini Recorder Cancel"
         case .miniRecorderPrompt(let index):

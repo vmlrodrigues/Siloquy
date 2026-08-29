@@ -214,9 +214,22 @@ class AIEnhancementService: ObservableObject {
             ""
         }
 
-        let languageSection = englishVariant.promptInstruction.map {
-            "\n\nLANGUAGE: \($0)"
-        } ?? ""
+        // When dictating in another language, the English-variant appendix is not just
+        // irrelevant but actively wrong — "use Australian English spelling throughout"
+        // is an instruction the model will try to honour on Portuguese text. Same
+        // reasoning as the translation case below. In its place, name the language, so
+        // the model does not quietly drift into English.
+        let dictationLanguage = DictationLanguageManager.shared.current
+        let languageSection: String
+        if dictationLanguage != .english {
+            languageSection = "\n\nLANGUAGE: The transcript is in \(dictationLanguage.englishName). "
+                + "Reply in \(dictationLanguage.englishName) and never translate it. "
+                + "Use that language's own conventions for numbers, currency, dates and times."
+        } else {
+            languageSection = englishVariant.promptInstruction.map {
+                "\n\nLANGUAGE: \($0)"
+            } ?? ""
+        }
 
         let finalContextSection = allContextSections + customVocabularySection + languageSection
 

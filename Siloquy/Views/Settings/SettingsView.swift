@@ -217,6 +217,8 @@ struct SettingsView: View {
             }
 
             // MARK: - Power Mode
+            DictationLanguagesSection()
+
             PowerModeSection()
 
             // MARK: - Interface

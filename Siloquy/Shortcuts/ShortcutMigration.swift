@@ -287,6 +287,10 @@ enum ShortcutMigration {
             return "toggleEnhancement"
         case .powerMode(let id):
             return "powerMode_\(id.uuidString)"
+        case .dictationLanguage:
+            // Introduced after the migration away from KeyboardShortcuts — nothing to
+            // carry over.
+            return nil
         case .miniRecorderEscape, .miniRecorderPrompt, .miniRecorderPowerMode:
             return nil
         }

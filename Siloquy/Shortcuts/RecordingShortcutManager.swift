@@ -46,6 +46,7 @@ class RecordingShortcutManager: ObservableObject {
     private var recorderUIManager: RecorderUIManager
     private var miniRecorderShortcutManager: MiniRecorderShortcutManager
     private let powerModeShortcutManager: PowerModeShortcutManager
+    private let dictationLanguageShortcutManager: DictationLanguageShortcutManager
     private let shortcutMonitor = ShortcutMonitor()
     private var shortcutChangeObserver: NSObjectProtocol?
     private let shortcutModeHandler: RecordingShortcutModeHandler
@@ -150,6 +151,7 @@ class RecordingShortcutManager: ObservableObject {
             },
             shortcutModeHandler: shortcutModeHandler
         )
+        self.dictationLanguageShortcutManager = DictationLanguageShortcutManager()
 
         shortcutChangeObserver = NotificationCenter.default.addObserver(
             forName: ShortcutStore.shortcutDidChange,

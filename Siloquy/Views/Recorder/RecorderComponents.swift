@@ -177,6 +177,12 @@ struct RecorderPromptButton: View {
             }
         }
         .frame(width: buttonSize)
+        // Overlay rather than an extra stack item: in English the badge is absent, and
+        // the toolbar should not reflow depending on the language.
+        .overlay(alignment: .bottomTrailing) {
+            RecorderLanguageBadge(buttonSize: buttonSize)
+                .offset(x: buttonSize * 0.11, y: buttonSize * 0.07)
+        }
         .padding(padding)
         .onHover {
             isHoveringButton = $0
@@ -306,6 +312,29 @@ struct LiveTranscriptView: View {
 }
 
 // MARK: - Recorder Status Display
+
+/// The language the recorder is listening in, shown only when it is not English.
+///
+/// The failure this prevents is silent and expensive: dictating a paragraph into a
+/// transcriber set to the wrong language and only discovering it from the result. The
+/// flag is absent in English so the common case stays uncluttered — its presence is
+/// itself the signal that something is different.
+struct RecorderLanguageBadge: View {
+    @ObservedObject private var languages = DictationLanguageManager.shared
+
+    /// Scaled from the button it sits on: the notch recorder's button is small enough
+    /// that a fixed-size flag covers the prompt icon underneath it.
+    let buttonSize: CGFloat
+
+    var body: some View {
+        if languages.current != .english {
+            Text(languages.current.flag)
+                .font(.system(size: buttonSize * 0.4))
+                .help("Dictating in \(languages.current.nativeName)")
+                .transition(.opacity)
+        }
+    }
+}
 
 struct RecorderStatusDisplay: View {
     let currentState: RecordingState
