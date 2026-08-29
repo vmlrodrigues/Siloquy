@@ -166,8 +166,6 @@ struct PromptEditorView: View {
             }
 
             Section {
-                dictationLanguagePicker
-
                 TriggerWordsEditor(triggerWords: $triggerWords)
             }
         }
@@ -364,35 +362,35 @@ struct PromptEditorView: View {
         let languages = DictationLanguageManager.shared.enabled
         if languages.count > 1 {
             Section {
-                dictationLanguagePicker
+                VStack(alignment: .leading, spacing: 6) {
+                    Picker("", selection: $dictationLanguageID) {
+                        Text("All my languages").tag(String?.none)
+                        ForEach(languages) { language in
+                            Text("Only \(language.flag) \(language.nativeName)").tag(String?.some(language.id))
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+
+                    Text(explanation(for: dictationLanguageID))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             } header: {
-                Text("Dictation Language")
+                Text("Show this prompt when I'm dictating in")
             }
         }
     }
 
-    @ViewBuilder
-    private var dictationLanguagePicker: some View {
-        let languages = DictationLanguageManager.shared.enabled
-        if languages.count > 1 {
-            VStack(alignment: .leading, spacing: 6) {
-                Picker("", selection: $dictationLanguageID) {
-                    Text("Any language").tag(String?.none)
-                    ForEach(languages) { language in
-                        Text("\(language.flag)  \(language.nativeName)").tag(String?.some(language.id))
-                    }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
-                .fixedSize()
-
-                Text(dictationLanguageID == nil
-                     ? "Offered whatever you are speaking."
-                     : "Only offered in that language, so ⌘1–⌘0 stay consistent when you switch.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+    /// Says what the setting does to this prompt, in the terms the user sees it in —
+    /// whether the tile is there and whether it has a ⌘ number.
+    private func explanation(for languageID: String?) -> String {
+        guard let languageID, let language = DictationLanguage.named(languageID) else {
+            return "The tile stays on screen and keeps its ⌘ number whichever language you switch to."
         }
+        return "The tile is hidden, and its ⌘ number does nothing, unless you are dictating in \(language.nativeName). Useful for a prompt written in \(language.nativeName) that would make no sense against English."
     }
 }
 

@@ -193,6 +193,42 @@ private struct ReorderablePromptGrid: View {
         return nil
     }
 
+    /// The placeholder for the dictation language you are currently speaking.
+    @ViewBuilder
+    private func reservedSlot(number: String?) -> some View {
+        VStack(spacing: 8) {
+            RoundedRectangle(cornerRadius: 14)
+                .strokeBorder(
+                    Color.secondary.opacity(0.35),
+                    style: StrokeStyle(lineWidth: 1, dash: [4, 3])
+                )
+                .frame(width: 56, height: 56)
+                .overlay(
+                    Text(DictationLanguageManager.shared.current.flag)
+                        .font(.system(size: 20))
+                        .opacity(0.45)
+                )
+                .overlay(alignment: .topLeading) {
+                    if let number {
+                        Text(number)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Color(NSColor.controlBackgroundColor)))
+                            .offset(x: -5, y: -5)
+                    }
+                }
+
+            Text("Speaking \(DictationLanguageManager.shared.current.tileName)")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
+                .frame(maxWidth: 70)
+        }
+        .opacity(0.55)
+        .help("\(DictationLanguageManager.shared.current.nativeName) keeps this key so the others never move. There is nothing to translate into the language you are already speaking.")
+    }
+
     /// Authored prompts belonging to a language other than the one in use.
     private var outOfScopePrompts: [CustomPrompt] {
         let offered = Set(enhancementService.allPrompts.map(\.id))
@@ -215,7 +251,14 @@ private struct ReorderablePromptGrid: View {
                     // separate pass for generated tiles, and no way for the drawn order
                     // to disagree with the numbering.
                     ForEach(Array(enhancementService.promptSlots.enumerated()), id: \.offset) { slotIndex, slot in
-                        if let prompt = slot {
+                        if slot == nil {
+                            // The slot your own language holds. Drawn rather than
+                            // omitted, because a missing tile just reads as a missing
+                            // ⌘3 — this says the key is spoken for, and by what. It is
+                            // inert: there is nothing to translate into the language you
+                            // are already speaking.
+                            reservedSlot(number: Self.shortcutLabel(for: slotIndex))
+                        } else if let prompt = slot {
                             prompt.promptIcon(
                                 isSelected: selectedPromptId == prompt.id,
                                 shortcutNumber: Self.shortcutLabel(for: slotIndex),
