@@ -217,10 +217,16 @@ private struct ReorderablePromptGrid: View {
                 ]
 
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(Array(enhancementService.customPrompts.enumerated()), id: \.element.id) { index, prompt in
+                    ForEach(Array(enhancementService.customPrompts.enumerated()), id: \.element.id) { _, prompt in
+                        // The grid lists every prompt so any of them can be edited or
+                        // reordered, but the ⌘ number has to come from the prompts
+                        // actually offered right now. Numbering by grid position would
+                        // print a shortcut that belongs to a different prompt as soon as
+                        // one is filtered out by language.
+                        let liveIndex = enhancementService.allPrompts.firstIndex(where: { $0.id == prompt.id })
                         prompt.promptIcon(
                             isSelected: selectedPromptId == prompt.id,
-                            shortcutNumber: Self.shortcutLabel(for: index),
+                            shortcutNumber: liveIndex.flatMap(Self.shortcutLabel(for:)),
                             onTap: {
                                 withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                     onPromptSelected(prompt)
@@ -229,6 +235,22 @@ private struct ReorderablePromptGrid: View {
                             onEdit: onEditPrompt,
                             onDelete: onDeletePrompt
                         )
+                        // Dimmed when this prompt is not on offer in the language you
+                        // are dictating in — it is still here to edit, it just has no
+                        // shortcut right now. Without this, a prompt with no ⌘ number
+                        // looks broken rather than out of scope.
+                        .opacity(liveIndex == nil ? 0.4 : 1.0)
+                        .overlay(alignment: .topLeading) {
+                            if liveIndex == nil, let scope = prompt.dictationLanguage,
+                               let language = DictationLanguage.named(scope) {
+                                Text(language.flag)
+                                    .font(.system(size: 11))
+                                    .padding(3)
+                                    .background(Circle().fill(Color(NSColor.controlBackgroundColor)))
+                                    .offset(x: -4, y: -4)
+                                    .help("Only offered when dictating in \(language.nativeName)")
+                            }
+                        }
                         .opacity(draggingItem?.id == prompt.id ? 0.3 : 1.0)
                         .scaleEffect(draggingItem?.id == prompt.id ? 1.05 : 1.0)
                         .overlay(

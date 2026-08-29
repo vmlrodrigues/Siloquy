@@ -89,6 +89,20 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     /// (see TranslationLanguage). Its promptText is a self-contained translation instruction,
     /// so it is deletable and reorderable like any custom prompt (#25).
     let targetLanguage: String?
+    /// The dictation language this prompt belongs to (`DictationLanguage.id`), or `nil`
+    /// for one that applies whatever you are speaking.
+    ///
+    /// Instructions are written in a language and about a language — "remove fillers"
+    /// has to name *which* fillers, and number conventions differ — so a prompt tuned
+    /// for English is not the same prompt in Portuguese. Scoping them means ⌘1 keeps
+    /// meaning "clean this up properly" after a language switch, rather than running
+    /// English instructions over Portuguese speech.
+    let dictationLanguage: String?
+
+    /// Whether this prompt should be offered while dictating in `language`.
+    func applies(to language: DictationLanguage) -> Bool {
+        dictationLanguage == nil || dictationLanguage == language.id
+    }
 
     /// A translation prompt replaces enhancement with "translate to X"; the enhancement
     /// context appendix (custom vocabulary, English-variant rule) does not apply to it.
@@ -113,7 +127,8 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         isPredefined: Bool = false,
         triggerWords: [String] = [],
         useSystemInstructions: Bool = true,
-        targetLanguage: String? = nil
+        targetLanguage: String? = nil,
+        dictationLanguage: String? = nil
     ) {
         self.id = id
         self.title = title
@@ -125,10 +140,11 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         self.triggerWords = triggerWords
         self.useSystemInstructions = useSystemInstructions
         self.targetLanguage = targetLanguage
+        self.dictationLanguage = dictationLanguage
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, promptText, isActive, icon, description, isPredefined, triggerWords, useSystemInstructions, targetLanguage
+        case id, title, promptText, isActive, icon, description, isPredefined, triggerWords, useSystemInstructions, targetLanguage, dictationLanguage
     }
 
     init(from decoder: Decoder) throws {
@@ -143,6 +159,9 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         triggerWords = try container.decode([String].self, forKey: .triggerWords)
         useSystemInstructions = try container.decodeIfPresent(Bool.self, forKey: .useSystemInstructions) ?? true
         targetLanguage = try container.decodeIfPresent(String.self, forKey: .targetLanguage)
+        // Absent on every prompt written before this existed, which is correct: they
+        // were authored with no language in mind, so they stay available in all of them.
+        dictationLanguage = try container.decodeIfPresent(String.self, forKey: .dictationLanguage)
     }
     
     var finalPromptText: String {

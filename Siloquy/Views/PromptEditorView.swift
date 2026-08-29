@@ -28,6 +28,8 @@ struct PromptEditorView: View {
     @State private var triggerWords: [String]
     @State private var useSystemInstructions: Bool
     @State private var translationLanguageID: String?
+    /// `nil` means the prompt applies whatever language you are dictating in.
+    @State private var dictationLanguageID: String?
     @State private var showingIconPicker = false
 
     private var isEditingPredefinedPrompt: Bool {
@@ -72,6 +74,7 @@ struct PromptEditorView: View {
             _triggerWords = State(initialValue: prompt.triggerWords)
             _useSystemInstructions = State(initialValue: prompt.useSystemInstructions)
             _translationLanguageID = State(initialValue: prompt.targetLanguage)
+            _dictationLanguageID = State(initialValue: prompt.dictationLanguage)
         }
     }
     
@@ -163,6 +166,8 @@ struct PromptEditorView: View {
             }
 
             Section {
+                dictationLanguagePicker
+
                 TriggerWordsEditor(triggerWords: $triggerWords)
             }
         }
@@ -264,6 +269,8 @@ struct PromptEditorView: View {
                 Text("Instructions")
             }
 
+            dictationLanguageSection
+
             Section {
                 TriggerWordsEditor(triggerWords: $triggerWords)
             } header: {
@@ -306,7 +313,8 @@ struct PromptEditorView: View {
                 icon: selectedIcon,
                 description: description.isEmpty ? nil : description,
                 triggerWords: triggerWords,
-                useSystemInstructions: useSystemInstructions
+                useSystemInstructions: useSystemInstructions,
+                dictationLanguage: dictationLanguageID
             )
         case .edit(let prompt):
             if prompt.isTranslation,
@@ -324,7 +332,8 @@ struct PromptEditorView: View {
                     isPredefined: false,
                     triggerWords: triggerWords,
                     useSystemInstructions: false,
-                    targetLanguage: lang.id
+                    targetLanguage: lang.id,
+                    dictationLanguage: dictationLanguageID
                 )
                 enhancementService.updatePrompt(updatedPrompt)
                 return
@@ -338,9 +347,51 @@ struct PromptEditorView: View {
                 description: prompt.isPredefined ? prompt.description : (description.isEmpty ? nil : description),
                 isPredefined: prompt.isPredefined,
                 triggerWords: triggerWords,
-                useSystemInstructions: useSystemInstructions
+                useSystemInstructions: useSystemInstructions,
+                targetLanguage: prompt.targetLanguage,
+                dictationLanguage: dictationLanguageID
             )
             enhancementService.updatePrompt(updatedPrompt)
+        }
+    }
+
+    /// Which dictation language this prompt belongs to.
+    ///
+    /// Only shown once a second language exists — with one language every prompt is
+    /// implicitly for it, and a picker with a single meaningful choice is noise.
+    @ViewBuilder
+    var dictationLanguageSection: some View {
+        let languages = DictationLanguageManager.shared.enabled
+        if languages.count > 1 {
+            Section {
+                dictationLanguagePicker
+            } header: {
+                Text("Dictation Language")
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var dictationLanguagePicker: some View {
+        let languages = DictationLanguageManager.shared.enabled
+        if languages.count > 1 {
+            VStack(alignment: .leading, spacing: 6) {
+                Picker("", selection: $dictationLanguageID) {
+                    Text("Any language").tag(String?.none)
+                    ForEach(languages) { language in
+                        Text("\(language.flag)  \(language.nativeName)").tag(String?.some(language.id))
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+                .fixedSize()
+
+                Text(dictationLanguageID == nil
+                     ? "Offered whatever you are speaking."
+                     : "Only offered in that language, so ⌘1–⌘0 stay consistent when you switch.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
         }
     }
 }

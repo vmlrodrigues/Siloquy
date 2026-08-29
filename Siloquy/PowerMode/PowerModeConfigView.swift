@@ -404,7 +404,7 @@ struct ConfigurationView: View {
                                     selectedAIModel = aiService.currentModel
                                 }
                                 if selectedPromptId == nil {
-                                    selectedPromptId = enhancementService.allPrompts.first?.id
+                                    selectedPromptId = enhancementService.everyPrompt.first?.id
                                 }
                             }
                         }
@@ -479,14 +479,14 @@ struct ConfigurationView: View {
                             }
                         }
 
-                        if enhancementService.allPrompts.isEmpty {
+                        if enhancementService.everyPrompt.isEmpty {
                             LabeledContent("Enhancement Prompt") {
                                 Text("No prompts available")
                                     .foregroundColor(.secondary)
                             }
                         } else {
                             Picker("Enhancement Prompt", selection: $selectedPromptId) {
-                                ForEach(enhancementService.allPrompts) { prompt in
+                                ForEach(enhancementService.everyPrompt) { prompt in
                                     Text(prompt.title).tag(prompt.id as UUID?)
                                 }
                             }
@@ -559,7 +559,7 @@ struct ConfigurationView: View {
                 }
 
                 if isAIEnhancementEnabled && selectedPromptId == nil {
-                    selectedPromptId = enhancementService.allPrompts.first?.id
+                    selectedPromptId = enhancementService.everyPrompt.first?.id
                 }
 
                 if let selectedModelName = effectiveModelName,

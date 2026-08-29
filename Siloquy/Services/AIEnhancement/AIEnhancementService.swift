@@ -56,6 +56,7 @@ class AIEnhancementService: ObservableObject {
     @Published var selectedPromptId: UUID? {
         didSet {
             UserDefaults.standard.set(selectedPromptId?.uuidString, forKey: "selectedPromptId")
+            rememberSelectionForCurrentLanguage()
             NotificationCenter.default.post(name: .AppSettingsDidChange, object: nil)
             NotificationCenter.default.post(name: .promptSelectionChanged, object: nil)
         }
@@ -74,8 +75,63 @@ class AIEnhancementService: ObservableObject {
         allPrompts.first { $0.id == selectedPromptId }
     }
 
+    /// The prompts offered while dictating in the current language.
+    ///
+    /// Filtered, so ⌘1–⌘0 keep their meaning across a language switch: the tile in slot
+    /// one is still "clean this up properly", now in the language being spoken. Muscle
+    /// memory survives; content follows.
+    ///
+    /// Translation is filtered too, and inverts: translating into the language you are
+    /// already speaking is a no-op, so that tile is hidden. Translation always means
+    /// "out of the language I am speaking".
     var allPrompts: [CustomPrompt] {
-        return customPrompts
+        let language = DictationLanguageManager.shared.current
+        return customPrompts.filter { prompt in
+            guard prompt.applies(to: language) else { return false }
+            if let target = prompt.targetLanguage {
+                return !DictationLanguage.matches(target, language)
+            }
+            return true
+        }
+    }
+
+    /// Every prompt regardless of language, for places that configure rather than
+    /// dictate — Power Mode picks a prompt for an app, not for the language in use.
+    var everyPrompt: [CustomPrompt] {
+        customPrompts
+    }
+
+    private let selectionByLanguageKey = "selectedPromptByDictationLanguage"
+
+    private func rememberSelectionForCurrentLanguage() {
+        guard let selectedPromptId else { return }
+        var map = UserDefaults.standard.dictionary(forKey: selectionByLanguageKey) as? [String: String] ?? [:]
+        map[DictationLanguageManager.shared.current.id] = selectedPromptId.uuidString
+        UserDefaults.standard.set(map, forKey: selectionByLanguageKey)
+    }
+
+    /// Put the selection back where this language left it.
+    ///
+    /// Each language keeps its own choice, so switching to Portuguese and back to
+    /// English returns you to the English prompt you were using rather than resetting.
+    /// Falls back to the default when the remembered prompt no longer applies.
+    func restoreSelectionForCurrentLanguage() {
+        let language = DictationLanguageManager.shared.current
+        let map = UserDefaults.standard.dictionary(forKey: selectionByLanguageKey) as? [String: String] ?? [:]
+
+        if let remembered = map[language.id].flatMap(UUID.init(uuidString:)),
+           allPrompts.contains(where: { $0.id == remembered }) {
+            if selectedPromptId != remembered { selectedPromptId = remembered }
+            return
+        }
+
+        // Nothing remembered, or it belongs to another language now.
+        if let current = selectedPromptId, allPrompts.contains(where: { $0.id == current }) {
+            return
+        }
+
+        selectedPromptId = allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId })?.id
+            ?? allPrompts.first?.id
     }
 
     private let aiService: AIService
@@ -116,6 +172,14 @@ class AIEnhancementService: ObservableObject {
 
         if isEnhancementEnabled && (selectedPromptId == nil || !allPrompts.contains(where: { $0.id == selectedPromptId })) {
             self.selectedPromptId = allPrompts.first?.id
+        }
+
+        NotificationCenter.default.addObserver(
+            forName: .dictationLanguageDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.restoreSelectionForCurrentLanguage() }
         }
 
         NotificationCenter.default.addObserver(
@@ -527,8 +591,8 @@ class AIEnhancementService: ObservableObject {
         screenCaptureService.lastCapturedText = nil
     }
 
-    func addPrompt(title: String, promptText: String, icon: PromptIcon = "doc.text.fill", description: String? = nil, triggerWords: [String] = [], useSystemInstructions: Bool = true) {
-        let newPrompt = CustomPrompt(title: title, promptText: promptText, icon: icon, description: description, isPredefined: false, triggerWords: triggerWords, useSystemInstructions: useSystemInstructions)
+    func addPrompt(title: String, promptText: String, icon: PromptIcon = "doc.text.fill", description: String? = nil, triggerWords: [String] = [], useSystemInstructions: Bool = true, dictationLanguage: String? = nil) {
+        let newPrompt = CustomPrompt(title: title, promptText: promptText, icon: icon, description: description, isPredefined: false, triggerWords: triggerWords, useSystemInstructions: useSystemInstructions, dictationLanguage: dictationLanguage)
         customPrompts.append(newPrompt)
         if customPrompts.count == 1 {
             selectedPromptId = newPrompt.id
