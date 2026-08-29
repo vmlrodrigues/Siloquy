@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import SwiftUI
 import os
@@ -251,6 +252,14 @@ final class DictationLanguageManager: ObservableObject {
         // to follow to leave listeners on the language actually chosen.
         NotificationCenter.default.post(name: .languageDidChange, object: nil)
         NotificationCenter.default.post(name: .dictationLanguageDidChange, object: nil)
+
+        // Only worth a flash when there is a choice to be ambiguous about, and only
+        // when Siloquy is not in front: on screen the row already marks itself active,
+        // and a HUD over the window you are looking at would just be noise.
+        if enabled.count > 1, !NSApp.isActive {
+            DictationLanguageHUD.shared.show(language)
+        }
+
         logger.notice("Dictation language → \(language.id, privacy: .public) as \(code, privacy: .public) via \(model.name, privacy: .public)")
     }
 

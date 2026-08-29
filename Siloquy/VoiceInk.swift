@@ -408,19 +408,7 @@ struct VoiceInkApp: App {
                 .environmentObject(aiService)
                 .environmentObject(enhancementService)
         } label: {
-            let image: NSImage = {
-                let ratio = $0.size.height / $0.size.width
-                $0.size.height = 22
-                $0.size.width = 22 / ratio
-                return $0
-            }(NSImage(named: "menuBarIcon")!)
-
-            Image(nsImage: image)
-            #if LOCAL_BUILD
-            // Dev build (`make local`): label the menu-bar item so it's distinguishable
-            // from the release app's icon at a glance.
-            Text("DEV")
-            #endif
+            MenuBarLabel()
         }
         .menuBarExtraStyle(.menu)
 

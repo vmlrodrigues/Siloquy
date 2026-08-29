@@ -14,6 +14,10 @@ struct DictationLanguagesSection: View {
     @State private var isConfirmingRemoval = false
     @State private var hoveredLanguage: DictationLanguage?
 
+    /// Wide enough for the unbound "Record" button, which is the widest state the
+    /// recorder takes.
+    private let shortcutColumnWidth: CGFloat = 112
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Dictation Languages")
@@ -140,28 +144,34 @@ struct DictationLanguagesSection: View {
 
                 Spacer(minLength: 12)
 
-                // A shortcut is only meaningful once there is somewhere to switch to,
-                // so it appears with the second language.
+                // Fixed columns so every row's controls line up on the right. The
+                // recorder is wider unbound ("Record") than bound ("⌥⌘E"), and English
+                // has no remove button, so without reserved widths each row's controls
+                // sat at a different offset.
                 if manager.enabled.count > 1 {
                     ShortcutRecorder(action: .dictationLanguage(language.id)) {
                         recordingShortcutManager.updateShortcutStatus()
                     }
                     .controlSize(.small)
+                    .frame(width: shortcutColumnWidth, alignment: .trailing)
                 }
 
-                if language.isRemovable {
-                    Button {
-                        languageToRemove = language
-                        isConfirmingRemoval = true
-                    } label: {
-                        Image(systemName: "minus.circle")
-                            .foregroundColor(.secondary)
-                            .padding(4)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .help("Remove \(language.nativeName)")
+                Button {
+                    languageToRemove = language
+                    isConfirmingRemoval = true
+                } label: {
+                    Image(systemName: "minus.circle")
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                        .contentShape(Rectangle())
                 }
+                .buttonStyle(.plain)
+                .help("Remove \(language.nativeName)")
+                // English cannot be removed, but its slot is still reserved so the
+                // shortcut column above it does not shift.
+                .opacity(language.isRemovable ? 1 : 0)
+                .disabled(!language.isRemovable)
+                .accessibilityHidden(!language.isRemovable)
             }
 
             HStack(spacing: 8) {
