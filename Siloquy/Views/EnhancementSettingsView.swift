@@ -184,7 +184,6 @@ private struct ReorderablePromptGrid: View {
     let onEditPrompt: ((CustomPrompt) -> Void)?
     let onDeletePrompt: ((CustomPrompt) -> Void)?
 
-    @State private var draggingItem: CustomPrompt?
 
     /// The ⌘-number shortcut for a tile at this position — ⌘1…⌘9 then ⌘0 for the
     /// tenth, nothing beyond. Mirrors MiniRecorderShortcutManager's positional mapping.
@@ -192,6 +191,12 @@ private struct ReorderablePromptGrid: View {
         if index < 9 { return "⌘\(index + 1)" }
         if index == 9 { return "⌘0" }
         return nil
+    }
+
+    /// Authored prompts belonging to a language other than the one in use.
+    private var outOfScopePrompts: [CustomPrompt] {
+        let offered = Set(enhancementService.allPrompts.map(\.id))
+        return enhancementService.customPrompts.filter { !offered.contains($0.id) }
     }
 
     var body: some View {
@@ -206,31 +211,39 @@ private struct ReorderablePromptGrid: View {
                 ]
 
                 LazyVGrid(columns: columns, spacing: 16) {
-                    ForEach(Array(enhancementService.customPrompts.enumerated()), id: \.element.id) { _, prompt in
-                        // The grid lists every prompt so any of them can be edited or
-                        // reordered, but the ⌘ number has to come from the prompts
-                        // actually offered right now. Numbering by grid position would
-                        // print a shortcut that belongs to a different prompt as soon as
-                        // one is filtered out by language.
-                        let liveIndex = enhancementService.promptSlots.firstIndex(where: { $0?.id == prompt.id })
+                    // Driven by the slot list, so what you see is the ⌘ order: no
+                    // separate pass for generated tiles, and no way for the drawn order
+                    // to disagree with the numbering.
+                    ForEach(Array(enhancementService.promptSlots.enumerated()), id: \.offset) { slotIndex, slot in
+                        if let prompt = slot {
+                            prompt.promptIcon(
+                                isSelected: selectedPromptId == prompt.id,
+                                shortcutNumber: Self.shortcutLabel(for: slotIndex),
+                                onTap: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        onPromptSelected(prompt)
+                                    }
+                                },
+                                // Generated translation tiles come from the language
+                                // list, so there is nothing to edit or delete on them.
+                                onEdit: prompt.isTranslation ? nil : onEditPrompt,
+                                onDelete: prompt.isTranslation ? nil : onDeletePrompt
+                            )
+                        }
+                    }
+
+                    // Prompts scoped to another language keep their place in the grid so
+                    // they can still be edited, but have no ⌘ number while out of scope.
+                    ForEach(outOfScopePrompts, id: \.id) { prompt in
                         prompt.promptIcon(
-                            isSelected: selectedPromptId == prompt.id,
-                            shortcutNumber: liveIndex.flatMap(Self.shortcutLabel(for:)),
-                            onTap: {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                    onPromptSelected(prompt)
-                                }
-                            },
+                            isSelected: false,
+                            onTap: {},
                             onEdit: onEditPrompt,
                             onDelete: onDeletePrompt
                         )
-                        // Dimmed when this prompt is not on offer in the language you
-                        // are dictating in — it is still here to edit, it just has no
-                        // shortcut right now. Without this, a prompt with no ⌘ number
-                        // looks broken rather than out of scope.
-                        .opacity(liveIndex == nil ? 0.4 : 1.0)
+                        .opacity(0.4)
                         .overlay(alignment: .topLeading) {
-                            if liveIndex == nil, let scope = prompt.dictationLanguage,
+                            if let scope = prompt.dictationLanguage,
                                let language = DictationLanguage.named(scope) {
                                 Text(language.flag)
                                     .font(.system(size: 11))
@@ -239,46 +252,6 @@ private struct ReorderablePromptGrid: View {
                                     .offset(x: -4, y: -4)
                                     .help("Only offered when dictating in \(language.nativeName)")
                             }
-                        }
-                        .opacity(draggingItem?.id == prompt.id ? 0.3 : 1.0)
-                        .scaleEffect(draggingItem?.id == prompt.id ? 1.05 : 1.0)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .stroke(
-                                    draggingItem != nil && draggingItem?.id != prompt.id
-                                    ? Color.accentColor.opacity(0.25)
-                                    : Color.clear,
-                                    lineWidth: 1
-                                )
-                        )
-                        .animation(.easeInOut(duration: 0.15), value: draggingItem?.id == prompt.id)
-                        .onDrag {
-                            draggingItem = prompt
-                            return NSItemProvider(object: prompt.id.uuidString as NSString)
-                        }
-                        .onDrop(
-                            of: [UTType.text],
-                            delegate: PromptDropDelegate(
-                                item: prompt,
-                                prompts: $enhancementService.customPrompts,
-                                draggingItem: $draggingItem
-                            )
-                        )
-                    }
-                    // Translation tiles are generated from the dictation languages, so
-                    // they sit after the authored prompts and are not reorderable — you
-                    // change them by changing your languages.
-                    ForEach(Array(enhancementService.promptSlots.enumerated()), id: \.offset) { slotIndex, slot in
-                        if let prompt = slot, prompt.isTranslation {
-                            prompt.promptIcon(
-                                isSelected: selectedPromptId == prompt.id,
-                                shortcutNumber: Self.shortcutLabel(for: slotIndex),
-                                onTap: {
-                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                        onPromptSelected(prompt)
-                                    }
-                                }
-                            )
                         }
                     }
                 }
@@ -291,8 +264,8 @@ private struct ReorderablePromptGrid: View {
                     .foregroundColor(.secondary)
 
                     Text(DictationLanguageManager.shared.enabled.count > 1
-                         ? "Drag to reorder (⌘1–⌘0) • Double-click to edit • Translation tiles come from your dictation languages and keep a fixed key each"
-                         : "Drag to reorder (⌘1–⌘0) • Double-click to edit • Right-click for more options")
+                         ? "⌘1 is always the clean-up prompt • Double-click to edit • Translation tiles come from your dictation languages and keep a fixed key each"
+                         : "Double-click to edit • Right-click for more options")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 }
@@ -304,31 +277,3 @@ private struct ReorderablePromptGrid: View {
 }
 
 // MARK: - Drop Delegate
-private struct PromptDropDelegate: DropDelegate {
-    let item: CustomPrompt
-    @Binding var prompts: [CustomPrompt]
-    @Binding var draggingItem: CustomPrompt?
-
-    func dropEntered(info: DropInfo) {
-        guard let draggingItem = draggingItem, draggingItem != item else { return }
-        guard let fromIndex = prompts.firstIndex(of: draggingItem),
-              let toIndex = prompts.firstIndex(of: item) else { return }
-
-        if prompts[toIndex].id != draggingItem.id {
-            withAnimation(.easeInOut(duration: 0.12)) {
-                let from = fromIndex
-                let to = toIndex
-                prompts.move(fromOffsets: IndexSet(integer: from), toOffset: to > from ? to + 1 : to)
-            }
-        }
-    }
-
-    func dropUpdated(info: DropInfo) -> DropProposal? {
-        DropProposal(operation: .move)
-    }
-
-    func performDrop(info: DropInfo) -> Bool {
-        draggingItem = nil
-        return true
-    }
-}

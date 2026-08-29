@@ -95,9 +95,16 @@ class AIEnhancementService: ObservableObject {
         let language = DictationLanguageManager.shared.current
         let languages = DictationLanguageManager.shared.enabled
 
-        let authored: [CustomPrompt?] = customPrompts
-            .filter { $0.applies(to: language) && !$0.isTranslation }
-            .map { Optional($0) }
+        // Deterministic order, so ⌘1 is always the clean-up prompt. Dragging used to
+        // decide this, which meant the one guarantee the language switch was built to
+        // make — that ⌘1 means "clean this up properly" whatever you are speaking —
+        // could be undone by a stray drag.
+        let offered = customPrompts.filter { $0.applies(to: language) && !$0.isTranslation }
+        let authored: [CustomPrompt?] = (
+            offered.filter { $0.id == PredefinedPrompts.defaultPromptId }
+            + offered.filter { $0.id == PredefinedPrompts.assistantPromptId }
+            + offered.filter { $0.id != PredefinedPrompts.defaultPromptId && $0.id != PredefinedPrompts.assistantPromptId }
+        ).map { Optional($0) }
 
         // With one language there is nowhere to translate to.
         guard languages.count > 1 else { return authored }
