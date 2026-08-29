@@ -193,17 +193,18 @@ final class NativeAppleStreamingProvider: StreamingTranscriptionProvider {
         }
     }
 
-    /// SpeechAnalyzer needs the locale reserved before it will transcribe it, and only a
-    /// limited number can be held at once — so release the others first.
+    /// Claim this locale's reservation if it isn't already held.
+    ///
+    /// Deliberately does not release the others first. A reservation is what stops
+    /// macOS reclaiming an installed locale, so releasing every other language to make
+    /// room for this one uninstalls them — `DictationLanguageManager` owns the set and
+    /// keeps every enabled language reserved. If the reservation cannot be taken the
+    /// asset is already installed, so transcription proceeds regardless.
     @available(macOS 26, *)
     private static func reserveIfNeeded(locale: Locale, transcriber: SpeechTranscriber, logger: Logger) async {
         let identifier = locale.identifier(.bcp47)
         let reserved = await AssetInventory.reservedLocales
         guard !reserved.contains(where: { $0.identifier(.bcp47) == identifier }) else { return }
-
-        for existing in reserved {
-            await AssetInventory.release(reservedLocale: existing)
-        }
 
         do {
             _ = try await AssetInventory.reserve(locale: locale)

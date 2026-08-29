@@ -33,6 +33,13 @@ final class DictationLanguageManager: ObservableObject {
     /// Locales Apple can transcribe on this machine, or `nil` until the first check
     /// finishes. Empty on an OS too old for SpeechAnalyzer.
     @Published private(set) var appleSupportedLocales: Set<String>?
+    /// Apple locales whose assets are actually on this Mac. "Apple Speech is
+    /// downloaded" is not a fact — each locale ships its own asset, so readiness is a
+    /// property of the language, not of the framework.
+    @Published private(set) var installedAppleLocales: Set<String> = []
+    /// Languages with a download in flight, so the row can show progress instead of
+    /// offering the button again.
+    @Published private(set) var downloadingLanguages: Set<String> = []
 
     /// Switching a language switches the transcription model, and that has to go through
     /// the engine rather than straight to `UserDefaults`: the engine also updates its
@@ -49,7 +56,11 @@ final class DictationLanguageManager: ObservableObject {
         modelNameByLanguage = UserDefaults.standard.dictionary(forKey: modelsKey) as? [String: String] ?? [:]
         current = DictationLanguage.named(UserDefaults.standard.string(forKey: "SelectedLanguage") ?? "")
             ?? .english
-        Task { await loadAppleSupportedLocales() }
+        Task {
+            await loadAppleSupportedLocales()
+            await refreshInstalledAppleLocales()
+            await reconcileAppleReservations()
+        }
     }
 
     func configure(engine: any PowerModeStateProvider, modelManager: TranscriptionModelManager) {
@@ -150,6 +161,98 @@ final class DictationLanguageManager: ObservableObject {
         !usableModels(for: language).isEmpty
     }
 
+    /// Whether dictating in this language would work right now.
+    ///
+    /// Distinct from `isTranscribable`: German is transcribable — Apple supports it and
+    /// the framework is installed — but not *ready* until its asset is downloaded.
+    /// Conflating the two is what let a language be selected and then fail at the one
+    /// moment an error is useless, after you had already spoken.
+    func isReady(_ language: DictationLanguage) -> Bool {
+        guard let model = model(for: language) else { return false }
+        guard model.provider == .nativeApple else { return true }
+        return installedAppleLocales.contains(language.id)
+    }
+
+    func isDownloading(_ language: DictationLanguage) -> Bool {
+        downloadingLanguages.contains(language.id)
+    }
+
+    /// Keep a reservation for every enabled Apple language.
+    ///
+    /// A reservation is what stops macOS reclaiming an installed locale, and up to
+    /// `maximumReservedLocales` can be held. Releasing them all before claiming one —
+    /// which is what the single-language code did — leaves every other language
+    /// unreserved and eligible for eviction, so downloading Spanish silently uninstalls
+    /// Portuguese. Reserve the set, not the latest one.
+    func reconcileAppleReservations(including extra: DictationLanguage? = nil) async {
+        guard #available(macOS 26, *) else { return }
+        #if canImport(Speech) && ENABLE_NATIVE_SPEECH_ANALYZER
+        var wanted: [DictationLanguage] = enabled.filter { model(for: $0)?.provider == .nativeApple }
+        if let extra, !wanted.contains(extra) { wanted.insert(extra, at: 0) }
+
+        // The active language first, so if there are more languages than slots the one
+        // being used keeps its reservation.
+        wanted.sort { lhs, _ in lhs == current }
+        let keep = Array(wanted.prefix(AssetInventory.maximumReservedLocales))
+        let keepIDs = Set(keep.map(\.id))
+
+        let reserved = await AssetInventory.reservedLocales
+        for locale in reserved where !keepIDs.contains(locale.identifier(.bcp47)) {
+            _ = await AssetInventory.release(reservedLocale: locale)
+        }
+
+        let stillReserved = Set(await AssetInventory.reservedLocales.map { $0.identifier(.bcp47) })
+        for language in keep where !stillReserved.contains(language.id) {
+            _ = try? await AssetInventory.reserve(locale: Locale(identifier: language.id))
+        }
+
+        logger.notice("Reserved Apple locales: \(keepIDs.sorted().joined(separator: ", "), privacy: .public)")
+        #endif
+    }
+
+    func refreshInstalledAppleLocales() async {
+        guard #available(macOS 26, *) else { return }
+        #if canImport(Speech) && ENABLE_NATIVE_SPEECH_ANALYZER
+        installedAppleLocales = await Set(SpeechTranscriber.installedLocales.map { $0.identifier(.bcp47) })
+        #endif
+    }
+
+    /// Fetch the Apple asset for this language. Never started automatically: these are
+    /// large, and a click on a language should not begin a download the user did not
+    /// ask for.
+    func download(_ language: DictationLanguage) async {
+        guard #available(macOS 26, *) else { return }
+        #if canImport(Speech) && ENABLE_NATIVE_SPEECH_ANALYZER
+        guard !downloadingLanguages.contains(language.id) else { return }
+        downloadingLanguages.insert(language.id)
+        defer { downloadingLanguages.remove(language.id) }
+
+        let locale = Locale(identifier: language.id)
+        let transcriber = SpeechTranscriber(
+            locale: locale,
+            transcriptionOptions: [],
+            reportingOptions: [],
+            attributeOptions: []
+        )
+
+        do {
+            await reconcileAppleReservations(including: language)
+
+            if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
+                try await request.downloadAndInstall()
+            }
+            await refreshInstalledAppleLocales()
+            logger.notice("Downloaded Apple asset for \(language.id, privacy: .public)")
+        } catch {
+            logger.error("Download failed for \(language.id, privacy: .public): \(error.localizedDescription, privacy: .public)")
+            NotificationManager.shared.showNotification(
+                title: "Couldn't download \(language.nativeName): \(error.localizedDescription)",
+                type: .error
+            )
+        }
+        #endif
+    }
+
     // MARK: - The enabled list
 
     private func loadEnabled() -> [DictationLanguage] {
@@ -171,6 +274,7 @@ final class DictationLanguageManager: ObservableObject {
         backfillMissingModels()
         NotificationCenter.default.post(name: .dictationLanguagesDidChange, object: nil)
         logger.notice("Enabled dictation language \(language.id, privacy: .public)")
+        Task { await reconcileAppleReservations() }
     }
 
     func disable(_ language: DictationLanguage) {
@@ -184,6 +288,7 @@ final class DictationLanguageManager: ObservableObject {
         if current == language { select(.english) }
         NotificationCenter.default.post(name: .dictationLanguagesDidChange, object: nil)
         logger.notice("Disabled dictation language \(language.id, privacy: .public)")
+        Task { await reconcileAppleReservations() }
     }
 
     /// Languages not yet enabled that this machine can actually transcribe.
@@ -229,6 +334,17 @@ final class DictationLanguageManager: ObservableObject {
 
         guard let model = model(for: language) else {
             logger.error("No usable model for \(language.id, privacy: .public)")
+            return
+        }
+
+        // Refuse rather than let the failure surface after a whole dictation. The row
+        // says the same thing, but a shortcut can be pressed from anywhere.
+        guard isReady(language) else {
+            logger.notice("Refusing switch to \(language.id, privacy: .public) — asset not downloaded")
+            NotificationManager.shared.showNotification(
+                title: "Download \(language.nativeName) before dictating in it",
+                type: .warning
+            )
             return
         }
 

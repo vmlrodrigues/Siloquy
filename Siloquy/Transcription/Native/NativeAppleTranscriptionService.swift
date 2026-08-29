@@ -150,9 +150,10 @@ class NativeAppleTranscriptionService: TranscriptionService {
             return
         }
 
-        for reservedLocale in reservedLocales {
-            await AssetInventory.release(reservedLocale: reservedLocale)
-        }
+        // Deliberately does not release the other reservations. A reservation is what
+        // keeps an installed locale from being reclaimed, so clearing them to make room
+        // uninstalls every other dictation language — `DictationLanguageManager` owns
+        // the set and reserves all of them.
 
         do {
             let reserved = try await AssetInventory.reserve(locale: locale)

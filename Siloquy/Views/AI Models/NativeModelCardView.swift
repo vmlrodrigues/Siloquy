@@ -6,6 +6,8 @@ struct NativeAppleModelCardView: View {
     let model: NativeAppleModel
     let isCurrent: Bool
     var setDefaultAction: () -> Void
+
+    @ObservedObject private var languages = DictationLanguageManager.shared
     
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
@@ -54,13 +56,32 @@ struct NativeAppleModelCardView: View {
                 .foregroundColor(Color(.secondaryLabelColor))
                 .lineLimit(1)
             
-            // Requires macOS 26+
-            Label("macOS 26+", systemImage: "macbook")
-                .font(.system(size: 11))
-                .foregroundColor(Color(.secondaryLabelColor))
-                .lineLimit(1)
+            // Apple installs a separate asset per locale, so listing this card under
+            // "Downloaded" says only that the framework is present — which read as a
+            // promise that every language was ready when most were not.
+            if let readiness = downloadReadiness {
+                Label(readiness.text, systemImage: readiness.complete ? "checkmark.circle" : "exclamationmark.triangle.fill")
+                    .font(.system(size: 11))
+                    .foregroundColor(readiness.complete ? Color(.secondaryLabelColor) : .orange)
+                    .lineLimit(1)
+                    .help("Each language downloads its own model. Download them per language under Dictation Languages above.")
+            }
         }
         .lineLimit(1)
+    }
+
+    /// How many of *your* languages are actually ready.
+    ///
+    /// A list of installed locales would be both too long and beside the point — macOS
+    /// carries English variants nobody asked for. What matters is whether the languages
+    /// you set up will work, so the card counts those and says so where the card would
+    /// otherwise imply, by sitting under "Downloaded", that all of them do.
+    private var downloadReadiness: (text: String, complete: Bool)? {
+        let mine = languages.enabled.filter { languages.model(for: $0)?.provider == .nativeApple }
+        guard !mine.isEmpty else { return nil }
+
+        let ready = mine.filter { languages.installedAppleLocales.contains($0.id) }.count
+        return ("\(ready)/\(mine.count) languages ready", ready == mine.count)
     }
     
     private var descriptionSection: some View {

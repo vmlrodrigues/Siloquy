@@ -176,19 +176,41 @@ struct DictationLanguagesSection: View {
 
             HStack(spacing: 8) {
                 modelPicker(for: language, selected: selected)
-
-                // Apple ships a separate asset per locale and none are present until
-                // asked for. Without this the first dictation in a new language fails
-                // *after* you have finished speaking, which is the one moment an error
-                // is no use at all.
-                NativeAppleLanguageAssetControl(
-                    localeIdentifier: language.id,
-                    isVisible: selected?.provider == .nativeApple
-                )
+                readiness(for: language)
             }
             .padding(.leading, 46)
         }
         .padding(.vertical, 6)
+    }
+
+    /// Says plainly when a language cannot be used yet.
+    ///
+    /// Apple ships a separate asset per locale, so "Apple Speech is downloaded" is not a
+    /// fact about a language — German can be picked while its asset is absent. A bare
+    /// download arrow read as an optional extra rather than a blocker, and the failure
+    /// only surfaced after a whole dictation had been spoken.
+    @ViewBuilder
+    private func readiness(for language: DictationLanguage) -> some View {
+        if manager.isDownloading(language) {
+            HStack(spacing: 5) {
+                ProgressView().controlSize(.small).scaleEffect(0.7)
+                Text("Downloading \(language.englishName)…")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        } else if !manager.isReady(language) {
+            HStack(spacing: 6) {
+                Label("Not downloaded", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+
+                Button("Download") {
+                    Task { await manager.download(language) }
+                }
+                .controlSize(.small)
+                .help("Download the \(language.englishName) speech model. Until then this language can't be used.")
+            }
+        }
     }
 
     @ViewBuilder
