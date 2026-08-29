@@ -220,9 +220,14 @@ class AIEnhancementService: ObservableObject {
         // reasoning as the translation case below. In its place, name the language, so
         // the model does not quietly drift into English.
         let dictationLanguage = DictationLanguageManager.shared.current
+        let localizedPrompt = LocalizedEnhancementPrompts.systemPrompt(for: dictationLanguage)
         let languageSection: String
         if dictationLanguage != .english {
-            languageSection = "\n\nLANGUAGE: The transcript is in \(dictationLanguage.englishName). "
+            // A language with its own prompt needs no hint appended: the prompt is
+            // already written in that language and states its own conventions. Only
+            // languages without one fall back to naming the language in English.
+            languageSection = localizedPrompt != nil ? "" :
+                "\n\nLANGUAGE: The transcript is in \(dictationLanguage.englishName). "
                 + "Reply in \(dictationLanguage.englishName) and never translate it. "
                 + "Use that language's own conventions for numbers, currency, dates and times."
         } else {
@@ -247,6 +252,19 @@ class AIEnhancementService: ObservableObject {
         let usesDefaultPrompt = activePrompt == nil
             || activePrompt?.id == PredefinedPrompts.defaultPromptId
             || activePrompt?.id == PredefinedPrompts.retiredLocalModelPromptId
+        // The clean-up prompt swaps with the language, so ⌘1 means "clean this up
+        // properly" whatever you are speaking. Replaces the whole system message rather
+        // than appending to it: the English wrapper carries English input/output
+        // examples, and examples steer this model harder than instructions do, so
+        // leaving them in place pulls the output back towards English.
+        //
+        // Ahead of the per-model default below, not after it: that default is an
+        // English prompt tuned for the model, and the in-language prompts were measured
+        // against this very model. The language is the stronger claim.
+        if let localizedPrompt, usesDefaultPrompt {
+            return localizedPrompt + finalContextSection
+        }
+
         if aiService.selectedProvider == .gemmaLocal, usesDefaultPrompt {
             let modelID = GemmaService.currentSelectedModelID
             return PredefinedPrompts.localModelPromptText(forModelID: modelID) + finalContextSection
