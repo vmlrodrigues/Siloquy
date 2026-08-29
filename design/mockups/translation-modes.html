@@ -1,0 +1,130 @@
+<!doctype html><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;padding:30px;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:#1d1d1f}
+h1{font-size:19px;margin:0 0 5px}
+.lede{font-size:12.5px;color:#6e6e73;margin:0 0 26px;max-width:760px;line-height:1.55}
+.opt{background:#fff;border:0.5px solid #d8d8dd;border-radius:13px;padding:19px 21px;margin-bottom:17px}
+.opthead{display:flex;align-items:baseline;gap:9px;margin-bottom:3px}
+.optname{font-size:15px;font-weight:600}
+.tag{font-size:10.5px;font-weight:500;background:#e8f0fe;color:#0a6cff;padding:2px 8px;border-radius:20px}
+.tag.warn{background:#fff1e0;color:#b35c00}
+.optsub{font-size:12px;color:#6e6e73;margin:0 0 15px;line-height:1.5;max-width:700px}
+.modes{display:flex;gap:15px;flex-wrap:wrap}
+.mode{background:#fafafd;border:0.5px solid #e6e6ec;border-radius:10px;padding:12px 14px;min-width:322px}
+.modehead{font-size:11px;color:#6e6e73;margin-bottom:11px;display:flex;align-items:center;gap:6px}
+.chip{background:#1c1c1e;color:#f2f2f7;border-radius:20px;padding:2px 9px;font-size:10.5px}
+.tiles{display:flex;gap:11px;flex-wrap:wrap}
+.tile{width:70px;text-align:center}
+.ico{width:47px;height:47px;border-radius:12px;background:#f0f0f4;border:0.5px solid #dcdce2;margin:0 auto 5px;display:flex;align-items:center;justify-content:center;font-size:20px}
+.ico.on{background:#0a6cff;border-color:#0a6cff;color:#fff}
+.ico.tr{background:#fff;border-color:#c9c9d0}
+.tl{font-size:10px;line-height:1.25}
+.tk{font-size:9px;color:#8e8e93;font-family:ui-monospace,monospace;margin-top:2px}
+.dest{font-size:9px;color:#0a6cff;margin-top:1px}
+.menu{margin-top:9px;background:#fff;border:0.5px solid #d3d3da;border-radius:8px;padding:4px;width:168px;box-shadow:0 4px 14px rgba(0,0,0,.09)}
+.mi{font-size:11px;padding:5px 8px;border-radius:5px;display:flex;gap:7px;align-items:center}
+.mi.sel{background:#0a6cff;color:#fff}
+.pros{display:flex;gap:26px;margin-top:14px;font-size:11.5px;line-height:1.6}
+.pros div{flex:1}
+.pros b{font-weight:600;display:block;margin-bottom:2px;font-size:11px;letter-spacing:.02em;text-transform:uppercase;color:#8e8e93}
+.gone{opacity:.32}
+.strike{text-decoration:line-through}
+</style>
+
+<h1>Translation across dictation languages</h1>
+<p class="lede">Today a translation tile has a fixed destination, so “To Portuguese” is still sitting there — greyed out and useless — while you are speaking Portuguese. In every option below that tile is gone rather than dimmed, and translation means <b>out of the language you are speaking</b>. They differ in where the destination comes from and how many ⌘ slots it costs.</p>
+
+<div class="opt">
+  <div class="opthead"><span class="optname">A · Mirror</span><span class="tag">No configuration</span></div>
+  <p class="optsub">The languages you dictate in <i>are</i> the languages you translate between. One tile, and its destination flips to whichever other language you have. Nothing to set up and nothing to keep in sync — adding Português as a dictation language gives you translation both ways for free.</p>
+  <div class="modes">
+    <div class="mode">
+      <div class="modehead"><span class="chip">🇬🇧 English</span> speaking English</div>
+      <div class="tiles">
+        <div class="tile"><div class="ico on">✅</div><div class="tl">Default</div><div class="tk">⌘1</div></div>
+        <div class="tile"><div class="ico">💬</div><div class="tl">Assistant</div><div class="tk">⌘2</div></div>
+        <div class="tile"><div class="ico tr">🇵🇹</div><div class="tl">To Portuguese</div><div class="tk">⌘3</div></div>
+      </div>
+    </div>
+    <div class="mode">
+      <div class="modehead"><span class="chip">🇵🇹 Português</span> speaking Portuguese</div>
+      <div class="tiles">
+        <div class="tile"><div class="ico on">✅</div><div class="tl">Default</div><div class="tk">⌘1</div></div>
+        <div class="tile"><div class="ico">💬</div><div class="tl">Assistant</div><div class="tk">⌘2</div></div>
+        <div class="tile"><div class="ico tr">🇬🇧</div><div class="tl">To English</div><div class="tk">⌘3</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="pros">
+    <div><b>For</b>Zero setup. ⌘3 always means “translate”, in both directions. One list to manage instead of two.</div>
+    <div><b>Against</b>You can only translate into a language you also dictate in — no “to Mandarin” unless you add Mandarin as a dictation language. With three languages it needs two tiles, not one.</div>
+  </div>
+</div>
+
+<div class="opt">
+  <div class="opthead"><span class="optname">B · Destination list</span><span class="tag">Closest to today</span></div>
+  <p class="optsub">Keep an explicit list of destinations, as now, but include your dictation languages in it and hide whichever one you are currently speaking. The greyed tile simply disappears and the others close the gap.</p>
+  <div class="modes">
+    <div class="mode">
+      <div class="modehead"><span class="chip">🇬🇧 English</span> speaking English</div>
+      <div class="tiles">
+        <div class="tile"><div class="ico on">✅</div><div class="tl">Default</div><div class="tk">⌘1</div></div>
+        <div class="tile"><div class="ico">💬</div><div class="tl">Assistant</div><div class="tk">⌘2</div></div>
+        <div class="tile"><div class="ico tr">🇵🇹</div><div class="tl">To Portuguese</div><div class="tk">⌘3</div></div>
+        <div class="tile"><div class="ico tr">🇨🇳</div><div class="tl">To Mandarin</div><div class="tk">⌘4</div></div>
+        <div class="tile gone"><div class="ico tr">🇬🇧</div><div class="tl strike">To English</div><div class="tk">hidden</div></div>
+      </div>
+    </div>
+    <div class="mode">
+      <div class="modehead"><span class="chip">🇵🇹 Português</span> speaking Portuguese</div>
+      <div class="tiles">
+        <div class="tile"><div class="ico on">✅</div><div class="tl">Default</div><div class="tk">⌘1</div></div>
+        <div class="tile"><div class="ico">💬</div><div class="tl">Assistant</div><div class="tk">⌘2</div></div>
+        <div class="tile"><div class="ico tr">🇬🇧</div><div class="tl">To English</div><div class="tk">⌘3</div></div>
+        <div class="tile"><div class="ico tr">🇨🇳</div><div class="tl">To Mandarin</div><div class="tk">⌘4</div></div>
+        <div class="tile gone"><div class="ico tr">🇵🇹</div><div class="tl strike">To Portuguese</div><div class="tk">hidden</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="pros">
+    <div><b>For</b>Translate into anything, including languages you never speak. Smallest change from what ships today.</div>
+    <div><b>Against</b>Two lists that overlap — dictation languages and translation destinations — both needing maintenance. Tiles renumber as one drops out, so ⌘4 is Mandarin here but would be something else with a different set.</div>
+  </div>
+</div>
+
+<div class="opt">
+  <div class="opthead"><span class="optname">C · One Translate key</span><span class="tag warn">Two steps for a second destination</span></div>
+  <p class="optsub">A single Translate tile that keeps one ⌘ slot no matter how many destinations you have. It remembers the last destination you used from the language you are speaking, so the common case is still one keystroke; pressing and holding opens the list.</p>
+  <div class="modes">
+    <div class="mode">
+      <div class="modehead"><span class="chip">🇬🇧 English</span> speaking English</div>
+      <div class="tiles">
+        <div class="tile"><div class="ico on">✅</div><div class="tl">Default</div><div class="tk">⌘1</div></div>
+        <div class="tile"><div class="ico">💬</div><div class="tl">Assistant</div><div class="tk">⌘2</div></div>
+        <div class="tile"><div class="ico tr">🌐</div><div class="tl">Translate</div><div class="dest">→ Portuguese</div><div class="tk">⌘3</div></div>
+      </div>
+      <div class="menu">
+        <div class="mi sel">🇵🇹 &nbsp;Portuguese</div>
+        <div class="mi">🇨🇳 &nbsp;Mandarin</div>
+        <div class="mi">🇪🇸 &nbsp;Spanish</div>
+      </div>
+    </div>
+    <div class="mode">
+      <div class="modehead"><span class="chip">🇵🇹 Português</span> speaking Portuguese</div>
+      <div class="tiles">
+        <div class="tile"><div class="ico on">✅</div><div class="tl">Default</div><div class="tk">⌘1</div></div>
+        <div class="tile"><div class="ico">💬</div><div class="tl">Assistant</div><div class="tk">⌘2</div></div>
+        <div class="tile"><div class="ico tr">🌐</div><div class="tl">Translate</div><div class="dest">→ English</div><div class="tk">⌘3</div></div>
+      </div>
+      <div class="menu">
+        <div class="mi sel">🇬🇧 &nbsp;English</div>
+        <div class="mi">🇨🇳 &nbsp;Mandarin</div>
+        <div class="mi">🇪🇸 &nbsp;Spanish</div>
+      </div>
+    </div>
+  </div>
+  <div class="pros">
+    <div><b>For</b>One ⌘ slot however many destinations you keep, so the prompt tiles stay uncluttered. ⌘3 never moves.</div>
+    <div><b>Against</b>The destination is hidden inside a tile rather than visible on the strip, and a second destination takes two steps. The most machinery of the three.</div>
+  </div>
+</div>

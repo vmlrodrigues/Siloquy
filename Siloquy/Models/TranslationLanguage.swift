@@ -8,8 +8,15 @@ import Foundation
 struct TranslationLanguage: Identifiable, Hashable {
     /// Stable key, also stored as `CustomPrompt.targetLanguage` (used for de-duplication).
     let id: String
-    /// Tile title, e.g. "European Portuguese".
+    /// Full name, used in pickers and descriptions where there is room.
     let displayName: String
+    /// Short name for the prompt tile, which has room for about twelve characters
+    /// before it truncates — "European Portuguese" became "European…", which says
+    /// nothing about what the tile does.
+    let shortName: String
+
+    /// The tile's title: what pressing it does, not what the language is called.
+    var tileTitle: String { "To \(shortName)" }
     /// The phrase dropped into the prompt template, e.g. "European Portuguese (as spoken in Portugal)".
     let promptLanguage: String
     /// Flag emoji shown on the tile and in the pickers.
@@ -30,12 +37,12 @@ struct TranslationLanguage: Identifiable, Hashable {
 
     /// Supported languages.
     static let all: [TranslationLanguage] = [
-        .init(id: "pt-PT", displayName: "European Portuguese", promptLanguage: "European Portuguese (as spoken in Portugal)", flag: "🇵🇹"),
-        .init(id: "es", displayName: "Spanish", promptLanguage: "Spanish", flag: "🇪🇸"),
-        .init(id: "de", displayName: "German", promptLanguage: "German", flag: "🇩🇪"),
-        .init(id: "it", displayName: "Italian", promptLanguage: "Italian", flag: "🇮🇹"),
-        .init(id: "nl", displayName: "Dutch", promptLanguage: "Dutch", flag: "🇳🇱"),
-        .init(id: "zh", displayName: "Mandarin Chinese", promptLanguage: "Mandarin Chinese (Simplified)", flag: "🇨🇳"),
+        .init(id: "pt-PT", displayName: "European Portuguese", shortName: "Portuguese", promptLanguage: "European Portuguese (as spoken in Portugal)", flag: "🇵🇹"),
+        .init(id: "es", displayName: "Spanish", shortName: "Spanish", promptLanguage: "Spanish", flag: "🇪🇸"),
+        .init(id: "de", displayName: "German", shortName: "German", promptLanguage: "German", flag: "🇩🇪"),
+        .init(id: "it", displayName: "Italian", shortName: "Italian", promptLanguage: "Italian", flag: "🇮🇹"),
+        .init(id: "nl", displayName: "Dutch", shortName: "Dutch", promptLanguage: "Dutch", flag: "🇳🇱"),
+        .init(id: "zh", displayName: "Mandarin Chinese", shortName: "Mandarin", promptLanguage: "Mandarin Chinese (Simplified)", flag: "🇨🇳"),
     ]
 
     /// Enabled as tiles on first run. The rest are one tap away in the Add Translation picker.

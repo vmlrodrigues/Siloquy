@@ -324,7 +324,7 @@ struct PromptEditorView: View {
                 // stays in place (same id) so its ⌘ shortcut slot is unchanged.
                 let updatedPrompt = CustomPrompt(
                     id: prompt.id,
-                    title: lang.displayName,
+                    title: lang.tileTitle,
                     promptText: lang.promptText,
                     isActive: prompt.isActive,
                     icon: "globe",

@@ -610,7 +610,7 @@ class AIEnhancementService: ObservableObject {
     func addTranslationPrompts(_ languages: [TranslationLanguage]) {
         for lang in languages where !customPrompts.contains(where: { $0.targetLanguage == lang.id }) {
             let prompt = CustomPrompt(
-                title: lang.displayName,
+                title: lang.tileTitle,
                 promptText: lang.promptText,
                 icon: "globe",
                 description: "Translate dictation into \(lang.displayName)",
