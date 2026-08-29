@@ -48,6 +48,7 @@ struct ModelManagementView: View {
                 }
 
                 defaultModelSection
+                DictationLanguagesSection()
                 languageSelectionSection
                 availableModelsSection
             }
