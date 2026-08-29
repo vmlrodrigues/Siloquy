@@ -152,18 +152,20 @@ class MiniRecorderShortcutManager: ObservableObject {
     }
 
     private func handlePromptShortcut(index: Int) {
-        guard
-            let enhancementService = engine.getEnhancementService(),
-            index < enhancementService.allPrompts.count
-        else {
-            return
-        }
+        guard let enhancementService = engine.getEnhancementService() else { return }
+
+        // Indexes the slot list, not the offered list. Each dictation language keeps a
+        // permanent key, and the one you are speaking leaves its slot empty — pressing
+        // that key does nothing, rather than selecting whichever prompt would otherwise
+        // have shuffled into the position.
+        let slots = enhancementService.promptSlots
+        guard index < slots.count, let prompt = slots[index] else { return }
 
         if !enhancementService.isEnhancementEnabled {
             enhancementService.isEnhancementEnabled = true
         }
 
-        enhancementService.setActivePrompt(enhancementService.allPrompts[index])
+        enhancementService.setActivePrompt(prompt)
     }
 
     private func handlePowerModeSelectionShortcut(index: Int) async {

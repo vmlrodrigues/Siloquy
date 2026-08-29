@@ -99,6 +99,27 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     /// English instructions over Portuguese speech.
     let dictationLanguage: String?
 
+    /// The translate-into-this-language tile for a dictation language.
+    ///
+    /// Generated rather than stored: the languages you dictate in *are* the languages
+    /// you translate between, so keeping a second list in sync by hand would only
+    /// create ways for the two to disagree. Its id is fixed per language so the tile
+    /// can be selected and remembered like any other prompt.
+    static func translation(to language: DictationLanguage) -> CustomPrompt {
+        CustomPrompt(
+            id: language.translationPromptID,
+            title: "To \(language.tileName)",
+            promptText: TranslationLanguage.promptText(for: language.translationPhrase),
+            icon: "globe",
+            description: "Translate what you dictate into \(language.englishName)",
+            // Generated from the language list, so there is nothing here to edit or
+            // delete — you change it by changing your dictation languages.
+            isPredefined: true,
+            useSystemInstructions: false,
+            targetLanguage: language.id
+        )
+    }
+
     /// Whether this prompt should be offered while dictating in `language`.
     func applies(to language: DictationLanguage) -> Bool {
         dictationLanguage == nil || dictationLanguage == language.id
@@ -110,12 +131,17 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
 
     /// The icon to show wherever this prompt appears: a translation prompt shows its
     /// country flag emoji, everything else shows its SF Symbol name (#25).
-    var displayIcon: String {
-        if let lang = targetLanguage.flatMap({ TranslationLanguage.language(forID: $0) }) {
-            return lang.flag
-        }
-        return icon
+    /// The flag a translation prompt shows in place of an SF Symbol, if one is known.
+    ///
+    /// Dictation languages are checked first: they are where generated translation
+    /// tiles come from, and their ids ("en-US") are finer than the translation table's
+    /// ("es"), so looking only there would fall through to a generic globe.
+    var flagIcon: String? {
+        guard let id = targetLanguage else { return nil }
+        return DictationLanguage.named(id)?.flag ?? TranslationLanguage.language(forID: id)?.flag
     }
+
+    var displayIcon: String { flagIcon ?? icon }
 
     init(
         id: UUID = UUID(),
@@ -239,7 +265,7 @@ extension CustomPrompt {
                 
                 // A translation prompt shows its country flag; every other prompt shows
                 // its SF Symbol icon (#25).
-                if let flag = targetLanguage.flatMap({ TranslationLanguage.language(forID: $0)?.flag }) {
+                if let flag = flagIcon {
                     Text(flag)
                         .font(.system(size: 24))
                 } else {
@@ -290,7 +316,12 @@ extension CustomPrompt {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(isSelected ?
                         .primary : .secondary)
-                    .lineLimit(1)
+                    // Two lines, as in the design mockup: "To Portuguese" does not fit
+                    // on one at this width, and truncating it to "To Portugu…" loses
+                    // exactly the word that says where the text is going.
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: 70)
                 
                 // Trigger word section with consistent height

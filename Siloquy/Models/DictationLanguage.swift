@@ -23,6 +23,10 @@ struct DictationLanguage: Identifiable, Codable, Hashable {
     let nativeName: String
     /// English name, for the settings list when browsing languages you don't speak.
     let englishName: String
+    /// Short English name for a prompt tile, which fits about ten characters per line
+    /// over two lines. "Portuguese (Portugal)" truncates to "To Portugues…", losing the
+    /// word that says where the text is going; the flag carries the variant instead.
+    let tileName: String
     let flag: String
     /// Models to try, best first, when this language is enabled and has no model yet.
     ///
@@ -31,6 +35,15 @@ struct DictationLanguage: Identifiable, Codable, Hashable {
     /// preferring exact matches would quietly demote the model that measured best on
     /// English.
     let preferredModelNames: [String]
+    /// How to name this language *to the model* when translating into it — more
+    /// specific than the endonym, because "Portuguese" alone lets the model drift to
+    /// the Brazilian norm.
+    let translationPhrase: String
+    /// Fixed id for this language's generated translation prompt.
+    ///
+    /// Derived tiles still have to be selectable and rememberable like any other
+    /// prompt, and a fresh UUID each launch would lose the selection every time.
+    let translationPromptID: UUID
 
     /// English is the built-in default and cannot be removed — the app has to be able
     /// to fall back to something, and removing your only language would strand you.
@@ -83,9 +96,11 @@ extension DictationLanguage {
     static let english = DictationLanguage(
         id: "en-US",
         nativeName: "English",
-        englishName: "English",
+        englishName: "English", tileName: "English",
         flag: "🇬🇧",
-        preferredModelNames: ["parakeet-tdt-0.6b-v2", appleNative]
+        preferredModelNames: ["parakeet-tdt-0.6b-v2", appleNative],
+        translationPhrase: "English",
+        translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E1")!
     )
 
     /// `TranscriptionModel.name` for Apple's SpeechAnalyzer — the model's own name, not
@@ -99,13 +114,13 @@ extension DictationLanguage {
     /// `DictationLanguageManager` filters it at runtime.
     static let available: [DictationLanguage] = [
         english,
-        DictationLanguage(id: "pt-PT", nativeName: "Português", englishName: "Portuguese (Portugal)", flag: "🇵🇹", preferredModelNames: [appleNative]),
-        DictationLanguage(id: "pt-BR", nativeName: "Português (Brasil)", englishName: "Portuguese (Brazil)", flag: "🇧🇷", preferredModelNames: [appleNative]),
-        DictationLanguage(id: "es-ES", nativeName: "Español", englishName: "Spanish", flag: "🇪🇸", preferredModelNames: [appleNative]),
-        DictationLanguage(id: "es-MX", nativeName: "Español (México)", englishName: "Spanish (Mexico)", flag: "🇲🇽", preferredModelNames: [appleNative]),
-        DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", flag: "🇫🇷", preferredModelNames: [appleNative]),
-        DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", flag: "🇩🇪", preferredModelNames: [appleNative]),
-        DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative]),
+        DictationLanguage(id: "pt-PT", nativeName: "Português", englishName: "Portuguese (Portugal)", tileName: "Portuguese", flag: "🇵🇹", preferredModelNames: [appleNative], translationPhrase: "European Portuguese (as spoken in Portugal)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E2")!),
+        DictationLanguage(id: "pt-BR", nativeName: "Português (Brasil)", englishName: "Portuguese (Brazil)", tileName: "Portuguese (BR)", flag: "🇧🇷", preferredModelNames: [appleNative], translationPhrase: "Brazilian Portuguese", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E3")!),
+        DictationLanguage(id: "es-ES", nativeName: "Español", englishName: "Spanish", tileName: "Spanish", flag: "🇪🇸", preferredModelNames: [appleNative], translationPhrase: "Spanish (as spoken in Spain)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E4")!),
+        DictationLanguage(id: "es-MX", nativeName: "Español (México)", englishName: "Spanish (Mexico)", tileName: "Spanish (MX)", flag: "🇲🇽", preferredModelNames: [appleNative], translationPhrase: "Mexican Spanish", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E5")!),
+        DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", tileName: "French", flag: "🇫🇷", preferredModelNames: [appleNative], translationPhrase: "French", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!),
+        DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", tileName: "German", flag: "🇩🇪", preferredModelNames: [appleNative], translationPhrase: "German", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!),
+        DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),
     ]
 
     /// Whether a translation target names this dictation language.

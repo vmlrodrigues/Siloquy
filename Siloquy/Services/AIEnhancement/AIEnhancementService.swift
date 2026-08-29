@@ -84,15 +84,33 @@ class AIEnhancementService: ObservableObject {
     /// Translation is filtered too, and inverts: translating into the language you are
     /// already speaking is a no-op, so that tile is hidden. Translation always means
     /// "out of the language I am speaking".
-    var allPrompts: [CustomPrompt] {
+    /// Tiles in ⌘ order, with `nil` where a slot is reserved but has no tile.
+    ///
+    /// Every dictation language owns a permanent slot at the end of the strip, so ⌘5
+    /// means the same destination wherever you are standing. The language you are
+    /// currently speaking leaves its slot empty — closing the gap instead would shift
+    /// every key below it, which is the failure this reservation exists to prevent, and
+    /// drawing a dead tile there is the greyed-out tile it replaces.
+    var promptSlots: [CustomPrompt?] {
         let language = DictationLanguageManager.shared.current
-        return customPrompts.filter { prompt in
-            guard prompt.applies(to: language) else { return false }
-            if let target = prompt.targetLanguage {
-                return !DictationLanguage.matches(target, language)
-            }
-            return true
+        let languages = DictationLanguageManager.shared.enabled
+
+        let authored: [CustomPrompt?] = customPrompts
+            .filter { $0.applies(to: language) && !$0.isTranslation }
+            .map { Optional($0) }
+
+        // With one language there is nowhere to translate to.
+        guard languages.count > 1 else { return authored }
+
+        let translations: [CustomPrompt?] = languages.map { destination in
+            destination == language ? nil : CustomPrompt.translation(to: destination)
         }
+        return authored + translations
+    }
+
+    /// The prompts actually offered right now, in ⌘ order, with reserved gaps removed.
+    var allPrompts: [CustomPrompt] {
+        promptSlots.compactMap { $0 }
     }
 
     /// Every prompt regardless of language, for places that configure rather than
@@ -191,6 +209,7 @@ class AIEnhancementService: ObservableObject {
 
         initializePredefinedPrompts()
         removeRetiredPrompts()
+        removeSupersededTranslationPrompts()
         seedDefaultTranslationsIfNeeded()
     }
 
@@ -659,6 +678,36 @@ class AIEnhancementService: ObservableObject {
         }
         customPrompts.removeAll { $0.id == retiredId }
         logger.notice("Removed the retired Local Model Default prompt (#48)")
+    }
+
+    /// Drop stored translation prompts now that they are generated from the language
+    /// list.
+    ///
+    /// Keeping both would show the destination twice and let the two drift apart. A
+    /// stored one whose target is not a dictation language is left alone — it has no
+    /// generated counterpart, so removing it would silently delete a prompt the user
+    /// still relies on.
+    private func removeSupersededTranslationPrompts() {
+        let languages = DictationLanguage.available
+        let superseded = customPrompts.filter { prompt in
+            guard let target = prompt.targetLanguage else { return false }
+            return languages.contains { DictationLanguage.matches(target, $0) }
+        }
+        guard !superseded.isEmpty else { return }
+
+        let supersededIds = Set(superseded.map(\.id))
+        if let selected = selectedPromptId, supersededIds.contains(selected) {
+            // Point at the generated tile for the same destination, so a selection is
+            // carried over rather than silently reset.
+            let target = superseded.first { $0.id == selected }?.targetLanguage
+            selectedPromptId = target
+                .flatMap { t in DictationLanguage.available.first { DictationLanguage.matches(t, $0) } }
+                .map(\.translationPromptID)
+                ?? PredefinedPrompts.defaultPromptId
+        }
+
+        customPrompts.removeAll { supersededIds.contains($0.id) }
+        logger.notice("Removed \(superseded.count, privacy: .public) stored translation prompt(s) now generated from dictation languages")
     }
 
     private func initializePredefinedPrompts() {

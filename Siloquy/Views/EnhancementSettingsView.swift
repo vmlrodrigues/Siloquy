@@ -118,22 +118,12 @@ struct EnhancementSettingsView: View {
                 HStack {
                     Text("Enhancement & Translation Prompts")
                     Spacer()
-                    Menu {
-                        Button {
-                            openPromptPanel()
-                            withAnimation(.smooth(duration: 0.3)) {
-                                isEditingPrompt = true
-                            }
-                        } label: {
-                            Label("New prompt", systemImage: "doc.badge.plus")
-                        }
-                        Button {
-                            openPromptPanel()
-                            withAnimation(.smooth(duration: 0.3)) {
-                                isAddingTranslation = true
-                            }
-                        } label: {
-                            Label("Add translation…", systemImage: "globe")
+                    // "Add translation…" is gone: destinations come from your dictation
+                    // languages now, so adding one there adds its tile here.
+                    Button {
+                        openPromptPanel()
+                        withAnimation(.smooth(duration: 0.3)) {
+                            isEditingPrompt = true
                         }
                     } label: {
                         Image(systemName: "plus.circle.fill")
@@ -141,9 +131,8 @@ struct EnhancementSettingsView: View {
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(.secondary)
                     }
-                    .menuStyle(.borderlessButton)
-                    .menuIndicator(.hidden)
-                    .fixedSize()
+                    .buttonStyle(.plain)
+                    .help("New prompt")
                     .help("Add a prompt or translation")
                 }
             }
@@ -223,7 +212,7 @@ private struct ReorderablePromptGrid: View {
                         // actually offered right now. Numbering by grid position would
                         // print a shortcut that belongs to a different prompt as soon as
                         // one is filtered out by language.
-                        let liveIndex = enhancementService.allPrompts.firstIndex(where: { $0.id == prompt.id })
+                        let liveIndex = enhancementService.promptSlots.firstIndex(where: { $0?.id == prompt.id })
                         prompt.promptIcon(
                             isSelected: selectedPromptId == prompt.id,
                             shortcutNumber: liveIndex.flatMap(Self.shortcutLabel(for:)),
@@ -276,6 +265,22 @@ private struct ReorderablePromptGrid: View {
                             )
                         )
                     }
+                    // Translation tiles are generated from the dictation languages, so
+                    // they sit after the authored prompts and are not reorderable — you
+                    // change them by changing your languages.
+                    ForEach(Array(enhancementService.promptSlots.enumerated()), id: \.offset) { slotIndex, slot in
+                        if let prompt = slot, prompt.isTranslation {
+                            prompt.promptIcon(
+                                isSelected: selectedPromptId == prompt.id,
+                                shortcutNumber: Self.shortcutLabel(for: slotIndex),
+                                onTap: {
+                                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                        onPromptSelected(prompt)
+                                    }
+                                }
+                            )
+                        }
+                    }
                 }
                 .padding(.vertical, 12)
                 .padding(.horizontal, 16)
@@ -285,7 +290,9 @@ private struct ReorderablePromptGrid: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                    Text("Drag to reorder (⌘1–⌘0) • Double-click to edit • Right-click for more options")
+                    Text(DictationLanguageManager.shared.enabled.count > 1
+                         ? "Drag to reorder (⌘1–⌘0) • Double-click to edit • Translation tiles come from your dictation languages and keep a fixed key each"
+                         : "Drag to reorder (⌘1–⌘0) • Double-click to edit • Right-click for more options")
                     .font(.caption)
                     .foregroundColor(.secondary)
                 }
