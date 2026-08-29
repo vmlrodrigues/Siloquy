@@ -68,6 +68,9 @@ struct NativeAppleModel: TranscriptionModel {
     let provider: ModelProvider = .nativeApple
     let isMultilingualModel: Bool
     let supportedLanguages: [String: String]
+    /// SpeechAnalyzer reports partial results natively, so it can drive the live text
+    /// preview rather than only producing a transcript once recording stops.
+    var supportsStreaming: Bool = true
 }
 
 // A new struct for FluidAudio models

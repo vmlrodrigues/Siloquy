@@ -220,6 +220,9 @@ class StreamingTranscriptionService {
     // MARK: - Private
 
     private func createProvider(for model: any TranscriptionModel) -> StreamingTranscriptionProvider {
+        if model.provider == .nativeApple {
+            return NativeAppleStreamingProvider()
+        }
         if model.provider == .fluidAudio {
             guard let fluidAudioService else {
                 fatalError("FluidAudioTranscriptionService required for FluidAudio streaming. Ensure it is passed to StreamingTranscriptionService.")
