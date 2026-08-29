@@ -295,15 +295,25 @@ final class ShortcutRecorderModel: ObservableObject {
                 modifierFlags: peakModifierFlags
             )
 
-            pendingModifierShortcut = shortcut
+            // Preview the chord either way so the user sees their modifiers register,
+            // but only arm it for commit where a modifier-only binding is usable.
+            // Otherwise releasing ⌥⌘ before pressing the letter would capture ⌥⌘ and
+            // end recording, making a combination like ⌥⌘E impossible to enter by hand.
             previewShortcut = shortcut
+            pendingModifierShortcut = (activeAction?.allowsModifierOnly ?? false) ? shortcut : nil
             return true
         }
 
         if let pendingModifierShortcut {
             finish(with: pendingModifierShortcut)
+            return true
         }
 
+        // Nothing to commit: the chord was released without a key, and this action
+        // cannot use a modifier-only binding. Go back to waiting rather than leaving a
+        // preview of a shortcut that will never be assigned.
+        previewShortcut = nil
+        peakModifierFlags = []
         return true
     }
 }

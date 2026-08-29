@@ -9,6 +9,10 @@ import SwiftUI
 struct DictationLanguagesSection: View {
     @ObservedObject private var manager = DictationLanguageManager.shared
     @EnvironmentObject private var recordingShortcutManager: RecordingShortcutManager
+    /// Removing also discards that language's shortcut, which is not obvious from a
+    /// single small button and cannot be undone.
+    @State private var languageToRemove: DictationLanguage?
+    @State private var isConfirmingRemoval = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -50,6 +54,25 @@ struct DictationLanguagesSection: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(10)
+        // A confirmation dialog rather than an alert: `ModelManagementView` already owns
+        // an `.alert` on the enclosing ScrollView, and only one alert presents per
+        // hierarchy — a nested one silently never appears.
+        .confirmationDialog(
+            languageToRemove.map { "Remove \($0.nativeName)?" } ?? "",
+            isPresented: $isConfirmingRemoval,
+            titleVisibility: .visible,
+            presenting: languageToRemove
+        ) { language in
+            Button("Remove", role: .destructive) {
+                manager.disable(language)
+                languageToRemove = nil
+            }
+            Button("Cancel", role: .cancel) {
+                languageToRemove = nil
+            }
+        } message: { _ in
+            Text("Its shortcut will be cleared. The downloaded language model stays on your Mac, so adding it back later needs no download.")
+        }
     }
 
     private func row(for language: DictationLanguage) -> some View {
@@ -83,10 +106,13 @@ struct DictationLanguagesSection: View {
 
             if language.isRemovable {
                 Button {
-                    manager.disable(language)
+                    languageToRemove = language
+                    isConfirmingRemoval = true
                 } label: {
                     Image(systemName: "minus.circle")
                         .foregroundColor(.secondary)
+                        .padding(4)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .help("Remove \(language.nativeName)")

@@ -27,6 +27,10 @@ enum ShortcutValidator {
             return error
         }
 
+        if shortcut.kind == .modifierOnly, !action.allowsModifierOnly {
+            return .plainKeyRequiresModifier
+        }
+
         if let reservedAction = reservedActionConflicting(with: shortcut) {
             return .alreadyUsedBy(reservedAction.displayName)
         }
