@@ -40,6 +40,8 @@ final class DictationLanguageManager: ObservableObject {
     /// Consulted for `usableModels` — models actually downloaded, or authorised with an
     /// API key. Offering a model that cannot run would fail only once you had spoken.
     private weak var modelManager: TranscriptionModelManager?
+    /// Consulted only to refuse a switch while the microphone is open.
+    private weak var recorderState: (any RecorderStateProvider)?
 
     private init() {
         enabled = loadEnabled()
@@ -52,6 +54,7 @@ final class DictationLanguageManager: ObservableObject {
     func configure(engine: any PowerModeStateProvider, modelManager: TranscriptionModelManager) {
         self.engine = engine
         self.modelManager = modelManager
+        self.recorderState = engine as? any RecorderStateProvider
         backfillMissingModels()
     }
 
@@ -206,6 +209,20 @@ final class DictationLanguageManager: ObservableObject {
 
         guard let engine else {
             logger.error("Cannot switch to \(language.id, privacy: .public) — no engine configured")
+            return
+        }
+
+        // The transcriber is chosen when recording starts and cannot be swapped
+        // underneath a live session. Letting the settings change anyway is worse than
+        // refusing: the language would read as Portuguese while an English transcriber
+        // kept running, so the live preview would show one language being mangled into
+        // another with nothing to explain why.
+        if let state = recorderState?.recordingState, state != .idle {
+            logger.notice("Refusing switch to \(language.id, privacy: .public) — recorder is \(String(describing: state), privacy: .public)")
+            NotificationManager.shared.showNotification(
+                title: "Finish or cancel this dictation before switching to \(language.nativeName)",
+                type: .warning
+            )
             return
         }
 

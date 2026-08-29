@@ -12,6 +12,7 @@ struct DictationLanguagesSection: View {
     /// single small button and cannot be undone.
     @State private var languageToRemove: DictationLanguage?
     @State private var isConfirmingRemoval = false
+    @State private var hoveredLanguage: DictationLanguage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -87,6 +88,15 @@ struct DictationLanguagesSection: View {
                     manager.select(language)
                 } label: {
                     HStack(spacing: 9) {
+                        // A filled dot for the active language, hollow for the rest —
+                        // the row is a choice, and without a mark for the unchosen ones
+                        // there is nothing to suggest they can be picked.
+                        Image(systemName: language == manager.current
+                              ? "largecircle.fill.circle"
+                              : "circle")
+                            .foregroundColor(language == manager.current ? .accentColor : .secondary)
+                            .font(.system(size: 12))
+
                         Text(language.flag)
                         Text(language.nativeName)
                             .fontWeight(language == manager.current ? .semibold : .regular)
@@ -102,12 +112,31 @@ struct DictationLanguagesSection: View {
                                 .foregroundColor(.accentColor)
                         }
                     }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(hoveredLanguage == language && language != manager.current
+                                  ? Color.primary.opacity(0.08)
+                                  : Color.clear)
+                    )
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .onHover { inside in
+                    hoveredLanguage = inside ? language : (hoveredLanguage == language ? nil : hoveredLanguage)
+                    // The pointer is the other half of the signal: a hand says "this
+                    // does something" before the row has been hovered long enough to
+                    // notice the background.
+                    if inside, language != manager.current {
+                        NSCursor.pointingHand.push()
+                    } else if inside == false {
+                        NSCursor.pop()
+                    }
+                }
                 .help(language == manager.current
                       ? "Already dictating in \(language.nativeName)"
-                      : "Dictate in \(language.nativeName)")
+                      : "Click to dictate in \(language.nativeName)")
 
                 Spacer(minLength: 12)
 
@@ -147,7 +176,7 @@ struct DictationLanguagesSection: View {
                     isVisible: selected?.provider == .nativeApple
                 )
             }
-            .padding(.leading, 26)
+            .padding(.leading, 46)
         }
         .padding(.vertical, 6)
     }

@@ -6,19 +6,6 @@ struct FluidAudioModelCardView: View {
     let model: FluidAudioModel
     @ObservedObject var fluidAudioModelManager: FluidAudioModelManager
     @ObservedObject var transcriptionModelManager: TranscriptionModelManager
-    @State private var streamingEnabled: Bool
-
-    init(model: FluidAudioModel, fluidAudioModelManager: FluidAudioModelManager, transcriptionModelManager: TranscriptionModelManager) {
-        self.model = model
-        _fluidAudioModelManager = ObservedObject(wrappedValue: fluidAudioModelManager)
-        _transcriptionModelManager = ObservedObject(wrappedValue: transcriptionModelManager)
-        let key = "streaming-enabled-\(model.name)"
-        _streamingEnabled = State(initialValue: UserDefaults.standard.object(forKey: key) as? Bool ?? true)
-    }
-
-    private var streamingDefaultsKey: String {
-        "streaming-enabled-\(model.name)"
-    }
 
     var isCurrent: Bool {
         transcriptionModelManager.currentTranscriptionModel?.name == model.name
@@ -54,17 +41,6 @@ struct FluidAudioModelCardView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundColor(Color(.labelColor))
 
-            if model.supportsStreaming && isDownloaded {
-                Toggle("Real-time", isOn: $streamingEnabled)
-                    .toggleStyle(.switch)
-                    .controlSize(.mini)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(Color(.secondaryLabelColor))
-                    .onChange(of: streamingEnabled) { _, newValue in
-                        UserDefaults.standard.set(newValue, forKey: streamingDefaultsKey)
-                    }
-                    .help(streamingEnabled ? "Live streaming enabled — click to switch to batch" : "Batch mode — click to enable live streaming")
-            }
 
             Spacer()
         }
