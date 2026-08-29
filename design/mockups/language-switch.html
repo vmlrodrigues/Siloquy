@@ -1,0 +1,115 @@
+<!doctype html><meta charset="utf-8"><style>
+*{box-sizing:border-box}
+body{margin:0;padding:26px;background:#f2f2f7;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,sans-serif;color:#1d1d1f}
+.wrap{display:flex;gap:22px;align-items:flex-start}
+.panel{width:420px}
+.sec{font-size:15px;font-weight:600;margin:0 0 9px 2px}
+.badge{font-size:11px;font-weight:500;background:#e8f0fe;color:#0a6cff;padding:2px 8px;border-radius:20px;vertical-align:2px;margin-left:4px}
+.card{background:#fff;border:0.5px solid #d8d8dd;border-radius:11px;overflow:hidden}
+.card.pad{padding:15px}
+.row{display:flex;align-items:center;gap:12px;padding:12px 15px;border-bottom:0.5px solid #ececf0}
+.selrow{background:#eef4ff}
+.radio{width:14px;height:14px;border-radius:50%;border:1.5px solid #b8b8bf;flex:0 0 auto}
+.radio.on{border-color:#0a6cff;background:radial-gradient(circle,#0a6cff 0 3.2px,transparent 3.4px)}
+.flag{font-size:18px}
+.rowtxt{flex:1}
+.rn{font-size:13.5px}
+.rs{font-size:11.5px;color:#6e6e73;margin-top:1px}
+.key{font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;background:#f5f5f7;border:0.5px solid #ddd;padding:3px 7px;border-radius:5px}
+.addrow{display:flex;align-items:center;gap:8px;padding:11px 15px;font-size:12.5px;color:#6e6e73}
+.plus{font-size:14px}
+.note{font-size:11.5px;color:#8e8e93;margin:7px 0 20px 2px;line-height:1.5}
+.ph{font-size:12px;color:#6e6e73;margin-bottom:13px}
+.tiles{display:flex;gap:13px;flex-wrap:wrap}
+.tile{width:74px;text-align:center}
+.ico{width:50px;height:50px;border-radius:13px;background:#f5f5f7;border:0.5px solid #ddd;margin:0 auto 5px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.ico.on{background:#0a6cff;border-color:#0a6cff;color:#fff}
+.tl{font-size:10.5px;line-height:1.25}
+.tk{font-size:9.5px;color:#8e8e93;font-family:ui-monospace,monospace;margin-top:1px}
+.rec{display:inline-flex;align-items:center;gap:9px;background:#1c1c1e;color:#f2f2f7;border-radius:20px;padding:8px 17px;font-size:12.5px}
+.dot{width:7px;height:7px;border-radius:50%;background:#ff453a}
+</style><div class="wrap">
+    <div class="panel">
+      <div class="sec">Dictation Languages</div>
+      <div class="card">
+        <div class="row selrow">
+          <span class="radio on"></span>
+          <span class="flag">🇬🇧</span>
+          <div class="rowtxt"><div class="rn">English</div><div class="rs">Parakeet v2 · en-US</div></div>
+          <span class="key">⌥⌘E</span>
+        </div>
+        <div class="row">
+          <span class="radio"></span>
+          <span class="flag">🇵🇹</span>
+          <div class="rowtxt"><div class="rn">Português</div><div class="rs">Apple SpeechAnalyzer · pt-PT</div></div>
+          <span class="key">⌥⌘P</span>
+        </div>
+        <div class="addrow"><span class="plus">+</span>Add a language…</div>
+      </div>
+      <div class="note">Each language you add gets its own shortcut. Most people use two.</div>
+
+      <div class="sec">AI Enhancement <span class="badge">English</span></div>
+      <div class="card pad">
+        <div class="ph">Enhancement &amp; Translation Prompts</div>
+        <div class="tiles">
+      <div class="tile">
+        <div class="ico on">✓</div>
+        <div class="tl">Default</div><div class="tk">⌘1</div>
+      </div>
+      <div class="tile">
+        <div class="ico ">💬</div>
+        <div class="tl">Assistant</div><div class="tk">⌘2</div>
+      </div>
+      <div class="tile">
+        <div class="ico ">⌗</div>
+        <div class="tl">Local Model</div><div class="tk">⌘3</div>
+      </div>
+      <div class="tile">
+        <div class="ico ">🇵🇹</div>
+        <div class="tl">To Portuguese</div><div class="tk">⌘4</div>
+      </div></div>
+      </div>
+      <div class="note">⌘1 is the English cleanup prompt. Every label is in English — the language you are working in.</div>
+
+      <div class="rec"><span class="dot"></span>Listening &nbsp;·&nbsp; EN</div>
+    </div>
+    <div class="panel">
+      <div class="sec">Idiomas de Ditado</div>
+      <div class="card">
+        <div class="row">
+          <span class="radio"></span>
+          <span class="flag">🇬🇧</span>
+          <div class="rowtxt"><div class="rn">English</div><div class="rs">Parakeet v2 · en-US</div></div>
+          <span class="key">⌥⌘E</span>
+        </div>
+        <div class="row selrow">
+          <span class="radio on"></span>
+          <span class="flag">🇵🇹</span>
+          <div class="rowtxt"><div class="rn">Português</div><div class="rs">Apple SpeechAnalyzer · pt-PT</div></div>
+          <span class="key">⌥⌘P</span>
+        </div>
+        <div class="addrow"><span class="plus">+</span>Adicionar idioma…</div>
+      </div>
+      <div class="note">Cada idioma que adicionares tem o seu próprio atalho.</div>
+
+      <div class="sec">Melhoria com IA <span class="badge">Português</span></div>
+      <div class="card pad">
+        <div class="ph">Comandos de Melhoria e Tradução</div>
+        <div class="tiles">
+      <div class="tile">
+        <div class="ico on">✓</div>
+        <div class="tl">Predefinido</div><div class="tk">⌘1</div>
+      </div>
+      <div class="tile">
+        <div class="ico ">💬</div>
+        <div class="tl">Assistente</div><div class="tk">⌘2</div>
+      </div>
+      <div class="tile">
+        <div class="ico ">🇬🇧</div>
+        <div class="tl">Para Inglês</div><div class="tk">⌘3</div>
+      </div></div>
+      </div>
+      <div class="note">⌘1 é agora o comando em português — escrito em português, com as convenções de pt-PT.</div>
+
+      <div class="rec"><span class="dot"></span>A escutar &nbsp;·&nbsp; 🇵🇹</div>
+    </div></div>
