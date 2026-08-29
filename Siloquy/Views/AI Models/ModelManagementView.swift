@@ -47,9 +47,7 @@ struct ModelManagementView: View {
                     intelMacWarningBanner
                 }
 
-                defaultModelSection
                 DictationLanguagesSection()
-                languageSelectionSection
                 availableModelsSection
             }
             .padding(40)
@@ -101,25 +99,6 @@ struct ModelManagementView: View {
             // Content
             ModelSettingsView(whisperPrompt: whisperPrompt)
         }
-    }
-    
-    private var defaultModelSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Default Model")
-                .font(.headline)
-                .foregroundColor(.secondary)
-            Text(transcriptionModelManager.currentTranscriptionModel?.displayName ?? "No model selected")
-                .font(.title2)
-                .fontWeight(.bold)
-        }
-        .padding()
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(CardBackground(isSelected: false))
-        .cornerRadius(10)
-    }
-
-    private var languageSelectionSection: some View {
-        LanguageSelectionView(transcriptionModelManager: transcriptionModelManager, displayMode: .full, whisperPrompt: whisperPrompt)
     }
     
     private var availableModelsSection: some View {

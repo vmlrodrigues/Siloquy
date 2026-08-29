@@ -162,17 +162,8 @@ struct CloudModelCardView: View {
     
     private var actionSection: some View {
         HStack(spacing: 8) {
-            if isCurrent {
-                Text("Default Model")
-                    .font(.system(size: 12))
-                    .foregroundColor(Color(.secondaryLabelColor))
-            } else if isConfigured {
-                Button(action: setDefaultAction) {
-                    Text("Set as Default")
-                        .font(.system(size: 12))
-                }
-                .buttonStyle(.bordered)
-                .controlSize(.small)
+            if isConfigured {
+                ModelLanguageAssignment(model: model)
             } else {
                 Button(action: {
                     withAnimation(.interpolatingSpring(stiffness: 170, damping: 20)) {

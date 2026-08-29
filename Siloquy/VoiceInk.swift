@@ -148,7 +148,7 @@ struct VoiceInkApp: App {
         engine.recorderUIManager = recorderUIManager
         // Language switching changes the transcription model, so it needs the engine
         // rather than writing the defaults behind its back.
-        DictationLanguageManager.shared.configure(engine: engine)
+        DictationLanguageManager.shared.configure(engine: engine, modelManager: transcriptionModelManager)
 
         // 6. Initialize model state
         // Migration and refreshAllAvailableModels must run before loadCurrentTranscriptionModel so renamed keys are remapped and imported models are present when restoring the saved selection.
