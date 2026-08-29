@@ -126,6 +126,7 @@ class AIEnhancementService: ObservableObject {
         )
 
         initializePredefinedPrompts()
+        removeRetiredPrompts()
         seedDefaultTranslationsIfNeeded()
     }
 
@@ -232,7 +233,7 @@ class AIEnhancementService: ObservableObject {
         // with it (#22). A user-created custom prompt still takes precedence.
         let usesDefaultPrompt = activePrompt == nil
             || activePrompt?.id == PredefinedPrompts.defaultPromptId
-            || activePrompt?.id == PredefinedPrompts.localModelPromptId
+            || activePrompt?.id == PredefinedPrompts.retiredLocalModelPromptId
         if aiService.selectedProvider == .gemmaLocal, usesDefaultPrompt {
             let modelID = GemmaService.currentSelectedModelID
             return PredefinedPrompts.localModelPromptText(forModelID: modelID) + finalContextSection
@@ -245,9 +246,7 @@ class AIEnhancementService: ObservableObject {
                 return activePrompt.finalPromptText + finalContextSection
             }
         } else {
-            let defaultId = aiService.selectedProvider.isLocalProvider
-                ? PredefinedPrompts.localModelPromptId
-                : PredefinedPrompts.defaultPromptId
+            let defaultId = PredefinedPrompts.defaultPromptId
             let defaultPrompt = allPrompts.first(where: { $0.id == defaultId }) ?? allPrompts.first!
             return defaultPrompt.finalPromptText + finalContextSection
         }
@@ -547,6 +546,24 @@ class AIEnhancementService: ObservableObject {
 
     func setActivePrompt(_ prompt: CustomPrompt) {
         selectedPromptId = prompt.id
+    }
+
+    /// Remove the retired "Local Model Default" prompt from existing installs (#48).
+    ///
+    /// `initializePredefinedPrompts` only ever appends, so dropping a prompt from the
+    /// template list stops new installs seeing it but leaves it sitting in the stored
+    /// list of everyone who already had it — still selectable, still occupying a
+    /// ⌘-number slot. Anyone with it selected is moved to Default, which is what the
+    /// on-device provider was already giving them.
+    private func removeRetiredPrompts() {
+        let retiredId = PredefinedPrompts.retiredLocalModelPromptId
+        guard customPrompts.contains(where: { $0.id == retiredId }) else { return }
+
+        if selectedPromptId == retiredId {
+            selectedPromptId = PredefinedPrompts.defaultPromptId
+        }
+        customPrompts.removeAll { $0.id == retiredId }
+        logger.notice("Removed the retired Local Model Default prompt (#48)")
     }
 
     private func initializePredefinedPrompts() {
