@@ -5,7 +5,6 @@ struct EnhancementSettingsView: View {
     @EnvironmentObject private var enhancementService: AIEnhancementService
     @State private var isEditingPrompt = false
     @State private var isShowingSettings = false
-    @State private var isAddingTranslation = false
     @State private var selectedPromptForEdit: CustomPrompt?
     @State private var panelID = UUID()
 
@@ -14,12 +13,10 @@ struct EnhancementSettingsView: View {
     private enum PanelType {
         case promptEditor
         case settings
-        case translationPicker
     }
 
     private var activePanel: PanelType? {
         if isShowingSettings { return .settings }
-        if isAddingTranslation { return .translationPicker }
         if isEditingPrompt || selectedPromptForEdit != nil { return .promptEditor }
         return nil
     }
@@ -38,7 +35,6 @@ struct EnhancementSettingsView: View {
             isEditingPrompt = false
             selectedPromptForEdit = nil
             isShowingSettings = false
-            isAddingTranslation = false
         }
     }
 
@@ -150,8 +146,6 @@ struct EnhancementSettingsView: View {
                 switch activePanel {
                 case .settings:
                     EnhancementSettingsPanel(onDismiss: closePanel)
-                case .translationPicker:
-                    TranslationLanguagePickerView(onDismiss: closePanel)
                         .id(panelID)
                 case .promptEditor:
                     Group {

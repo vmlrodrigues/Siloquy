@@ -99,7 +99,17 @@ class AIEnhancementService: ObservableObject {
         // decide this, which meant the one guarantee the language switch was built to
         // make — that ⌘1 means "clean this up properly" whatever you are speaking —
         // could be undone by a stray drag.
-        let offered = customPrompts.filter { $0.applies(to: language) && !$0.isTranslation }
+        let offered = customPrompts.filter { prompt in
+            guard prompt.applies(to: language) else { return false }
+            // A stored translation prompt is superseded only where a generated tile
+            // covers the same destination. One targeting a language you cannot dictate
+            // in — Mandarin, say — has no generated counterpart, so it stays an
+            // ordinary tile rather than being stranded with no key.
+            if let target = prompt.targetLanguage {
+                return !DictationLanguage.available.contains { DictationLanguage.matches(target, $0) }
+            }
+            return true
+        }
         let authored: [CustomPrompt?] = (
             offered.filter { $0.id == PredefinedPrompts.defaultPromptId }
             + offered.filter { $0.id == PredefinedPrompts.assistantPromptId }
@@ -217,7 +227,6 @@ class AIEnhancementService: ObservableObject {
         initializePredefinedPrompts()
         removeRetiredPrompts()
         removeSupersededTranslationPrompts()
-        seedDefaultTranslationsIfNeeded()
     }
 
     /// Force enhancement off at the start of a new dictation when the user opted into
@@ -631,32 +640,7 @@ class AIEnhancementService: ObservableObject {
         }
     }
 
-    /// Add built-in Translation prompts (#25). Each becomes an ordinary deletable tile;
-    /// a language already present is skipped so it can't be added twice.
-    func addTranslationPrompts(_ languages: [TranslationLanguage]) {
-        for lang in languages where !customPrompts.contains(where: { $0.targetLanguage == lang.id }) {
-            let prompt = CustomPrompt(
-                title: lang.tileTitle,
-                promptText: lang.promptText,
-                icon: "globe",
-                description: "Translate dictation into \(lang.displayName)",
-                isPredefined: false,
-                useSystemInstructions: false,
-                targetLanguage: lang.id
-            )
-            customPrompts.append(prompt)
-        }
-    }
 
-    /// Seed the default translation tiles once, on first launch of the version that
-    /// introduced them. Honours a later deletion — it never re-adds after the first run.
-    private func seedDefaultTranslationsIfNeeded() {
-        let key = "didSeedTranslationsV1"
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        let defaults = TranslationLanguage.defaultSeededIDs.compactMap { TranslationLanguage.language(forID: $0) }
-        addTranslationPrompts(defaults)
-        UserDefaults.standard.set(true, forKey: key)
-    }
 
     func deletePrompt(_ prompt: CustomPrompt) {
         customPrompts.removeAll { $0.id == prompt.id }
