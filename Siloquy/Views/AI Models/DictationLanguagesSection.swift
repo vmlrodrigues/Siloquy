@@ -201,6 +201,14 @@ struct DictationLanguagesSection: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+        } else if let missing = manager.missingModel(for: language) {
+            // The transcriber itself is absent, not just this language's slice of it.
+            // Downloading it belongs in the model list below, where its size and
+            // progress are shown, so this points there rather than duplicating it.
+            Label("Needs \(missing.displayName)", systemImage: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundColor(.orange)
+                .help("\(missing.displayName) is the only model here that transcribes \(language.englishName). Download it under Downloaded or Local below, and this language becomes usable.")
         } else if !manager.isReady(language) {
             HStack(spacing: 6) {
                 Label("Not downloaded", systemImage: "exclamationmark.triangle.fill")
@@ -218,7 +226,8 @@ struct DictationLanguagesSection: View {
 
     @ViewBuilder
     private func modelPicker(for language: DictationLanguage, selected: (any TranscriptionModel)?) -> some View {
-        let candidates = manager.usableModels(for: language)
+        let candidates = manager.candidateModels(for: language)
+        let usable = Set(manager.usableModels(for: language).map(\.name))
 
         if candidates.isEmpty {
             Label("No model on this Mac can transcribe \(language.englishName)", systemImage: "exclamationmark.triangle")
@@ -231,7 +240,9 @@ struct DictationLanguagesSection: View {
                         manager.setModel(model, for: language)
                     } label: {
                         HStack {
-                            Text(model.displayName)
+                            Text(usable.contains(model.name)
+                                 ? model.displayName
+                                 : "\(model.displayName) — not downloaded")
                             if model.name == selected?.name {
                                 Image(systemName: "checkmark")
                             }

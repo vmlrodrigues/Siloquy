@@ -98,11 +98,19 @@ final class DictationLanguageManager: ObservableObject {
     ///
     /// Apple is filtered against the locales the running OS actually ships rather than
     /// the app's static table, which can be ahead of or behind the OS.
-    func usableModels(for language: DictationLanguage) -> [any TranscriptionModel] {
+    /// Models that could transcribe this language, whether or not they are installed.
+    ///
+    /// Separate from `usableModels` so a language is offered when the app knows a model
+    /// for it, and the row can then say which one to fetch. Filtering the offer by what
+    /// is already downloaded hid Dutch entirely rather than telling you it needs
+    /// Parakeet v3 — while Portuguese, whose model is present but whose locale asset is
+    /// not, was offered and explained. Same situation, opposite treatment.
+    func candidateModels(for language: DictationLanguage) -> [any TranscriptionModel] {
         guard let modelManager else { return [] }
 
-        return modelManager.usableModels.filter { model in
+        return modelManager.allAvailableModels.filter { model in
             guard language.isSupported(by: model) else { return false }
+            guard modelManager.isAvailableOnCurrentOS(model) else { return false }
 
             // Until the OS check returns, trust the model's own table. Reporting
             // "unsupported" during that window would empty the picker at launch and,
@@ -115,21 +123,33 @@ final class DictationLanguageManager: ObservableObject {
         }
     }
 
+    /// The subset of `candidateModels` that could run right now — downloaded, or a
+    /// cloud model with its key configured.
+    func usableModels(for language: DictationLanguage) -> [any TranscriptionModel] {
+        guard let modelManager else { return [] }
+        let ready = Set(modelManager.usableModels.map(\.name))
+        return candidateModels(for: language).filter { ready.contains($0.name) }
+    }
+
     func model(for language: DictationLanguage) -> (any TranscriptionModel)? {
-        let candidates = usableModels(for: language)
+        let candidates = candidateModels(for: language)
+        let usable = usableModels(for: language)
 
         if let chosen = modelNameByLanguage[language.id],
            let model = candidates.first(where: { $0.name == chosen }) {
             return model
         }
 
-        // No stored choice, or the stored one is gone (deleted, or its API key removed).
+        // Prefer something that runs today; fall back to the best candidate so the row
+        // can name what to download rather than showing no model at all.
         for preferred in language.preferredModelNames {
-            if let model = candidates.first(where: { $0.name == preferred }) {
-                return model
-            }
+            if let model = usable.first(where: { $0.name == preferred }) { return model }
         }
+        if let first = usable.first { return first }
 
+        for preferred in language.preferredModelNames {
+            if let model = candidates.first(where: { $0.name == preferred }) { return model }
+        }
         return candidates.first
     }
 
@@ -158,7 +178,7 @@ final class DictationLanguageManager: ObservableObject {
 
     /// Whether this language can be transcribed here at all.
     func isTranscribable(_ language: DictationLanguage) -> Bool {
-        !usableModels(for: language).isEmpty
+        !candidateModels(for: language).isEmpty
     }
 
     /// Whether dictating in this language would work right now.
@@ -169,8 +189,19 @@ final class DictationLanguageManager: ObservableObject {
     /// moment an error is useless, after you had already spoken.
     func isReady(_ language: DictationLanguage) -> Bool {
         guard let model = model(for: language) else { return false }
+        // The model itself may not be installed — Dutch needs Parakeet v3 downloaded
+        // before anything else matters.
+        guard usableModels(for: language).contains(where: { $0.name == model.name }) else { return false }
         guard model.provider == .nativeApple else { return true }
         return installedAppleLocales.contains(language.id)
+    }
+
+    /// The model this language needs but which is not installed, if that is what is
+    /// standing in the way.
+    func missingModel(for language: DictationLanguage) -> (any TranscriptionModel)? {
+        guard let model = model(for: language) else { return nil }
+        guard !usableModels(for: language).contains(where: { $0.name == model.name }) else { return nil }
+        return model
     }
 
     func isDownloading(_ language: DictationLanguage) -> Bool {
