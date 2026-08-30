@@ -114,16 +114,10 @@ class AIEnhancementService: ObservableObject {
         // decide this, which meant the one guarantee the language switch was built to
         // make — that ⌘1 means "clean this up properly" whatever you are speaking —
         // could be undone by a stray drag.
-        let authoredAll = customPrompts.filter { prompt in
-            // A stored translation prompt is superseded only where a generated tile
-            // covers the same destination. One targeting a language you cannot dictate
-            // in — Mandarin, say — has no generated counterpart, so it stays an
-            // ordinary tile rather than being stranded with no key.
-            if let target = prompt.targetLanguage {
-                return !DictationLanguage.available.contains { DictationLanguage.matches(target, $0) }
-            }
-            return true
-        }
+        //
+        // Translation tiles are generated from the dictation languages, so a stored one
+        // never belongs on the strip.
+        let authoredAll = customPrompts.filter { $0.targetLanguage == nil }
         // Out-of-scope prompts hold their place as an empty slot rather than closing the
         // gap. Collapsing them made the authored block a different length per language,
         // which shifted every translation key below it — the exact failure the reserved
@@ -287,7 +281,7 @@ class AIEnhancementService: ObservableObject {
 
         initializePredefinedPrompts()
         removeRetiredPrompts()
-        removeSupersededTranslationPrompts()
+        removeStoredTranslationPrompts()
         // Property observers do not fire for assignments made during init, so build the
         // strip explicitly — after the cleanups, so it is not built from prompts that
         // are about to be deleted.
@@ -752,40 +746,17 @@ class AIEnhancementService: ObservableObject {
         logger.notice("Removed the retired Local Model Default prompt (#48)")
     }
 
-    /// Drop stored translation prompts now that they are generated from the language
-    /// list.
+    /// Drop translation prompts stored by v0.13.x.
     ///
-    /// Keeping both would show the destination twice and let the two drift apart. A
-    /// stored one whose target is not a dictation language is left alone — it has no
-    /// generated counterpart, so removing it would silently delete a prompt the user
-    /// still relies on.
-    private func removeSupersededTranslationPrompts() {
-        // Only the languages that will actually produce a generated tile — which means
-        // enabled, and more than one enabled, since a single language has nothing to
-        // translate to. Matching against every *candidate* language deleted the tile on
-        // upgrade (where only English is enabled) with nothing put in its place, and it
-        // could not be recreated.
-        let enabled = DictationLanguageManager.shared.enabled
-        guard enabled.count > 1 else { return }
-        let superseded = customPrompts.filter { prompt in
-            guard let target = prompt.targetLanguage else { return false }
-            return enabled.contains { DictationLanguage.matches(target, $0) }
-        }
-        guard !superseded.isEmpty else { return }
-
-        let supersededIds = Set(superseded.map(\.id))
-        if let selected = selectedPromptId, supersededIds.contains(selected) {
-            // Point at the generated tile for the same destination, so a selection is
-            // carried over rather than silently reset.
-            let target = superseded.first { $0.id == selected }?.targetLanguage
-            selectedPromptId = target
-                .flatMap { t in enabled.first { DictationLanguage.matches(t, $0) } }
-                .map(\.translationPromptID)
-                ?? PredefinedPrompts.defaultPromptId
-        }
-
-        customPrompts.removeAll { supersededIds.contains($0.id) }
-        logger.notice("Removed \(superseded.count, privacy: .public) stored translation prompt(s) now generated from dictation languages")
+    /// Translation tiles are generated from your dictation languages now, so a stored
+    /// one is dead weight: the strip does not show it, nothing can edit it, and it
+    /// cannot be regenerated. `validateSelection` repoints the selection afterwards if
+    /// it happened to point at one.
+    private func removeStoredTranslationPrompts() {
+        let count = customPrompts.count { $0.isTranslation }
+        guard count > 0 else { return }
+        customPrompts.removeAll { $0.isTranslation }
+        logger.notice("Removed \(count, privacy: .public) stored translation prompt(s); translation tiles come from the dictation languages")
     }
 
     private func initializePredefinedPrompts() {

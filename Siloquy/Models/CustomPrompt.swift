@@ -129,14 +129,12 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     /// context appendix (custom vocabulary, English-variant rule) does not apply to it.
     var isTranslation: Bool { targetLanguage != nil }
 
-    /// The flag a translation prompt shows in place of an SF Symbol, if one is known.
+    /// The flag a translation prompt shows in place of an SF Symbol.
     ///
-    /// Dictation languages are checked first: they are where generated translation
-    /// tiles come from. A v0.13.x prompt stored against a language you cannot dictate
-    /// in falls back to its own flag rather than a generic globe.
+    /// Generated tiles are the only translation tiles there are, and each comes from a
+    /// dictation language, so the language table is the whole answer.
     var flagIcon: String? {
-        guard let id = targetLanguage else { return nil }
-        return DictationLanguage.named(id)?.flag ?? TranslationPrompt.legacyFlag(forID: id)
+        targetLanguage.flatMap { DictationLanguage.named($0)?.flag }
     }
 
     /// The icon to show wherever this prompt appears: a translation prompt shows its

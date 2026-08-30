@@ -136,17 +136,6 @@ extension DictationLanguage {
         DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.italian, translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),
     ]
 
-    /// Whether a translation target names this dictation language.
-    ///
-    /// The two id spaces don't line up: translation targets are coarse ("es", "de")
-    /// while dictation languages are specific ("es-ES", "es-MX"). Comparing the strings
-    /// directly would leave "Translate to Spanish" on offer while speaking Spanish.
-    static func matches(_ translationTargetID: String, _ language: DictationLanguage) -> Bool {
-        if translationTargetID == language.id { return true }
-        let targetBase = String(translationTargetID.prefix(while: { $0 != "-" }))
-        return targetBase == language.baseCode
-    }
-
     static func named(_ id: String) -> DictationLanguage? {
         available.first { $0.id == id }
     }
