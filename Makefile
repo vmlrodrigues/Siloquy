@@ -144,7 +144,11 @@ reset-dev: reset-onboarding
 
 # Distribution build — sign with Developer ID, package DMG, notarise, publish GitHub Release.
 # Usage: make release VERSION=1.2.3
-release: check setup
+# Build a signed, notarised, stapled DMG — and stop there.
+# Everything `release` does to produce the artifact, with nothing that
+# publishes it: no appcast, no commit, no tag, no push, no GitHub release.
+# Use it to install a build by hand before deciding to ship it.
+dmg: check setup
 	@[ -n "$(VERSION)" ] || { echo "Error: VERSION not set. Edit the VERSION file or pass VERSION=x.y.z"; exit 1; }
 	@command -v create-dmg >/dev/null 2>&1 || { echo "create-dmg not found — run: brew install create-dmg"; exit 1; }
 	@command -v gh >/dev/null 2>&1 || { echo "gh not found — run: brew install gh"; exit 1; }
@@ -239,7 +243,12 @@ release: check setup
 	@spctl --assess --type open --context context:primary-signature \
 		--ignore-cache "$(RELEASE_STAGING)/Siloquy.app" && \
 		echo "  Gatekeeper: OK" || echo "  Warning: Gatekeeper check failed — check entitlements"
+	@echo ""
+	@echo "  DMG ready: $(DMG_NAME)"
+	@echo "  Nothing published — no tag, no push, no GitHub release."
+	@echo ""
 
+release: dmg
 	@echo "→ Signing DMG and updating appcast..."
 	@SIG_LINE=$$("$(SPARKLE_SIGN_UPDATE)" "$(DMG_NAME)" 2>&1) && \
 	SIG=$$(echo "$$SIG_LINE" | awk -F'"' '{print $$2}') && \
@@ -296,6 +305,7 @@ help:
 	@echo "  setup              Copy whisper XCFramework to Siloquy project"
 	@echo "  build              Build the Siloquy Xcode project (Debug, unsigned)"
 	@echo "  local              Build for local use, re-sign with Apple Development cert"
+	@echo "  dmg                Build, sign, and notarise a DMG — publishes nothing"
 	@echo "  release            Build, sign, notarise, and publish a GitHub release"
 	@echo "                     Usage: make release VERSION=x.y.z"
 	@echo "  run                Launch the built Siloquy app"

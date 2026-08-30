@@ -7,6 +7,81 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.14.0 — 2026-08-30
+
+#### Added
+- **Dictate in another language, with a keystroke.** Set up the languages you
+  speak in Dictation Models, give each one a shortcut, and pressing it switches
+  everything at once: the transcription model, the clean-up prompt, and the set
+  of translation tiles. Nothing to configure per session — ⌘1 still means
+  "clean this up properly" whatever you are speaking. (#3)
+- **A model per language.** English keeps Parakeet v2, which is English-only
+  but the strongest on English; other languages use Apple Speech, which ships a
+  separately tuned asset per locale and tells European Portuguese apart from
+  Brazilian. Dutch uses Parakeet v3, since Apple has no Dutch model. You can
+  override the choice for any language. (#3)
+- **Clean-up prompts written in the language you are speaking**, not translated
+  into it. Portuguese (Portugal and Brazil), Spanish, French, German, Italian
+  and Dutch each get a prompt that states its own conventions for numbers,
+  currency, dates and times — so "quatro mil e quinhentos euros" becomes
+  "4500 €" rather than something an English prompt guessed at. (#3)
+- **A permanent ⌘ key for every translation.** Translation tiles are generated
+  from the languages you dictate in, so the two can no longer disagree, and each
+  destination keeps the same key whichever language you are speaking. The tile
+  for the language you are currently speaking is shown inert — there is nothing
+  to translate into the language you are already using. (#3, #25)
+- **The live text preview now works with Apple Speech.** It only ever worked in
+  English before, because Parakeet v2 was the one model with a streaming path.
+  Apple Speech now streams too, which also means the final transcript arrives
+  while you are still speaking rather than being produced from the file
+  afterwards. (#49)
+- **The active language is visible when Siloquy is not in front** — the notch
+  flashes it on a switch, and the menu bar icon shows it. Neither appears if you
+  only dictate in one language. (#3)
+- Dutch, in place of Mexican Spanish. (#3)
+
+#### Changed
+- **The prompt strip has a fixed order.** Drag-and-drop assigned the shortcuts
+  before, which meant a stray drag could undo the one guarantee the language
+  switch is built to make. ⌘1 is always the clean-up prompt. (#3)
+- Dictation Languages live in Dictation Models rather than Settings, next to
+  the models they choose between. (#3)
+- The "Local Model Default" prompt is retired. Since 0.13.0 the on-device
+  provider picks its prompt per model, so choosing it and choosing Default
+  produced identical output. (#48, #22)
+- Translation prompts stored by 0.13.x are removed on first launch. Translation
+  tiles are generated from your dictation languages now, so a stored one cannot
+  be edited or regenerated. Re-add a destination by enabling that language.
+  (#53)
+
+#### Fixed
+- **Downloading one Apple Speech language no longer uninstalls the others.** A
+  reservation is what stops macOS reclaiming an installed locale, and the
+  download released every one of them before claiming its own — so fetching
+  Spanish could silently cost you Portuguese. Harmless when there was a single
+  language; not any more. (#50)
+- The Apple Speech card no longer claims to be downloaded when the language you
+  are about to speak is not. Download state is shown per language. (#3)
+- Switching language mid-dictation is refused rather than half-applied, and the
+  rows now look clickable because they are. (#3)
+- Removing a dictation language asks first, and a shortcut can use any modifier
+  combination — ⌥⌘E and friends were rejected before. (#3)
+
+#### Performance
+- The prompt strip and model readiness are cached rather than rebuilt on every
+  keystroke and settings change, which kept Keychain lookups off the dictation
+  path. (#51)
+
+#### Internal
+- A language is defined in one place instead of three. Its clean-up prompt is a
+  required field on the language itself, so a new language cannot be added
+  without deciding what its prompt is. (#52)
+- The enhancement pipeline is documented in `docs/enhancement-pipeline.md`:
+  which model a language selects, which prompt each key sends, and every prompt
+  verbatim.
+
+---
+
 ### 0.13.3 — 2026-08-16
 
 #### Fixed
