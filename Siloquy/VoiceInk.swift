@@ -149,6 +149,9 @@ struct VoiceInkApp: App {
         // Language switching changes the transcription model, so it needs the engine
         // rather than writing the defaults behind its back.
         DictationLanguageManager.shared.configure(engine: engine, modelManager: transcriptionModelManager)
+        // The enhancement service was built before the language manager knew its
+        // languages, so its prompt strip was computed against an empty set.
+        enhancementService.refreshPromptSlots()
 
         // 6. Initialize model state
         // Migration and refreshAllAvailableModels must run before loadCurrentTranscriptionModel so renamed keys are remapped and imported models are present when restoring the saved selection.

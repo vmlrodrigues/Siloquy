@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import Foundation
 import SwiftUI
 import os
@@ -41,6 +42,11 @@ final class DictationLanguageManager: ObservableObject {
     /// Languages with a download in flight, so the row can show progress instead of
     /// offering the button again.
     @Published private(set) var downloadingLanguages: Set<String> = []
+    /// Mirrors `TranscriptionModelManager.usableModelNames`, which owns the expensive
+    /// computation and its invalidation. Held here so views observing this manager
+    /// redraw when model availability changes.
+    @Published private(set) var readyModelNames: Set<String> = []
+    private var cancellables = Set<AnyCancellable>()
 
     /// Switching a language switches the transcription model, and that has to go through
     /// the engine rather than straight to `UserDefaults`: the engine also updates its
@@ -74,12 +80,25 @@ final class DictationLanguageManager: ObservableObject {
         self.engine = engine
         self.modelManager = modelManager
         self.recorderState = engine as? any RecorderStateProvider
+        modelManager.refreshUsableModels()
+        readyModelNames = modelManager.usableModelNames
+        // Only now, with readiness known: resolving against an empty ready set records
+        // a model that cannot run, and the choice is persisted.
         backfillMissingModels()
 
         // Push the restored language out before listening for anyone else's writes. At
         // launch `TranscriptionModelManager` normalises whatever `SelectedLanguage`
         // holds and posts a change; adopting that would overwrite the language we just
         // restored with the fallback it happened to pick.
+        // Follow the owner rather than recomputing or listening on .AppSettingsDidChange,
+        // which is posted by prompt selection and enhancement toggles — it fired the
+        // Keychain walk on every ⌘1–⌘0 press during dictation, which is the cost this
+        // was meant to remove.
+        modelManager.$usableModelNames
+            .removeDuplicates()
+            .sink { [weak self] names in self?.readyModelNames = names }
+            .store(in: &cancellables)
+
         applyCurrentLanguage()
 
         // `SelectedLanguage` has other writers — Power Mode applying a per-app config,
@@ -178,18 +197,17 @@ final class DictationLanguageManager: ObservableObject {
         }
     }
 
-    /// The subset of `candidateModels` that could run right now — downloaded, or a
-    /// cloud model with its key configured.
-    func usableModels(for language: DictationLanguage) -> [any TranscriptionModel] {
-        guard let modelManager else { return [] }
-        let ready = Set(modelManager.usableModels.map(\.name))
-        return candidateModels(for: language).filter { ready.contains($0.name) }
-    }
+
 
     func model(for language: DictationLanguage) -> (any TranscriptionModel)? {
-        let candidates = candidateModels(for: language)
-        let usable = usableModels(for: language)
+        state(of: language).selected
+    }
 
+    private func resolveModel(
+        for language: DictationLanguage,
+        candidates: [any TranscriptionModel],
+        usable: [any TranscriptionModel]
+    ) -> (any TranscriptionModel)? {
         if let chosen = modelNameByLanguage[language.id],
            let model = candidates.first(where: { $0.name == chosen }) {
             return model
@@ -243,20 +261,46 @@ final class DictationLanguageManager: ObservableObject {
     /// Conflating the two is what let a language be selected and then fail at the one
     /// moment an error is useless, after you had already spoken.
     func isReady(_ language: DictationLanguage) -> Bool {
-        guard let model = model(for: language) else { return false }
-        // The model itself may not be installed — Dutch needs Parakeet v3 downloaded
-        // before anything else matters.
-        guard usableModels(for: language).contains(where: { $0.name == model.name }) else { return false }
-        guard model.provider == .nativeApple else { return true }
-        return installedAppleLocales.contains(language.id)
+        state(of: language).isReady
     }
 
     /// The model this language needs but which is not installed, if that is what is
     /// standing in the way.
     func missingModel(for language: DictationLanguage) -> (any TranscriptionModel)? {
-        guard let model = model(for: language) else { return nil }
-        guard !usableModels(for: language).contains(where: { $0.name == model.name }) else { return nil }
-        return model
+        state(of: language).missing
+    }
+
+    /// Everything a language row needs, resolved once.
+    ///
+    /// The row used to ask four separate questions that each re-derived the same two
+    /// lists; this walks the models once and answers all of them.
+    struct LanguageState {
+        let candidates: [any TranscriptionModel]
+        let usable: [any TranscriptionModel]
+        let selected: (any TranscriptionModel)?
+        let isReady: Bool
+        let missing: (any TranscriptionModel)?
+    }
+
+    func state(of language: DictationLanguage) -> LanguageState {
+        let candidates = candidateModels(for: language)
+        let usable = candidates.filter { readyModelNames.contains($0.name) }
+        let selected = resolveModel(for: language, candidates: candidates, usable: usable)
+
+        guard let selected else {
+            return LanguageState(candidates: candidates, usable: usable, selected: nil, isReady: false, missing: nil)
+        }
+
+        let installed = usable.contains { $0.name == selected.name }
+        let ready = installed
+            && (selected.provider != .nativeApple || installedAppleLocales.contains(language.id))
+        return LanguageState(
+            candidates: candidates,
+            usable: usable,
+            selected: selected,
+            isReady: ready,
+            missing: installed ? nil : selected
+        )
     }
 
     func isDownloading(_ language: DictationLanguage) -> Bool {

@@ -35,23 +35,41 @@ class TranscriptionModelManager: ObservableObject {
 
     // MARK: - Computed: usable models
 
+    /// Names of the models that can run right now.
+    ///
+    /// Cached because deciding this asks the Keychain whether each cloud provider has a
+    /// key — a synchronous XPC round-trip apiece — and stats the disk for the local
+    /// ones. Callers read it from view bodies, so recomputing per read put that on the
+    /// main actor during rendering and dictation.
+    @Published private(set) var usableModelNames: Set<String> = []
+
     var usableModels: [any TranscriptionModel] {
-        allAvailableModels.filter { model in
-            switch model.provider {
-            case .whisper:
-                return whisperModelManager?.availableModels.contains { $0.name == model.name } ?? false
-            case .fluidAudio:
-                return fluidAudioModelManager?.isFluidAudioModelDownloaded(named: model.name) ?? false
-            case .nativeApple:
-                if #available(macOS 26, *) { return true } else { return false }
-            case .custom:
-                return true
-            default:
-                if let cloudProvider = CloudProviderRegistry.provider(for: model.provider) {
-                    return APIKeyManager.shared.hasAPIKey(forProvider: cloudProvider.providerKey)
-                }
-                return false
+        allAvailableModels.filter { usableModelNames.contains($0.name) }
+    }
+
+    /// Recompute what can run. Called wherever the answer can change: a model
+    /// downloaded, deleted or imported, and an API key saved or cleared — all of which
+    /// already route through `refreshAllAvailableModels()`.
+    func refreshUsableModels() {
+        let names = Set(allAvailableModels.filter { isUsable($0) }.map(\.name))
+        if names != usableModelNames { usableModelNames = names }
+    }
+
+    private func isUsable(_ model: any TranscriptionModel) -> Bool {
+        switch model.provider {
+        case .whisper:
+            return whisperModelManager?.availableModels.contains { $0.name == model.name } ?? false
+        case .fluidAudio:
+            return fluidAudioModelManager?.isFluidAudioModelDownloaded(named: model.name) ?? false
+        case .nativeApple:
+            if #available(macOS 26, *) { return true } else { return false }
+        case .custom:
+            return true
+        default:
+            if let cloudProvider = CloudProviderRegistry.provider(for: model.provider) {
+                return APIKeyManager.shared.hasAPIKey(forProvider: cloudProvider.providerKey)
             }
+            return false
         }
     }
 
@@ -128,6 +146,9 @@ class TranscriptionModelManager: ObservableObject {
         }
 
         allAvailableModels = models
+        // Every path that changes what can run — download, delete, import, key saved or
+        // cleared — comes through here, so this is the one place that must invalidate.
+        refreshUsableModels()
 
         if let currentName = currentModelName,
            let updatedModel = allAvailableModels.first(where: { $0.name == currentName }) {

@@ -47,6 +47,10 @@ class AIEnhancementService: ObservableObject {
 
     @Published var customPrompts: [CustomPrompt] {
         didSet {
+            // The strip is derived from this. Without the rebuild, adding, editing or
+            // deleting a prompt changed storage but not the tiles, their ⌘ keys, or the
+            // text actually sent to the model.
+            refreshPromptSlots()
             if let encoded = try? JSONEncoder().encode(customPrompts) {
                 UserDefaults.standard.set(encoded, forKey: "customPrompts")
             }
@@ -68,11 +72,15 @@ class AIEnhancementService: ObservableObject {
         }
     }
 
+    /// Block observers are keyed by token; `removeObserver(self)` in deinit does not
+    /// reach them.
+    private var languageObservers: [NSObjectProtocol] = []
     @Published var lastSystemMessageSent: String?
     @Published var lastUserMessageSent: String?
 
     var activePrompt: CustomPrompt? {
-        allPrompts.first { $0.id == selectedPromptId }
+        guard let selectedPromptId else { return nil }
+        return promptSlots.first { $0?.id == selectedPromptId } ?? nil
     }
 
     /// The prompts offered while dictating in the current language.
@@ -91,7 +99,14 @@ class AIEnhancementService: ObservableObject {
     /// currently speaking leaves its slot empty — closing the gap instead would shift
     /// every key below it, which is the failure this reservation exists to prevent, and
     /// drawing a dead tile there is the greyed-out tile it replaces.
-    var promptSlots: [CustomPrompt?] {
+    /// Stored, not computed. The recorder reads `activePrompt` on every audio-meter
+    /// tick — about sixty times a second while you speak — and rebuilding this each
+    /// time constructed a fresh translation prompt per language, each interpolating a
+    /// few hundred characters, on the main actor during dictation. It changes only when
+    /// the prompts or the language change, both of which are explicit events.
+    @Published private(set) var promptSlots: [CustomPrompt?] = []
+
+    private func buildPromptSlots() -> [CustomPrompt?] {
         let language = DictationLanguageManager.shared.current
         let languages = DictationLanguageManager.shared.enabled
 
@@ -129,13 +144,40 @@ class AIEnhancementService: ObservableObject {
         return authored + translations
     }
 
+    /// Recompute the strip. Called when the prompts change and when the language does.
+    /// Drop a selection that no longer resolves, falling back to the clean-up prompt.
+    func validateSelection() {
+        guard isEnhancementEnabled else { return }
+        if selectedPromptId == nil || !allPrompts.contains(where: { $0.id == selectedPromptId }) {
+            selectedPromptId = allPrompts.first(where: { $0.id == PredefinedPrompts.defaultPromptId })?.id
+                ?? allPrompts.first?.id
+        }
+    }
+
+    func refreshPromptSlots() {
+        translationSlotStart = {
+            let languages = DictationLanguageManager.shared.enabled
+            guard languages.count > 1 else { return Int.max }
+            return max(0, buildPromptSlots().count - languages.count)
+        }()
+        let rebuilt = buildPromptSlots()
+        // Compared by value. An edited prompt keeps its id by definition, so an
+        // id-only check would drop every edit — including the one this rebuild exists
+        // to propagate.
+        guard rebuilt != promptSlots else { return }
+        promptSlots = rebuilt
+    }
+
     /// Where the per-language translation slots begin. Anything before this index that
     /// is `nil` is a prompt scoped to another language; anything at or after it is the
     /// slot held by the language you are speaking.
-    var translationSlotStart: Int {
-        promptSlots.count - max(0, DictationLanguageManager.shared.enabled.count > 1
-                                ? DictationLanguageManager.shared.enabled.count : 0)
-    }
+    ///
+    /// Stored alongside the strip rather than re-derived from the live language list:
+    /// the list changes synchronously while the strip rebuilds a main-actor hop later,
+    /// so a derived index disagreed with the array it indexed for at least one render —
+    /// drawing an out-of-scope prompt's gap as a reserved tile, and going negative when
+    /// the strip was shorter than the language count.
+    @Published private(set) var translationSlotStart: Int = 0
 
     /// The prompts actually offered right now, in ⌘ order, with reserved gaps removed.
     var allPrompts: [CustomPrompt] {
@@ -217,16 +259,23 @@ class AIEnhancementService: ObservableObject {
             self.selectedPromptId = UUID(uuidString: savedPromptId)
         }
 
-        if isEnhancementEnabled && (selectedPromptId == nil || !allPrompts.contains(where: { $0.id == selectedPromptId })) {
-            self.selectedPromptId = allPrompts.first?.id
-        }
 
-        NotificationCenter.default.addObserver(
-            forName: .dictationLanguageDidChange,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.restoreSelectionForCurrentLanguage() }
+
+        // Both signals matter now that the strip is stored: the active language decides
+        // which slot is reserved, and the *set* of languages decides how many
+        // translation tiles exist at all. Observing only the first left the strip stale
+        // after adding or removing a language.
+        for name in [Notification.Name.dictationLanguageDidChange, .dictationLanguagesDidChange] {
+            languageObservers.append(NotificationCenter.default.addObserver(
+                forName: name,
+                object: nil,
+                queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.refreshPromptSlots()
+                    self?.restoreSelectionForCurrentLanguage()
+                }
+            })
         }
 
         NotificationCenter.default.addObserver(
@@ -239,6 +288,13 @@ class AIEnhancementService: ObservableObject {
         initializePredefinedPrompts()
         removeRetiredPrompts()
         removeSupersededTranslationPrompts()
+        // Property observers do not fire for assignments made during init, so build the
+        // strip explicitly — after the cleanups, so it is not built from prompts that
+        // are about to be deleted.
+        refreshPromptSlots()
+        // Only now is there a strip to validate against. Doing this earlier compared the
+        // saved selection to an empty list, so it was discarded on every launch.
+        validateSelection()
     }
 
     /// Force enhancement off at the start of a new dictation when the user opted into
@@ -251,6 +307,7 @@ class AIEnhancementService: ObservableObject {
 
     deinit {
         NotificationCenter.default.removeObserver(self)
+        languageObservers.forEach(NotificationCenter.default.removeObserver)
     }
 
     @objc private func handleAPIKeyChange() {
@@ -396,7 +453,12 @@ class AIEnhancementService: ObservableObject {
             }
         } else {
             let defaultId = PredefinedPrompts.defaultPromptId
-            let defaultPrompt = allPrompts.first(where: { $0.id == defaultId }) ?? allPrompts.first!
+            // No force-unwrap: with the strip stored, every slot can legitimately be nil
+            // (all prompts scoped to another language), and crashing here would land
+            // after the user had already spoken.
+            guard let defaultPrompt = allPrompts.first(where: { $0.id == defaultId }) ?? allPrompts.first else {
+                return AIPrompts.customPromptTemplate.replacingOccurrences(of: "%@", with: "") + finalContextSection
+            }
             return defaultPrompt.finalPromptText + finalContextSection
         }
     }

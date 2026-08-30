@@ -84,7 +84,10 @@ struct DictationLanguagesSection: View {
     }
 
     private func row(for language: DictationLanguage) -> some View {
-        let selected = manager.model(for: language)
+        // One resolution per row. Asking the manager for the model, the missing model
+        // and the readiness separately re-walked every registry model each time, and
+        // each walk asked the Keychain about every cloud provider.
+        let state = manager.state(of: language)
 
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 9) {
@@ -184,8 +187,8 @@ struct DictationLanguagesSection: View {
             }
 
             HStack(spacing: 8) {
-                modelPicker(for: language, selected: selected)
-                readiness(for: language)
+                modelPicker(for: language, state: state)
+                readiness(for: language, state: state)
             }
             .padding(.leading, 46)
         }
@@ -199,7 +202,7 @@ struct DictationLanguagesSection: View {
     /// download arrow read as an optional extra rather than a blocker, and the failure
     /// only surfaced after a whole dictation had been spoken.
     @ViewBuilder
-    private func readiness(for language: DictationLanguage) -> some View {
+    private func readiness(for language: DictationLanguage, state: DictationLanguageManager.LanguageState) -> some View {
         if manager.isDownloading(language) {
             HStack(spacing: 5) {
                 ProgressView().controlSize(.small).scaleEffect(0.7)
@@ -207,7 +210,7 @@ struct DictationLanguagesSection: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
-        } else if let missing = manager.missingModel(for: language) {
+        } else if let missing = state.missing {
             // The transcriber itself is absent, not just this language's slice of it.
             // Downloading it belongs in the model list below, where its size and
             // progress are shown, so this points there rather than duplicating it.
@@ -215,7 +218,7 @@ struct DictationLanguagesSection: View {
                 .font(.caption)
                 .foregroundColor(.orange)
                 .help("\(missing.displayName) is the only model here that transcribes \(language.englishName). Download it under Downloaded or Local below, and this language becomes usable.")
-        } else if !manager.isReady(language) {
+        } else if !state.isReady {
             HStack(spacing: 6) {
                 Label("Not downloaded", systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
@@ -231,9 +234,10 @@ struct DictationLanguagesSection: View {
     }
 
     @ViewBuilder
-    private func modelPicker(for language: DictationLanguage, selected: (any TranscriptionModel)?) -> some View {
-        let candidates = manager.candidateModels(for: language)
-        let usable = Set(manager.usableModels(for: language).map(\.name))
+    private func modelPicker(for language: DictationLanguage, state: DictationLanguageManager.LanguageState) -> some View {
+        let candidates = state.candidates
+        let usable = Set(state.usable.map(\.name))
+        let selected = state.selected
 
         if candidates.isEmpty {
             Label("No model on this Mac can transcribe \(language.englishName)", systemImage: "exclamationmark.triangle")
