@@ -161,7 +161,6 @@ struct NativeAppleLanguageAssetControl: View {
         #if canImport(Speech) && ENABLE_NATIVE_SPEECH_ANALYZER
         do {
             let locale = Locale(identifier: localeIdentifier)
-            let normalizedIdentifier = locale.identifier(.bcp47)
             let transcriber = SpeechTranscriber(
                 locale: locale,
                 transcriptionOptions: [],
@@ -169,27 +168,22 @@ struct NativeAppleLanguageAssetControl: View {
                 attributeOptions: []
             )
 
-            let reservedLocales = await AssetInventory.reservedLocales
-            for reservedLocale in reservedLocales {
-                await AssetInventory.release(reservedLocale: reservedLocale)
-            }
+            // A reservation is what stops macOS reclaiming an installed locale, so the
+            // whole set has to stay reserved. Releasing every other one to make room
+            // for this download is what silently uninstalled languages you already had
+            // (#50) — it was harmless only back when there was a single language.
+            // `DictationLanguageManager` owns the policy, including the slot limit.
+            await DictationLanguageManager.shared.reconcileAppleReservations(includingLocale: localeIdentifier)
 
-            let reserved = try await AssetInventory.reserve(locale: locale)
-
-            if !reserved {
-                let currentState = await assetState(for: localeIdentifier)
-                if currentState != .needsDownload {
-                    return currentState
-                }
-
-                logger.warning("Apple Speech asset reservation returned false for '\(normalizedIdentifier, privacy: .public)'. Continuing to request installation after confirming the asset still needs download.")
-            }
-
+            // Nothing to install means it is already here, which `assetState` reports.
             guard let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) else {
                 return await assetState(for: localeIdentifier)
             }
 
             try await request.downloadAndInstall()
+            // Two views read this state; refresh the manager's copy so Dictation Models
+            // does not still call the language missing.
+            await DictationLanguageManager.shared.refreshInstalledAppleLocales()
             return await assetState(for: localeIdentifier)
         } catch {
             logger.error("Apple Speech asset download failed for '\(localeIdentifier, privacy: .public)': \(error.localizedDescription, privacy: .public).")

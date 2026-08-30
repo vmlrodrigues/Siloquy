@@ -314,31 +314,39 @@ final class DictationLanguageManager: ObservableObject {
     /// which is what the single-language code did — leaves every other language
     /// unreserved and eligible for eviction, so downloading Spanish silently uninstalls
     /// Portuguese. Reserve the set, not the latest one.
-    func reconcileAppleReservations(including extra: DictationLanguage? = nil) async {
+    /// - Parameter extraLocale: one more locale to keep reserved, for a download the
+    ///   user has just asked for. An identifier rather than a `DictationLanguage`
+    ///   because the menu bar's picker offers every locale Apple supports, not only
+    ///   the ones you can set as a dictation language.
+    func reconcileAppleReservations(includingLocale extraLocale: String? = nil) async {
         guard #available(macOS 26, *) else { return }
         #if canImport(Speech) && ENABLE_NATIVE_SPEECH_ANALYZER
-        var wanted: [DictationLanguage] = enabled.filter { model(for: $0)?.provider == .nativeApple }
-        if let extra, !wanted.contains(extra) { wanted.insert(extra, at: 0) }
+        var wanted: [String] = enabled
+            .filter { model(for: $0)?.provider == .nativeApple }
+            .map(\.id)
+        if let extraLocale {
+            let normalized = Locale(identifier: extraLocale).identifier(.bcp47)
+            if !wanted.contains(normalized) { wanted.insert(normalized, at: 0) }
+        }
 
         // The active language first, so if there are more languages than slots the one
         // being used keeps its reservation. Partitioned rather than sorted: a predicate
         // of the form `lhs == current` reports x < x as true, which is not a strict weak
         // ordering — Swift leaves the result unspecified and can trap in debug builds.
-        wanted = wanted.filter { $0 == current } + wanted.filter { $0 != current }
-        let keep = Array(wanted.prefix(AssetInventory.maximumReservedLocales))
-        let keepIDs = Set(keep.map(\.id))
+        wanted = wanted.filter { $0 == current.id } + wanted.filter { $0 != current.id }
+        let keep = Set(wanted.prefix(AssetInventory.maximumReservedLocales))
 
         let reserved = await AssetInventory.reservedLocales
-        for locale in reserved where !keepIDs.contains(locale.identifier(.bcp47)) {
+        for locale in reserved where !keep.contains(locale.identifier(.bcp47)) {
             _ = await AssetInventory.release(reservedLocale: locale)
         }
 
         let stillReserved = Set(await AssetInventory.reservedLocales.map { $0.identifier(.bcp47) })
-        for language in keep where !stillReserved.contains(language.id) {
-            _ = try? await AssetInventory.reserve(locale: Locale(identifier: language.id))
+        for id in keep where !stillReserved.contains(id) {
+            _ = try? await AssetInventory.reserve(locale: Locale(identifier: id))
         }
 
-        logger.notice("Reserved Apple locales: \(keepIDs.sorted().joined(separator: ", "), privacy: .public)")
+        logger.notice("Reserved Apple locales: \(keep.sorted().joined(separator: ", "), privacy: .public)")
         #endif
     }
 
@@ -368,7 +376,7 @@ final class DictationLanguageManager: ObservableObject {
         )
 
         do {
-            await reconcileAppleReservations(including: language)
+            await reconcileAppleReservations(includingLocale: language.id)
 
             if let request = try await AssetInventory.assetInstallationRequest(supporting: [transcriber]) {
                 try await request.downloadAndInstall()
