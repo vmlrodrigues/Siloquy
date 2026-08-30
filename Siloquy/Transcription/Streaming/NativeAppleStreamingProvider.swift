@@ -146,9 +146,16 @@ final class NativeAppleStreamingProvider: StreamingTranscriptionProvider {
             logger.error("Finalize failed: \(error.localizedDescription, privacy: .public)")
         }
 
-        // The results task ends when the analyzer closes the stream; wait for it so the
-        // last final result is in `finalizedText` before reporting.
+        // The results task ends when the analyzer closes the stream — but a finalize
+        // that threw above never closes it, and nothing upstream times out this call, so
+        // waiting unguarded loses the dictation and wedges the recorder. Cancel it if it
+        // has not finished, and report whatever was finalised before the failure.
+        let watchdog = Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            session.resultsTask?.cancel()
+        }
         await session.resultsTask?.value
+        watchdog.cancel()
 
         eventsContinuation?.yield(.committed(text: finalizedText.trimmingCharacters(in: .whitespacesAndNewlines)))
         #else

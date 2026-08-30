@@ -180,11 +180,6 @@ struct ModelManagementView: View {
                                     isShowingDeleteAlert = true
                                 }
                             },
-                            setDefaultAction: {
-                                Task {
-                                    transcriptionModelManager.setDefaultTranscriptionModel(model)
-                                }
-                            },
                             downloadAction: {
                                 if let whisperModel = model as? WhisperModel {
                                     Task { await whisperModelManager.downloadModel(whisperModel) }
@@ -289,9 +284,16 @@ struct ModelManagementView: View {
             // are reachable under their own filters; nothing here needs fetching before
             // it can transcribe. Replaces a "Recommended" pill pinned to one model,
             // which stopped being meaningful once each language picks its own.
-            return transcriptionModelManager.usableModels.filter {
+            let onDevice: (any TranscriptionModel) -> Bool = {
                 $0.provider == .whisper || $0.provider == .nativeApple || $0.provider == .fluidAudio
             }
+            let ready = transcriptionModelManager.usableModels.filter(onDevice)
+            // On a fresh install nothing is downloaded, and an empty default tab left no
+            // way to find a model at all. Fall back to the catalogue so there is always
+            // something to download from the screen you land on.
+            return ready.isEmpty
+                ? transcriptionModelManager.allAvailableModels.filter { onDevice($0) && transcriptionModelManager.isAvailableOnCurrentOS($0) }
+                : ready
         case .local:
             return transcriptionModelManager.allAvailableModels.filter {
                 ($0.provider == .whisper || $0.provider == .nativeApple || $0.provider == .fluidAudio)

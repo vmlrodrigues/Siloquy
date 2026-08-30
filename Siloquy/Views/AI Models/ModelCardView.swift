@@ -13,7 +13,6 @@ struct ModelCardView: View {
 
     // Actions
     var deleteAction: () -> Void
-    var setDefaultAction: () -> Void
     var downloadAction: () -> Void
     var editAction: ((CustomCloudModel) -> Void)?
     var body: some View {
@@ -29,7 +28,6 @@ struct ModelCardView: View {
                         modelURL: modelURL,
                         isWarming: isWarming,
                         deleteAction: deleteAction,
-                        setDefaultAction: setDefaultAction,
                         downloadAction: downloadAction
                     )
                 } else if let importedModel = model as? ImportedWhisperModel {
@@ -39,7 +37,6 @@ struct ModelCardView: View {
                         isCurrent: isCurrent,
                         modelURL: modelURL,
                         deleteAction: deleteAction,
-                        setDefaultAction: setDefaultAction
                     )
                 }
             case .fluidAudio:
@@ -55,7 +52,6 @@ struct ModelCardView: View {
                     NativeAppleModelCardView(
                         model: nativeAppleModel,
                         isCurrent: isCurrent,
-                        setDefaultAction: setDefaultAction
                     )
                 }
             case .custom:
@@ -63,7 +59,6 @@ struct ModelCardView: View {
                     CustomModelCardView(
                         model: customModel,
                         isCurrent: isCurrent,
-                        setDefaultAction: setDefaultAction,
                         deleteAction: deleteAction,
                         editAction: editAction ?? { _ in }
                     )
@@ -73,7 +68,6 @@ struct ModelCardView: View {
                     CloudModelCardView(
                         model: cloudModel,
                         isCurrent: isCurrent,
-                        setDefaultAction: setDefaultAction
                     )
                 }
             }

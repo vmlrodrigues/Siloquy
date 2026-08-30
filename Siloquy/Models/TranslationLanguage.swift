@@ -45,8 +45,6 @@ struct TranslationLanguage: Identifiable, Hashable {
         .init(id: "zh", displayName: "Mandarin Chinese", shortName: "Mandarin", promptLanguage: "Mandarin Chinese (Simplified)", flag: "🇨🇳"),
     ]
 
-    /// Enabled as tiles on first run. The rest are one tap away in the Add Translation picker.
-    static let defaultSeededIDs: [String] = ["pt-PT"]
 
     static func language(forID id: String) -> TranslationLanguage? {
         all.first { $0.id == id }

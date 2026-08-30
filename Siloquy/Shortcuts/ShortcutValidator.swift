@@ -94,7 +94,11 @@ enum ShortcutValidator {
 
     private static var allStoredActions: [ShortcutAction] {
         ShortcutAction.legacyKeyboardShortcutActions +
-            PowerModeManager.shared.configurations.map { ShortcutAction.powerMode($0.id) }
+            PowerModeManager.shared.configurations.map { ShortcutAction.powerMode($0.id) } +
+            // Language shortcuts were absent here, so the same chord could be bound to
+            // two languages, or to a language and to recording, with no conflict
+            // reported — and both monitors then fired on a single press.
+            DictationLanguage.available.map { ShortcutAction.dictationLanguage($0.id) }
     }
 
     private static var reservedMiniRecorderShortcuts: [(ShortcutAction, Shortcut)] {

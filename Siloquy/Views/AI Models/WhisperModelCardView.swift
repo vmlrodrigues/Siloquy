@@ -11,7 +11,6 @@ struct WhisperModelCardView: View {
     
     // Actions
     var deleteAction: () -> Void
-    var setDefaultAction: () -> Void
     var downloadAction: () -> Void
     private var isDownloading: Bool {
         downloadProgress.keys.contains(model.name + "_main") || 
@@ -164,7 +163,6 @@ struct ImportedWhisperModelCardView: View {
     let modelURL: URL?
 
     var deleteAction: () -> Void
-    var setDefaultAction: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {

@@ -69,7 +69,7 @@ class TranscriptionServiceRegistry {
         // and a transcript ready the moment you stop — it costs nothing per use, and a
         // failure falls back to the file-based path anyway. Only cloud models keep the
         // choice, where streaming is a different endpoint with its own billing.
-        if model.provider == .fluidAudio || model.provider == .nativeApple || model.provider == .whisper {
+        if model.provider == .fluidAudio || model.provider == .nativeApple {
             return true
         }
         return UserDefaults.standard.object(forKey: "streaming-enabled-\(model.name)") as? Bool ?? true

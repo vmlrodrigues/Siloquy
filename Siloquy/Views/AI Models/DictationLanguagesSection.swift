@@ -13,6 +13,7 @@ struct DictationLanguagesSection: View {
     @State private var languageToRemove: DictationLanguage?
     @State private var isConfirmingRemoval = false
     @State private var hoveredLanguage: DictationLanguage?
+    @State private var pushedCursor = false
 
     /// Wide enough for the unbound "Record" button, which is the widest state the
     /// recorder takes.
@@ -132,13 +133,18 @@ struct DictationLanguagesSection: View {
                 .buttonStyle(.plain)
                 .onHover { inside in
                     hoveredLanguage = inside ? language : (hoveredLanguage == language ? nil : hoveredLanguage)
+                    // Track what we pushed: the push is conditional but the pop was not,
+                    // so hovering the active row popped a cursor this view never pushed
+                    // and unbalanced AppKit's stack.
                     // The pointer is the other half of the signal: a hand says "this
                     // does something" before the row has been hovered long enough to
                     // notice the background.
-                    if inside, language != manager.current {
+                    if inside, language != manager.current, !pushedCursor {
                         NSCursor.pointingHand.push()
-                    } else if inside == false {
+                        pushedCursor = true
+                    } else if !inside, pushedCursor {
                         NSCursor.pop()
+                        pushedCursor = false
                     }
                 }
                 .help(language == manager.current

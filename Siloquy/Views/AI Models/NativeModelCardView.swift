@@ -5,7 +5,6 @@ import AppKit
 struct NativeAppleModelCardView: View {
     let model: NativeAppleModel
     let isCurrent: Bool
-    var setDefaultAction: () -> Void
 
     @ObservedObject private var languages = DictationLanguageManager.shared
     

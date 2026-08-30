@@ -14,6 +14,9 @@ final class DictationLanguageHUD {
 
     private var panel: NSPanel?
     private var dismissTask: Task<Void, Never>?
+    /// Bumped by every show, so a fade-out completion can tell whether the panel it is
+    /// about to hide is still the one it was dismissing.
+    private var generation = 0
 
     private init() {}
 
@@ -24,7 +27,9 @@ final class DictationLanguageHUD {
         let hosting = NSHostingController(rootView: DictationLanguageHUDView(language: language))
         hosting.view.frame = NSRect(x: 0, y: 0, width: 210, height: 44)
 
-        let panel = existingPanel() ?? makePanel()
+        generation += 1
+        let shownGeneration = generation
+        let panel = panel ?? makePanel()
         panel.contentViewController = hosting
         panel.setFrame(Self.frame(width: 210, height: 44), display: false)
         panel.alphaValue = 0
@@ -38,23 +43,25 @@ final class DictationLanguageHUD {
 
         dismissTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 1_100_000_000)
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, self?.generation == shownGeneration else { return }
             self?.dismiss()
         }
     }
 
     private func dismiss() {
         guard let panel else { return }
+        let dismissingGeneration = generation
         NSAnimationContext.runAnimationGroup { context in
             context.duration = 0.2
             panel.animator().alphaValue = 0
         } completionHandler: { [weak self] in
+            // A show() that landed during the fade revived this same panel; hiding it
+            // now would blank the language the user just switched to.
+            guard self?.generation == dismissingGeneration else { return }
             panel.orderOut(nil)
             if self?.panel === panel { self?.panel = nil }
         }
     }
-
-    private func existingPanel() -> NSPanel? { panel }
 
     private func makePanel() -> NSPanel {
         let panel = NonActivatingPanel(

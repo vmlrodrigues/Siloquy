@@ -22,6 +22,7 @@ final class DictationLanguageManager: ObservableObject {
     private let logger = Logger(subsystem: "com.victorrodrigues.siloquy", category: "DictationLanguage")
     private let enabledKey = "dictationLanguagesEnabled"
     private let modelsKey = "dictationLanguageModels"
+    private let currentLanguageKey = "dictationLanguageCurrent"
 
     /// The languages offered for switching, in the order shown. English is always first
     /// and always present.
@@ -50,11 +51,17 @@ final class DictationLanguageManager: ObservableObject {
     private weak var modelManager: TranscriptionModelManager?
     /// Consulted only to refuse a switch while the microphone is open.
     private weak var recorderState: (any RecorderStateProvider)?
+    private var externalChangeObserver: NSObjectProtocol?
 
     private init() {
         enabled = loadEnabled()
         modelNameByLanguage = UserDefaults.standard.dictionary(forKey: modelsKey) as? [String: String] ?? [:]
-        current = DictationLanguage.named(UserDefaults.standard.string(forKey: "SelectedLanguage") ?? "")
+        // Read our own key, not SelectedLanguage: that one holds whatever code the
+        // chosen transcriber wants ("nl" for Parakeet, "pt-PT" for Apple), which is not
+        // a DictationLanguage.id and so could never be resolved back. Falling back to it
+        // keeps upgrades from an earlier build working.
+        current = DictationLanguage.named(UserDefaults.standard.string(forKey: currentLanguageKey) ?? "")
+            ?? DictationLanguage.named(UserDefaults.standard.string(forKey: "SelectedLanguage") ?? "")
             ?? .english
         Task {
             await loadAppleSupportedLocales()
@@ -68,6 +75,54 @@ final class DictationLanguageManager: ObservableObject {
         self.modelManager = modelManager
         self.recorderState = engine as? any RecorderStateProvider
         backfillMissingModels()
+
+        // Push the restored language out before listening for anyone else's writes. At
+        // launch `TranscriptionModelManager` normalises whatever `SelectedLanguage`
+        // holds and posts a change; adopting that would overwrite the language we just
+        // restored with the fallback it happened to pick.
+        applyCurrentLanguage()
+
+        // `SelectedLanguage` has other writers — Power Mode applying a per-app config,
+        // the menu-bar picker, and TranscriptionModelManager normalising the code after
+        // a model change. Each left `current` stale, so the prompt, the recorder badge
+        // and the menu-bar flag described a different language from the one being
+        // transcribed. Adopting their change here fixes all three at once, rather than
+        // teaching each writer about this manager.
+        externalChangeObserver = NotificationCenter.default.addObserver(
+            forName: .languageDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.adoptExternalLanguageChange() }
+        }
+    }
+
+    /// Write `current` out to the keys the transcriber reads, without going through
+    /// `select()` — used at launch, where the model has already been restored and only
+    /// the language code needs to agree with it.
+    private func applyCurrentLanguage() {
+        guard let model = model(for: current),
+              let code = current.languageCode(for: model) else { return }
+        UserDefaults.standard.set(code, forKey: "SelectedLanguage")
+        UserDefaults.standard.set(current.id, forKey: currentLanguageKey)
+        logger.notice("Restored dictation language \(self.current.id, privacy: .public) as \(code, privacy: .public)")
+    }
+
+    /// Re-derive `current` from whatever another component just wrote.
+    ///
+    /// No-ops when the change came from `select()`, which sets `current` before posting.
+    private func adoptExternalLanguageChange() {
+        guard let code = UserDefaults.standard.string(forKey: "SelectedLanguage"),
+              let model = engine?.currentTranscriptionModel else { return }
+
+        let match = enabled.first { $0.languageCode(for: model) == code && $0.id == modelNameByLanguage.first(where: { $0.value == model.name })?.key }
+            ?? enabled.first { $0.languageCode(for: model) == code }
+        guard let match, match != current else { return }
+
+        current = match
+        UserDefaults.standard.set(match.id, forKey: currentLanguageKey)
+        logger.notice("Adopted external language change → \(match.id, privacy: .public)")
+        NotificationCenter.default.post(name: .dictationLanguageDidChange, object: nil)
     }
 
     // MARK: - What this machine can actually transcribe
@@ -222,8 +277,10 @@ final class DictationLanguageManager: ObservableObject {
         if let extra, !wanted.contains(extra) { wanted.insert(extra, at: 0) }
 
         // The active language first, so if there are more languages than slots the one
-        // being used keeps its reservation.
-        wanted.sort { lhs, _ in lhs == current }
+        // being used keeps its reservation. Partitioned rather than sorted: a predicate
+        // of the form `lhs == current` reports x < x as true, which is not a strict weak
+        // ordering — Swift leaves the result unspecified and can trap in debug builds.
+        wanted = wanted.filter { $0 == current } + wanted.filter { $0 != current }
         let keep = Array(wanted.prefix(AssetInventory.maximumReservedLocales))
         let keepIDs = Set(keep.map(\.id))
 
@@ -315,8 +372,16 @@ final class DictationLanguageManager: ObservableObject {
         persistEnabled()
         UserDefaults.standard.set(modelNameByLanguage, forKey: modelsKey)
         ShortcutStore.setShortcut(nil, for: .dictationLanguage(language.id))
-        // Don't leave the app set to a language you can no longer reach.
-        if current == language { select(.english) }
+        // Don't leave the app set to a language you can no longer reach. Assign first:
+        // select() has several guards that can refuse (mid-recording, model missing),
+        // and refusing would otherwise strand `current` on a language that is no longer
+        // in `enabled` — which then removes the reserved ⌘ slot and shifts every
+        // translation key.
+        if current == language {
+            current = .english
+            UserDefaults.standard.set(DictationLanguage.english.id, forKey: currentLanguageKey)
+            select(.english)
+        }
         NotificationCenter.default.post(name: .dictationLanguagesDidChange, object: nil)
         logger.notice("Disabled dictation language \(language.id, privacy: .public)")
         Task { await reconcileAppleReservations() }
@@ -389,6 +454,7 @@ final class DictationLanguageManager: ObservableObject {
         // immediately overwritten by the fallback.
         engine.setDefaultTranscriptionModel(model)
         UserDefaults.standard.set(code, forKey: "SelectedLanguage")
+        UserDefaults.standard.set(language.id, forKey: currentLanguageKey)
         current = language
 
         // The model that was loaded is not necessarily the one about to be used.

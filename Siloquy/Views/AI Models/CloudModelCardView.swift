@@ -6,7 +6,6 @@ import LLMkit
 struct CloudModelCardView: View {
     let model: CloudModel
     let isCurrent: Bool
-    var setDefaultAction: () -> Void
 
     @EnvironmentObject private var transcriptionModelManager: TranscriptionModelManager
     @AppStorage("SelectedLanguage") private var selectedLanguage: String = "en"
@@ -14,10 +13,9 @@ struct CloudModelCardView: View {
     @State private var apiKey = ""
     @State private var streamingEnabled: Bool
 
-    init(model: CloudModel, isCurrent: Bool, setDefaultAction: @escaping () -> Void) {
+    init(model: CloudModel, isCurrent: Bool) {
         self.model = model
         self.isCurrent = isCurrent
-        self.setDefaultAction = setDefaultAction
         let key = "streaming-enabled-\(model.name)"
         _streamingEnabled = State(initialValue: UserDefaults.standard.object(forKey: key) as? Bool ?? true)
     }

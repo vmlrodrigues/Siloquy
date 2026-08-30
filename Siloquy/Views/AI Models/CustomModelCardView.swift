@@ -5,7 +5,6 @@ import AppKit
 struct CustomModelCardView: View {
     let model: CustomCloudModel
     let isCurrent: Bool
-    var setDefaultAction: () -> Void
     var deleteAction: () -> Void
     var editAction: (CustomCloudModel) -> Void
     

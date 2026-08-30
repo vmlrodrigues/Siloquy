@@ -1,5 +1,4 @@
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct EnhancementSettingsView: View {
     @EnvironmentObject private var enhancementService: AIEnhancementService
@@ -129,7 +128,6 @@ struct EnhancementSettingsView: View {
                     }
                     .buttonStyle(.plain)
                     .help("New prompt")
-                    .help("Add a prompt or translation")
                 }
             }
         }
@@ -223,6 +221,12 @@ private struct ReorderablePromptGrid: View {
         .help("\(DictationLanguageManager.shared.current.nativeName) keeps this key so the others never move. There is nothing to translate into the language you are already speaking.")
     }
 
+    /// Observed so a language switch redraws the grid. Without this the tiles and the
+    /// reserved slot kept showing the previous language whenever the switch did not also
+    /// change the selected prompt — which is the common case, since the clean-up prompt
+    /// applies to every language.
+    @ObservedObject private var languages = DictationLanguageManager.shared
+
     /// Authored prompts belonging to a language other than the one in use.
     private var outOfScopePrompts: [CustomPrompt] {
         let offered = Set(enhancementService.allPrompts.map(\.id))
@@ -245,7 +249,7 @@ private struct ReorderablePromptGrid: View {
                     // separate pass for generated tiles, and no way for the drawn order
                     // to disagree with the numbering.
                     ForEach(Array(enhancementService.promptSlots.enumerated()), id: \.offset) { slotIndex, slot in
-                        if slot == nil {
+                        if slot == nil, slotIndex >= enhancementService.translationSlotStart {
                             // The slot your own language holds. Drawn rather than
                             // omitted, because a missing tile just reads as a missing
                             // ⌘3 — this says the key is spoken for, and by what. It is

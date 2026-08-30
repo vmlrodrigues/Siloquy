@@ -99,8 +99,7 @@ class AIEnhancementService: ObservableObject {
         // decide this, which meant the one guarantee the language switch was built to
         // make — that ⌘1 means "clean this up properly" whatever you are speaking —
         // could be undone by a stray drag.
-        let offered = customPrompts.filter { prompt in
-            guard prompt.applies(to: language) else { return false }
+        let authoredAll = customPrompts.filter { prompt in
             // A stored translation prompt is superseded only where a generated tile
             // covers the same destination. One targeting a language you cannot dictate
             // in — Mandarin, say — has no generated counterpart, so it stays an
@@ -110,11 +109,16 @@ class AIEnhancementService: ObservableObject {
             }
             return true
         }
+        // Out-of-scope prompts hold their place as an empty slot rather than closing the
+        // gap. Collapsing them made the authored block a different length per language,
+        // which shifted every translation key below it — the exact failure the reserved
+        // slots exist to prevent.
+        let offered = authoredAll.map { $0.applies(to: language) ? $0 : nil }
         let authored: [CustomPrompt?] = (
-            offered.filter { $0.id == PredefinedPrompts.defaultPromptId }
-            + offered.filter { $0.id == PredefinedPrompts.assistantPromptId }
-            + offered.filter { $0.id != PredefinedPrompts.defaultPromptId && $0.id != PredefinedPrompts.assistantPromptId }
-        ).map { Optional($0) }
+            offered.filter { $0?.id == PredefinedPrompts.defaultPromptId }
+            + offered.filter { $0?.id == PredefinedPrompts.assistantPromptId }
+            + offered.filter { $0 == nil || ($0?.id != PredefinedPrompts.defaultPromptId && $0?.id != PredefinedPrompts.assistantPromptId) }
+        )
 
         // With one language there is nowhere to translate to.
         guard languages.count > 1 else { return authored }
@@ -123,6 +127,14 @@ class AIEnhancementService: ObservableObject {
             destination == language ? nil : CustomPrompt.translation(to: destination)
         }
         return authored + translations
+    }
+
+    /// Where the per-language translation slots begin. Anything before this index that
+    /// is `nil` is a prompt scoped to another language; anything at or after it is the
+    /// slot held by the language you are speaking.
+    var translationSlotStart: Int {
+        promptSlots.count - max(0, DictationLanguageManager.shared.enabled.count > 1
+                                ? DictationLanguageManager.shared.enabled.count : 0)
     }
 
     /// The prompts actually offered right now, in ⌘ order, with reserved gaps removed.
@@ -320,12 +332,19 @@ class AIEnhancementService: ObservableObject {
         // the model does not quietly drift into English.
         let dictationLanguage = DictationLanguageManager.shared.current
         let localizedPrompt = LocalizedEnhancementPrompts.systemPrompt(for: dictationLanguage)
+        // Whether the localised prompt will actually be sent, not merely whether one
+        // exists. The two were decided separately, so a non-English dictation with the
+        // Assistant or any custom prompt got an English prompt *and* no language
+        // instruction — worse than either alone.
+        let willUseLocalizedPrompt = localizedPrompt != nil
+            && (activePrompt == nil
+                || activePrompt?.id == PredefinedPrompts.defaultPromptId
+                || activePrompt?.id == PredefinedPrompts.retiredLocalModelPromptId)
         let languageSection: String
         if dictationLanguage != .english {
-            // A language with its own prompt needs no hint appended: the prompt is
-            // already written in that language and states its own conventions. Only
-            // languages without one fall back to naming the language in English.
-            languageSection = localizedPrompt != nil ? "" :
+            // A language whose own prompt is being sent needs no hint appended: it is
+            // already written in that language and states its own conventions.
+            languageSection = willUseLocalizedPrompt ? "" :
                 "\n\nLANGUAGE: The transcript is in \(dictationLanguage.englishName). "
                 + "Reply in \(dictationLanguage.englishName) and never translate it. "
                 + "Use that language's own conventions for numbers, currency, dates and times."
@@ -679,10 +698,16 @@ class AIEnhancementService: ObservableObject {
     /// generated counterpart, so removing it would silently delete a prompt the user
     /// still relies on.
     private func removeSupersededTranslationPrompts() {
-        let languages = DictationLanguage.available
+        // Only the languages that will actually produce a generated tile — which means
+        // enabled, and more than one enabled, since a single language has nothing to
+        // translate to. Matching against every *candidate* language deleted the tile on
+        // upgrade (where only English is enabled) with nothing put in its place, and it
+        // could not be recreated.
+        let enabled = DictationLanguageManager.shared.enabled
+        guard enabled.count > 1 else { return }
         let superseded = customPrompts.filter { prompt in
             guard let target = prompt.targetLanguage else { return false }
-            return languages.contains { DictationLanguage.matches(target, $0) }
+            return enabled.contains { DictationLanguage.matches(target, $0) }
         }
         guard !superseded.isEmpty else { return }
 
@@ -692,7 +717,7 @@ class AIEnhancementService: ObservableObject {
             // carried over rather than silently reset.
             let target = superseded.first { $0.id == selected }?.targetLanguage
             selectedPromptId = target
-                .flatMap { t in DictationLanguage.available.first { DictationLanguage.matches(t, $0) } }
+                .flatMap { t in enabled.first { DictationLanguage.matches(t, $0) } }
                 .map(\.translationPromptID)
                 ?? PredefinedPrompts.defaultPromptId
         }
