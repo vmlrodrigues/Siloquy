@@ -86,7 +86,7 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     let triggerWords: [String]
     let useSystemInstructions: Bool
     /// When non-nil, this is a built-in Translation prompt targeting the given language id
-    /// (see TranslationLanguage). Its promptText is a self-contained translation instruction,
+    /// (a `DictationLanguage.id`). Its promptText is a self-contained translation instruction,
     /// so it is deletable and reorderable like any custom prompt (#25).
     let targetLanguage: String?
     /// The dictation language this prompt belongs to (`DictationLanguage.id`), or `nil`
@@ -109,7 +109,7 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         CustomPrompt(
             id: language.translationPromptID,
             title: "To \(language.tileName)",
-            promptText: TranslationLanguage.promptText(for: language.translationPhrase),
+            promptText: TranslationPrompt.text(for: language.translationPhrase),
             icon: "globe",
             description: "Translate what you dictate into \(language.englishName)",
             // Generated from the language list, so there is nothing here to edit or
@@ -129,18 +129,18 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     /// context appendix (custom vocabulary, English-variant rule) does not apply to it.
     var isTranslation: Bool { targetLanguage != nil }
 
-    /// The icon to show wherever this prompt appears: a translation prompt shows its
-    /// country flag emoji, everything else shows its SF Symbol name (#25).
     /// The flag a translation prompt shows in place of an SF Symbol, if one is known.
     ///
     /// Dictation languages are checked first: they are where generated translation
-    /// tiles come from, and their ids ("en-US") are finer than the translation table's
-    /// ("es"), so looking only there would fall through to a generic globe.
+    /// tiles come from. A v0.13.x prompt stored against a language you cannot dictate
+    /// in falls back to its own flag rather than a generic globe.
     var flagIcon: String? {
         guard let id = targetLanguage else { return nil }
-        return DictationLanguage.named(id)?.flag ?? TranslationLanguage.language(forID: id)?.flag
+        return DictationLanguage.named(id)?.flag ?? TranslationPrompt.legacyFlag(forID: id)
     }
 
+    /// The icon to show wherever this prompt appears: a translation prompt shows its
+    /// country flag emoji, everything else shows its SF Symbol name (#25).
     var displayIcon: String { flagIcon ?? icon }
 
     init(

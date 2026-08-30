@@ -35,6 +35,15 @@ struct DictationLanguage: Identifiable, Codable, Hashable {
     /// preferring exact matches would quietly demote the model that measured best on
     /// English.
     let preferredModelNames: [String]
+    /// The clean-up prompt for this language, written in it.
+    ///
+    /// Declared here rather than looked up in a side table so a new language cannot be
+    /// added without deciding: the field has to be filled in at the point of
+    /// definition. Omitting an entry from a separate map was not a compile error, and
+    /// the language silently got the English prompt — the defect the in-language
+    /// prompts exist to fix. `nil` means English, which uses the app's own default
+    /// prompt and its English-variant appendix.
+    let cleanUpPrompt: String?
     /// How to name this language *to the model* when translating into it — more
     /// specific than the endonym, because "Portuguese" alone lets the model drift to
     /// the Brazilian norm.
@@ -99,6 +108,7 @@ extension DictationLanguage {
         englishName: "English", tileName: "English",
         flag: "🇬🇧",
         preferredModelNames: ["parakeet-tdt-0.6b-v2", appleNative],
+        cleanUpPrompt: nil,
         translationPhrase: "English",
         translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E1")!
     )
@@ -114,16 +124,16 @@ extension DictationLanguage {
     /// `DictationLanguageManager` filters it at runtime.
     static let available: [DictationLanguage] = [
         english,
-        DictationLanguage(id: "pt-PT", nativeName: "Português", englishName: "Portuguese (Portugal)", tileName: "Portuguese", flag: "🇵🇹", preferredModelNames: [appleNative], translationPhrase: "European Portuguese (as spoken in Portugal)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E2")!),
-        DictationLanguage(id: "pt-BR", nativeName: "Português (Brasil)", englishName: "Portuguese (Brazil)", tileName: "Portuguese (BR)", flag: "🇧🇷", preferredModelNames: [appleNative], translationPhrase: "Brazilian Portuguese", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E3")!),
-        DictationLanguage(id: "es-ES", nativeName: "Español", englishName: "Spanish", tileName: "Spanish", flag: "🇪🇸", preferredModelNames: [appleNative], translationPhrase: "Spanish (as spoken in Spain)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E4")!),
+        DictationLanguage(id: "pt-PT", nativeName: "Português", englishName: "Portuguese (Portugal)", tileName: "Portuguese", flag: "🇵🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.portuguesePT, translationPhrase: "European Portuguese (as spoken in Portugal)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E2")!),
+        DictationLanguage(id: "pt-BR", nativeName: "Português (Brasil)", englishName: "Portuguese (Brazil)", tileName: "Portuguese (BR)", flag: "🇧🇷", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.portugueseBR, translationPhrase: "Brazilian Portuguese", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E3")!),
+        DictationLanguage(id: "es-ES", nativeName: "Español", englishName: "Spanish", tileName: "Spanish", flag: "🇪🇸", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.spanishES, translationPhrase: "Spanish (as spoken in Spain)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E4")!),
         // Apple has no Dutch model, so this one leans on Parakeet v3 — which is the
         // point of choosing a model per language: English keeps v2 and its better
         // English accuracy, and only Dutch pays v3's multilingual trade-off.
-        DictationLanguage(id: "nl-NL", nativeName: "Nederlands", englishName: "Dutch", tileName: "Dutch", flag: "🇳🇱", preferredModelNames: ["parakeet-tdt-0.6b-v3"], translationPhrase: "Dutch", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E9")!),
-        DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", tileName: "French", flag: "🇫🇷", preferredModelNames: [appleNative], translationPhrase: "French", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!),
-        DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", tileName: "German", flag: "🇩🇪", preferredModelNames: [appleNative], translationPhrase: "German", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!),
-        DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),
+        DictationLanguage(id: "nl-NL", nativeName: "Nederlands", englishName: "Dutch", tileName: "Dutch", flag: "🇳🇱", preferredModelNames: ["parakeet-tdt-0.6b-v3"], cleanUpPrompt: LocalizedEnhancementPrompts.dutch, translationPhrase: "Dutch", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E9")!),
+        DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", tileName: "French", flag: "🇫🇷", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.french, translationPhrase: "French", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!),
+        DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", tileName: "German", flag: "🇩🇪", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.german, translationPhrase: "German", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!),
+        DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.italian, translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),
     ]
 
     /// Whether a translation target names this dictation language.
