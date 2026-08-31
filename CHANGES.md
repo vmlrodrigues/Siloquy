@@ -7,7 +7,7 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
-### 0.14.0 — 2026-08-30
+### 0.14.1 — 2026-08-30
 
 #### Added
 - **Dictate in another language, with a keystroke.** Set up the languages you
@@ -55,6 +55,11 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
   (#53)
 
 #### Fixed
+- **Switching dictation language now says so, even with Siloquy in front.** The
+  flash under the notch was suppressed whenever the app was frontmost, on the
+  assumption you could see the change in the window. That only held on the
+  Dictation Models section — from Dashboard, History or AI Enhancement the
+  switch happened silently. One indication now, whatever has focus. (#54)
 - **Downloading one Apple Speech language no longer uninstalls the others.** A
   reservation is what stops macOS reclaiming an installed locale, and the
   download released every one of them before claiming its own — so fetching
