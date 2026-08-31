@@ -518,10 +518,13 @@ final class DictationLanguageManager: ObservableObject {
         NotificationCenter.default.post(name: .languageDidChange, object: nil)
         NotificationCenter.default.post(name: .dictationLanguageDidChange, object: nil)
 
-        // Only worth a flash when there is a choice to be ambiguous about, and only
-        // when Siloquy is not in front: on screen the row already marks itself active,
-        // and a HUD over the window you are looking at would just be noise.
-        if enabled.count > 1, !NSApp.isActive {
+        // Only worth a flash when there is a choice to be ambiguous about — but then
+        // always, whatever has focus. Suppressing it while Siloquy was in front assumed
+        // you could see the change in the app; that only holds on the Dictation Models
+        // section, and everywhere else — Dashboard, History, AI Enhancement — shows no
+        // language state at all, so the switch happened silently (#54). The HUD is a
+        // non-activating panel, so it cannot take focus from the window underneath.
+        if enabled.count > 1 {
             DictationLanguageHUD.shared.show(language)
         }
 
