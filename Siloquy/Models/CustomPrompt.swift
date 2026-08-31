@@ -98,6 +98,20 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
     /// meaning "clean this up properly" after a language switch, rather than running
     /// English instructions over Portuguese speech.
     let dictationLanguage: String?
+    /// Whether this prompt wants the clipboard contents as context, or `nil` to follow
+    /// the global setting in AI Enhancement.
+    ///
+    /// The two kinds of prompt want opposite things. A clean-up prompt uses context as a
+    /// spelling reference — helpful, but marginal. Assistant uses it as subject matter:
+    /// "summarise this" means nothing without it. One switch for both made every quick
+    /// grammar fix pay for what only Assistant needs (#55).
+    let usesClipboardContext: Bool?
+    /// Whether this prompt wants the current window's text as context, or `nil` to follow
+    /// the global setting.
+    ///
+    /// Costlier than the clipboard: a Vision OCR pass, a window's worth of text added to
+    /// the prompt, and macOS's periodic screen-recording consent dialog.
+    let usesScreenContext: Bool?
 
     /// The translate-into-this-language tile for a dictation language.
     ///
@@ -152,7 +166,9 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         triggerWords: [String] = [],
         useSystemInstructions: Bool = true,
         targetLanguage: String? = nil,
-        dictationLanguage: String? = nil
+        dictationLanguage: String? = nil,
+        usesClipboardContext: Bool? = nil,
+        usesScreenContext: Bool? = nil
     ) {
         self.id = id
         self.title = title
@@ -165,10 +181,12 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         self.useSystemInstructions = useSystemInstructions
         self.targetLanguage = targetLanguage
         self.dictationLanguage = dictationLanguage
+        self.usesClipboardContext = usesClipboardContext
+        self.usesScreenContext = usesScreenContext
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, promptText, isActive, icon, description, isPredefined, triggerWords, useSystemInstructions, targetLanguage, dictationLanguage
+        case id, title, promptText, isActive, icon, description, isPredefined, triggerWords, useSystemInstructions, targetLanguage, dictationLanguage, usesClipboardContext, usesScreenContext
     }
 
     init(from decoder: Decoder) throws {
@@ -186,8 +204,21 @@ struct CustomPrompt: Identifiable, Codable, Equatable {
         // Absent on every prompt written before this existed, which is correct: they
         // were authored with no language in mind, so they stay available in all of them.
         dictationLanguage = try container.decodeIfPresent(String.self, forKey: .dictationLanguage)
+        // Absent on every prompt written before this existed, which reads as "follow the
+        // global setting" — exactly the behaviour those prompts already had.
+        usesClipboardContext = try container.decodeIfPresent(Bool.self, forKey: .usesClipboardContext)
+        usesScreenContext = try container.decodeIfPresent(Bool.self, forKey: .usesScreenContext)
     }
     
+    /// What this prompt actually gets, given the global setting it may defer to.
+    func wantsClipboardContext(globalDefault: Bool) -> Bool {
+        usesClipboardContext ?? globalDefault
+    }
+
+    func wantsScreenContext(globalDefault: Bool) -> Bool {
+        usesScreenContext ?? globalDefault
+    }
+
     var finalPromptText: String {
         if useSystemInstructions {
             return String(format: AIPrompts.customPromptTemplate, self.promptText)

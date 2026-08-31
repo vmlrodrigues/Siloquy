@@ -92,7 +92,12 @@ enum PredefinedPrompts {
                 icon: "bubble.left.and.bubble.right.fill",
                 description: "AI assistant that provides direct answers to queries",
                 isPredefined: true,
-                useSystemInstructions: false
+                useSystemInstructions: false,
+                // Assistant is the prompt that earns the context. Asking it to summarise
+                // or reply to something only works if it can see what you are looking at,
+                // where a clean-up prompt would pay the same cost for a spelling hint.
+                usesClipboardContext: true,
+                usesScreenContext: true
             )
         ]
     }

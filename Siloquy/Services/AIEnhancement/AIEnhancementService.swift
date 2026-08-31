@@ -282,6 +282,7 @@ class AIEnhancementService: ObservableObject {
         initializePredefinedPrompts()
         removeRetiredPrompts()
         removeStoredTranslationPrompts()
+        seedContextDefaults()
         // Property observers do not fire for assignments made during init, so build the
         // strip explicitly — after the cleanups, so it is not built from prompts that
         // are about to be deleted.
@@ -343,7 +344,13 @@ class AIEnhancementService: ObservableObject {
             selectedTextContext = ""
         }
 
-        let clipboardContext = if useClipboardContext,
+        // The prompt decides, falling back to the global switch when it has no opinion
+        // (#55). `activePrompt` is nil only when nothing is selected, which behaves as
+        // before.
+        let wantsClipboard = activePrompt?.wantsClipboardContext(globalDefault: useClipboardContext) ?? useClipboardContext
+        let wantsScreen = activePrompt?.wantsScreenContext(globalDefault: useScreenCaptureContext) ?? useScreenCaptureContext
+
+        let clipboardContext = if wantsClipboard,
                               let clipboardText = lastCapturedClipboard,
                               !clipboardText.isEmpty {
             "\n\n<CLIPBOARD_CONTEXT>\n\(clipboardText)\n</CLIPBOARD_CONTEXT>"
@@ -351,7 +358,7 @@ class AIEnhancementService: ObservableObject {
             ""
         }
 
-        let screenCaptureContext = if useScreenCaptureContext,
+        let screenCaptureContext = if wantsScreen,
                                    let capturedText = screenCaptureService.lastCapturedText,
                                    !capturedText.isEmpty {
             "\n\n<CURRENT_WINDOW_CONTEXT>\n\(capturedText)\n</CURRENT_WINDOW_CONTEXT>"
@@ -678,9 +685,23 @@ class AIEnhancementService: ObservableObject {
         // the app hits ScreenCaptureKit on every recording (whenever Screen Recording is
         // granted) even though the feature is off by default — which is what triggers
         // macOS's periodic "bypass the window picker" consent dialog. The captured text
-        // is only ever *used* when useScreenCaptureContext is true (see makeRequest), so
+        // is only ever *used* when the same decision says so (see makeRequest), so
         // capturing while it's false was pure waste plus an unwanted system prompt.
-        guard useScreenCaptureContext else { return }
+        //
+        // Read against the prompt armed *now*, because this runs when recording starts
+        // and the answer has to exist before the first word (#55). Arming Assistant
+        // mid-recording therefore finds no capture — the screen it would have wanted is
+        // the one you were looking at when you began speaking, not the one you end on.
+        // Nothing consumes the capture when enhancement is off, and it is not free: an
+        // OCR pass and, periodically, a system consent dialog. This guard mattered less
+        // when the global switch was the only way in; now that Assistant asks for screen
+        // context by default, arming it with enhancement off would otherwise pay for a
+        // capture nothing reads.
+        guard isEnhancementEnabled else { return }
+
+        let wantsScreen = activePrompt?.wantsScreenContext(globalDefault: useScreenCaptureContext)
+            ?? useScreenCaptureContext
+        guard wantsScreen else { return }
         guard CGPreflightScreenCaptureAccess() else {
             return
         }
@@ -701,8 +722,8 @@ class AIEnhancementService: ObservableObject {
         screenCaptureService.lastCapturedText = nil
     }
 
-    func addPrompt(title: String, promptText: String, icon: PromptIcon = "doc.text.fill", description: String? = nil, triggerWords: [String] = [], useSystemInstructions: Bool = true, dictationLanguage: String? = nil) {
-        let newPrompt = CustomPrompt(title: title, promptText: promptText, icon: icon, description: description, isPredefined: false, triggerWords: triggerWords, useSystemInstructions: useSystemInstructions, dictationLanguage: dictationLanguage)
+    func addPrompt(title: String, promptText: String, icon: PromptIcon = "doc.text.fill", description: String? = nil, triggerWords: [String] = [], useSystemInstructions: Bool = true, dictationLanguage: String? = nil, usesClipboardContext: Bool? = nil, usesScreenContext: Bool? = nil) {
+        let newPrompt = CustomPrompt(title: title, promptText: promptText, icon: icon, description: description, isPredefined: false, triggerWords: triggerWords, useSystemInstructions: useSystemInstructions, dictationLanguage: dictationLanguage, usesClipboardContext: usesClipboardContext, usesScreenContext: usesScreenContext)
         customPrompts.append(newPrompt)
         if customPrompts.count == 1 {
             selectedPromptId = newPrompt.id
@@ -759,6 +780,41 @@ class AIEnhancementService: ObservableObject {
         logger.notice("Removed \(count, privacy: .public) stored translation prompt(s); translation tiles come from the dictation languages")
     }
 
+    /// Give existing installs the context defaults a fresh one would get (#55).
+    ///
+    /// Once only, and keyed on its own flag rather than on the values being nil: nil is
+    /// a real choice meaning "follow the global setting", so re-seeding on every launch
+    /// would make that choice impossible to keep.
+    private func seedContextDefaults() {
+        let key = "didSeedPromptContextDefaults"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        defer { UserDefaults.standard.set(true, forKey: key) }
+
+        guard let index = customPrompts.firstIndex(where: { $0.id == PredefinedPrompts.assistantPromptId }),
+              let template = PredefinedPrompts.createDefaultPrompts()
+                  .first(where: { $0.id == PredefinedPrompts.assistantPromptId }) else { return }
+
+        let existing = customPrompts[index]
+        guard existing.usesClipboardContext == nil, existing.usesScreenContext == nil else { return }
+
+        customPrompts[index] = CustomPrompt(
+            id: existing.id,
+            title: existing.title,
+            promptText: existing.promptText,
+            isActive: existing.isActive,
+            icon: existing.icon,
+            description: existing.description,
+            isPredefined: existing.isPredefined,
+            triggerWords: existing.triggerWords,
+            useSystemInstructions: existing.useSystemInstructions,
+            targetLanguage: existing.targetLanguage,
+            dictationLanguage: existing.dictationLanguage,
+            usesClipboardContext: template.usesClipboardContext,
+            usesScreenContext: template.usesScreenContext
+        )
+        logger.notice("Seeded Assistant with its own clipboard and screen context defaults")
+    }
+
     private func initializePredefinedPrompts() {
         let predefinedTemplates = PredefinedPrompts.createDefaultPrompts()
 
@@ -774,7 +830,12 @@ class AIEnhancementService: ObservableObject {
                     description: template.description,
                     isPredefined: true,
                     triggerWords: updatedPrompt.triggerWords,
-                    useSystemInstructions: template.useSystemInstructions
+                    useSystemInstructions: template.useSystemInstructions,
+                    // Preserved rather than reset from the template: these are yours to
+                    // change once the prompt exists. `seedContextDefaults` sets the
+                    // starting values, once.
+                    usesClipboardContext: updatedPrompt.usesClipboardContext,
+                    usesScreenContext: updatedPrompt.usesScreenContext
                 )
                 customPrompts[existingIndex] = updatedPrompt
             } else {

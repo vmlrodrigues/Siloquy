@@ -29,6 +29,8 @@ struct PromptEditorView: View {
     @State private var useSystemInstructions: Bool
     /// `nil` means the prompt applies whatever language you are dictating in.
     @State private var dictationLanguageID: String?
+    @State private var clipboardContext: ContextChoice = .inherit
+    @State private var screenContext: ContextChoice = .inherit
     @State private var showingIconPicker = false
 
     private var isEditingPredefinedPrompt: Bool {
@@ -63,6 +65,8 @@ struct PromptEditorView: View {
             _triggerWords = State(initialValue: prompt.triggerWords)
             _useSystemInstructions = State(initialValue: prompt.useSystemInstructions)
             _dictationLanguageID = State(initialValue: prompt.dictationLanguage)
+            _clipboardContext = State(initialValue: ContextChoice(prompt.usesClipboardContext))
+            _screenContext = State(initialValue: ContextChoice(prompt.usesScreenContext))
         }
     }
     
@@ -144,7 +148,7 @@ struct PromptEditorView: View {
     private var predefinedPromptForm: some View {
         Form {
             Section {
-                Text("You can only customize the trigger words for system prompts.")
+                Text("A system prompt's instructions are fixed, but its trigger words and the context it receives are yours to set.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
             } header: {
@@ -154,6 +158,10 @@ struct PromptEditorView: View {
             Section {
                 TriggerWordsEditor(triggerWords: $triggerWords)
             }
+
+            // Assistant is the prompt most worth pointing at your screen, and it is
+            // predefined — so this has to be reachable here, not only on custom prompts.
+            contextSection
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -223,6 +231,7 @@ struct PromptEditorView: View {
             }
 
             dictationLanguageSection
+            contextSection
 
             Section {
                 TriggerWordsEditor(triggerWords: $triggerWords)
@@ -267,7 +276,9 @@ struct PromptEditorView: View {
                 description: description.isEmpty ? nil : description,
                 triggerWords: triggerWords,
                 useSystemInstructions: useSystemInstructions,
-                dictationLanguage: dictationLanguageID
+                dictationLanguage: dictationLanguageID,
+                usesClipboardContext: clipboardContext.value,
+                usesScreenContext: screenContext.value
             )
         case .edit(let prompt):
             let updatedPrompt = CustomPrompt(
@@ -281,9 +292,51 @@ struct PromptEditorView: View {
                 triggerWords: triggerWords,
                 useSystemInstructions: useSystemInstructions,
                 targetLanguage: prompt.targetLanguage,
-                dictationLanguage: dictationLanguageID
+                dictationLanguage: dictationLanguageID,
+                usesClipboardContext: clipboardContext.value,
+                usesScreenContext: screenContext.value
             )
             enhancementService.updatePrompt(updatedPrompt)
+        }
+    }
+
+    /// Whether this prompt gets the clipboard and the current window as context.
+    ///
+    /// Worth deciding per prompt because the two uses pull apart: a clean-up prompt reads
+    /// context as a spelling reference, while Assistant reads it as the thing you are
+    /// asking about. Screen context is the expensive one — an OCR pass, a window of text
+    /// added to every request, and macOS's periodic recording-consent dialog — so a
+    /// prompt that does not need it should not be paying for it (#55).
+    @ViewBuilder
+    var contextSection: some View {
+        Section {
+            VStack(alignment: .leading, spacing: 10) {
+                contextPicker("Clipboard", selection: $clipboardContext)
+                contextPicker("Current window", selection: $screenContext)
+
+                Text("Screen context is captured when recording starts, so it follows the prompt armed at that moment. Use it for prompts that act on what you are looking at.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } header: {
+            Text("Context this prompt receives")
+        }
+    }
+
+    @ViewBuilder
+    private func contextPicker(_ label: String, selection: Binding<ContextChoice>) -> some View {
+        HStack {
+            Text(label)
+            Spacer()
+            Picker("", selection: selection) {
+                ForEach(ContextChoice.allCases, id: \.self) { choice in
+                    Text(choice.label).tag(choice)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .fixedSize()
         }
     }
 
