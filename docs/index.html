@@ -252,11 +252,15 @@
     <p>Press a shortcut, speak, release — your words appear at the cursor in any app. Everything runs on your Mac. No account, no subscription, no audio ever leaves your device.</p>
     <div class="card">
       <div class="card-title">Speech-to-text <span class="badge badge-green">On-device</span></div>
-      <div class="card-body">Supports local and cloud transcription models. Parakeet (on-device, Apple Silicon) is recommended for most people — it delivers the lowest word-error rate of the open-source local models (~6%) while transcribing thousands of times faster than real time, with no internet connection required.</div>
+      <div class="card-body">Supports local and cloud transcription models. Parakeet V2 (on-device, Apple Silicon) is recommended for English — it delivers the lowest word-error rate of the open-source local models (~6%) while transcribing thousands of times faster than real time, with no internet connection required. Other languages use Apple Speech or Parakeet V3, picked per language.</div>
     </div>
     <div class="card">
       <div class="card-title">AI Enhancement <span class="badge badge-green">On-device</span></div>
       <div class="card-body">After transcribing, an on-device AI model cleans up grammar, removes filler words, and fixes self-corrections — all without an API key or server. You can also connect a cloud provider if you prefer.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Many languages <span class="badge badge-green">On-device</span></div>
+      <div class="card-body">Give each language you speak its own shortcut. One keystroke switches the transcription model, the clean-up prompt and the translation tiles together — so dictating in Portuguese is as immediate as dictating in English.</div>
     </div>
     <div class="card">
       <div class="card-title">Power Mode</div>
@@ -297,18 +301,18 @@
 
   <section>
     <h2><span class="num">2</span> Download the transcription model</h2>
-    <div class="tip"><strong>Recommended:</strong> Parakeet (local) — download it once from the AI Models screen, then it runs entirely on your Mac with no internet required.</div>
+    <div class="tip"><strong>Recommended:</strong> Parakeet (local) — download it once from the Dictation Models screen, then it runs entirely on your Mac with no internet required.</div>
     <ol class="steps">
       <li>
         <div class="step-content">
-          <div class="step-title">Open Siloquy → Settings → AI Models</div>
+          <div class="step-title">Open Siloquy → Dictation Models</div>
           <div class="step-desc">Click the Local tab.</div>
         </div>
       </li>
       <li>
         <div class="step-content">
           <div class="step-title">Find Parakeet and click Download</div>
-          <div class="step-desc">The model is about 600 MB. Download happens once — it stays on disk between launches.</div>
+          <div class="step-desc">Parakeet V2 is 474 MB. Download happens once — it stays on disk between launches. If you speak more than English, see <em>Dictate in another language</em> below.</div>
         </div>
       </li>
       <li>
@@ -348,26 +352,26 @@
 
   <!-- ── AI Enhancement ── -->
   <section>
-    <h2>AI Enhancement (optional but recommended)</h2>
+    <h2>AI Enhancement</h2>
     <p>Enhancement takes the raw transcript and passes it through an AI model to fix grammar, remove fillers, and handle self-corrections. The default is the on-device Gemma model — no setup needed beyond downloading it once.</p>
 
     <div class="card">
       <div class="card-title">On-device <span class="badge badge-green">No API key</span></div>
-      <div class="card-body">Settings → Enhancement → Provider: <strong>Local (On-device)</strong>. Download the model when prompted (~530 MB). Runs via Metal on Apple Silicon — typically 2–3 seconds for a typical dictation.</div>
+      <div class="card-body"><strong>AI Enhancement</strong> → Provider: <strong>Local (On-device)</strong>. Download <strong>Gemma 4 E4B</strong> when prompted (3.4 GB); on a Mac with less memory, Gemma 4 E2B is a lighter 2.4 GB fallback. Runs via Metal on Apple Silicon — typically 2–3 seconds for a typical dictation.</div>
     </div>
 
     <div class="card">
       <div class="card-title">Cloud providers <span class="badge badge-blue">API key required</span></div>
-      <div class="card-body">Groq and Cerebras both have generous free tiers and are significantly faster. Go to Settings → Enhancement, pick a provider, paste your API key. Groq <em>llama-3.3-70b</em> or Cerebras <em>llama-3.3-70b</em> are good starting points.</div>
+      <div class="card-body">Groq and Cerebras both have generous free tiers. Go to <strong>AI Enhancement</strong>, pick a provider, paste your API key. Groq <em>llama-3.3-70b</em> or Cerebras <em>llama-3.3-70b</em> are good starting points.</div>
     </div>
 
-    <p style="margin-top:16px; font-size:0.875rem; color:var(--muted);">Enhancement is optional. If you turn it off, the raw Parakeet transcript is pasted directly.</p>
+    <p style="margin-top:16px; font-size:0.875rem; color:var(--muted);">You can turn enhancement off per dictation, in which case the raw transcript is pasted directly — but the on-device model is quick enough that there is rarely a reason to.</p>
   </section>
 
   <!-- ── Enhancement Prompts ── -->
   <section>
     <h2>Enhancement prompts</h2>
-    <p>Siloquy ships with three built-in prompts that control how the AI model handles your transcript. Switch between them instantly with <kbd>⌘1</kbd> <kbd>⌘2</kbd> <kbd>⌘3</kbd> <kbd>⌘4</kbd> while enhancement is enabled — the icon on the recorder updates to show which one is armed. You can also create your own.</p>
+    <p>Prompts control how the AI model handles your transcript. Switch between them instantly with <kbd>⌘1</kbd> <kbd>⌘2</kbd> <kbd>⌘3</kbd> and so on while enhancement is enabled — the icon on the recorder updates to show which one is armed. The order is fixed, so a shortcut always means the same thing. You can add your own.</p>
 
     <div class="card">
       <div class="card-title">Default <span class="badge badge-blue">⌘1</span></div>
@@ -380,13 +384,65 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Local Model Default <span class="badge badge-blue">⌘3</span></div>
-      <div class="card-body">A leaner version of the Default prompt, written for the on-device Gemma model. The full Default prompt is detailed enough that smaller models can find it noisy; this version strips it down to the essential rules — remove fillers, fix grammar, handle self-corrections, output only the cleaned text — in a form that small models follow more reliably. Siloquy selects it automatically when the local provider is active.</div>
+      <div class="card-title">Translation tiles <span class="badge badge-blue">⌘3 and beyond</span></div>
+      <div class="card-body">One per language you dictate in, generated for you rather than written by hand — <em>To Portuguese</em>, <em>To Spanish</em>, and so on. Each keeps a fixed key, so it means the same thing whichever language you are speaking. See <em>Dictate in another language</em> below.</div>
     </div>
 
     <div class="tip" style="margin-top:4px;">
-      <strong>Create your own:</strong> click the prompt name at the top of the Enhancement panel to open the prompt picker, then tap the <strong>+</strong> button. Your custom prompts fill slots <kbd>⌘4</kbd> and beyond. See the <em>Translate your dictation</em> tip below for a practical example.
+      <strong>The right prompt for the model, automatically.</strong> On the Local (On-device) provider, <kbd>⌘1</kbd> sends the prompt that measured best with the model you picked — the fuller one for Gemma 4 E4B, a shorter one for E2B, which follows brief instructions more reliably. Nothing to configure.
     </div>
+
+    <div class="tip" style="margin-top:4px;">
+      <strong>Create your own:</strong> in <strong>AI Enhancement</strong>, find <em>Enhancement &amp; Translation Prompts</em> and click <strong>＋</strong>. Custom prompts sit after Default and Assistant, and you can limit one to a single dictation language if it only makes sense there.
+    </div>
+  </section>
+
+  <!-- ── Languages ── -->
+  <section>
+    <h2>Dictate in another language</h2>
+    <p>Set up the languages you speak and give each one a shortcut. Pressing it switches everything at once — the transcription model, the clean-up prompt, and the translation tiles — so there is nothing to change per session.</p>
+
+    <div class="card">
+      <div class="card-title">A model chosen per language <span class="badge badge-green">On-device</span></div>
+      <div class="card-body">English keeps <strong>Parakeet V2</strong>, which is English-only but the strongest on English. Other languages use <strong>Apple Speech</strong>, which ships a separately tuned asset per locale and tells European Portuguese apart from Brazilian. Dutch uses <strong>Parakeet V3</strong> (English plus 25 European languages), since Apple has no Dutch model. You can override the choice for any language.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Clean-up written <em>in</em> your language</div>
+      <div class="card-body">The clean-up prompt is not an English prompt pointed at another language — it is written in that language and states its own conventions for numbers, currency, dates and times. Portuguese (Portugal and Brazil), Spanish, French, German, Italian and Dutch each have one, so <em>"quatro mil e quinhentos euros"</em> comes back as <em>"4500 €"</em>. <kbd>⌘1</kbd> keeps meaning "clean this up properly" whatever you are speaking.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Translation, without setting anything up</div>
+      <div class="card-body">Every language you add gets its own translation tile with a permanent ⌘ key. The key never moves when you switch language, and the tile for the language you are currently speaking is shown inert — there is nothing to translate into the language you are already using.</div>
+    </div>
+
+    <ol class="steps">
+      <li>
+        <div class="step-content">
+          <div class="step-title">Open Dictation Models → Dictation Languages</div>
+          <div class="step-desc">Click <strong>Add a language…</strong> and pick one. English is always there.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Download what it needs</div>
+          <div class="step-desc">The row says whether a model is ready for that language, and offers the download if not. Apple Speech assets come from macOS itself and need macOS 26 or later.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Give it a shortcut</div>
+          <div class="step-desc">Click <strong>Record</strong> on the row and press the keys you want. Any modifier combination works.</div>
+        </div>
+      </li>
+      <li>
+        <div class="step-content">
+          <div class="step-title">Press it and start speaking</div>
+          <div class="step-desc">The language flashes under the notch so you know it took, and the menu bar shows which one is active. Clicking a row switches language too.</div>
+        </div>
+      </li>
+    </ol>
   </section>
 
   <!-- ── Tips ── -->
@@ -398,24 +454,23 @@
     </div>
     <div class="card">
       <div class="card-title">English variant</div>
-      <div class="card-body">Settings → Enhancement → gear icon → English variant. Choose Australian, British, Canadian, or American. The AI enhancement output will use that spelling.</div>
+      <div class="card-body"><strong>AI Enhancement</strong> → gear icon → English variant. Choose Australian, British, Canadian, or American. The AI enhancement output will use that spelling.</div>
     </div>
     <div class="card">
       <div class="card-title">Personal dictionary</div>
-      <div class="card-body">Add names, technical terms, or brand names in Settings → Dictionary. The AI enhancement model will preserve those spellings exactly.</div>
+      <div class="card-body">Add names, technical terms, or brand names in <strong>Dictionary</strong>. The AI enhancement model will preserve those spellings exactly.</div>
     </div>
     <div class="card">
       <div class="card-title">Power Mode</div>
       <div class="card-body">Create per-app profiles with different prompts and providers. Useful if you dictate in very different contexts — technical notes vs. casual messages, for example.</div>
     </div>
     <div class="card">
-      <div class="card-title">Translate your dictation <span class="badge badge-green">On-device</span></div>
-      <div class="card-body">
-        You can dictate in one language and have the result written in another — no extra model or API key needed. The AI enhancement step handles translation via a custom prompt.<br><br>
-        <strong>Set it up:</strong> go to Settings → Enhancement, click the prompt name at the top of the panel to open the prompt picker, then create a new prompt. Give it a name like <em>"Translate into Portuguese"</em> and set the instructions to something like: <em>"Translate the following text into European Portuguese. Output only the translation."</em><br><br>
-        <strong>Switch prompts on the fly:</strong> with enhancement enabled, press <kbd>⌘1</kbd> <kbd>⌘2</kbd> <kbd>⌘3</kbd> <kbd>⌘4</kbd> to jump between your saved prompts. The icon updates to show which one is active — so you can arm the translation prompt, dictate, and switch back to your normal prompt in seconds.<br><br>
-        <strong>For best translation quality</strong> — especially into languages other than English — download <strong>Gemma 4 E4B</strong> from Settings → AI Models. It is noticeably stronger at multilingual output than the default E2B model, at the cost of a larger download (3.4 GB) and more memory.
-      </div>
+      <div class="card-title">Live text preview</div>
+      <div class="card-body">Settings → <strong>Show Live Text Preview</strong> shows the words in the recorder as you speak. It needs a streaming model — Parakeet and Apple Speech both stream, so it works whichever language you are in.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Translating into a language you don't dictate in</div>
+      <div class="card-body">Translation tiles come from your dictation languages, so the quickest route is to add the destination as a language. If you want a destination you will never speak, write an ordinary prompt for it — <em>"Translate the text into X. Output only the translation."</em> — and it takes a ⌘ key like any other.</div>
     </div>
   </section>
 
