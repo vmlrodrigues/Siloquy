@@ -7,6 +7,18 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.14.3 — 2026-09-01
+
+#### Fixed
+- **Assistant can act on what you have selected, or on your screen.** Its
+  instructions referred to a section the app never sends, so the sentence
+  telling it to work on your clipboard, window or selection pointed at
+  nothing — asking it to summarise what was in front of you tended to hand
+  back your own words. It now names the sections it is actually given,
+  including the selected text, which no prompt had ever mentioned. (#58)
+
+---
+
 ### 0.14.2 — 2026-09-01
 
 #### Fixed
