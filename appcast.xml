@@ -7,7 +7,271 @@
         <link>https://github.com/vmlrodrigues/Siloquy</link>
         <description>Siloquy release updates</description>
         <language>en</language>
-                                                                                                                                                        <item>
+                                                                                                                                                                <item>
+            <title>Siloquy 0.14.2</title>
+            <pubDate>Tue, 01 Sep 2026 11:41:17 +0000</pubDate>
+            <sparkle:version>0.14.2</sparkle:version>
+            <sparkle:shortVersionString>0.14.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <description><![CDATA[
+    <style>
+      body { background:#fff; color:#1d1d1f; margin:0; padding:14px 16px;
+             font:13px/1.5 -apple-system, system-ui, sans-serif; }
+      h2 { font-size:1.6em; font-weight:700; color:#0a84ff; margin:1.4em 0 .4em; }
+      h2:first-of-type { margin-top:.1em; }
+      h3 { font-size:.8em; font-weight:700; text-transform:uppercase;
+           letter-spacing:.05em; color:#86868b; margin:1.1em 0 .35em; }
+      ul { margin:.2em 0 .9em; padding-left:1.25em; }
+      li { margin:.35em 0; }
+      code { font-family:ui-monospace, SFMono-Regular, monospace; font-size:.88em;
+             background:#f0f0f2; padding:.08em .35em; border-radius:4px; }
+      strong { font-weight:700; }
+    </style>
+    <h2>0.14.2 — 2026-09-01</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li><strong>A single modifier key can be assigned as a shortcut again.</strong> Setting Right ⌥ to toggle AI enhancement — or any bare modifier to anything other than starting a recording — silently failed in 0.14.1. The key appeared as you pressed it, then vanished on release with no explanation. The same gate discarded onboarding&#x27;s pre-assignment of Right ⌥ to the enhancement toggle on every fresh install, and dropped that shortcut when restoring from a backup. Combinations like ⌥⌘E remain enterable, and abandoning one now leaves the recorder waiting rather than closing on a guess. (#59)</li>
+    </ul>
+    <h3>Added</h3>
+    <ul>
+      <li><strong>Each prompt can say what context it receives.</strong> Clipboard and current-window context were single switches applied to every prompt, but a clean-up prompt reads context as a spelling reference while Assistant reads it as the thing you are asking about. Each prompt now chooses for itself, or follows the global switch as before; Assistant asks for both. Screen context is only captured when the armed prompt wants it, so a quick grammar fix no longer pays for an OCR pass it never uses. (#55)</li>
+    </ul>
+    <h2>0.14.1 — 2026-08-30</h2>
+    <h3>Added</h3>
+    <ul>
+      <li><strong>Dictate in another language, with a keystroke.</strong> Set up the languages you speak in Dictation Models, give each one a shortcut, and pressing it switches everything at once: the transcription model, the clean-up prompt, and the set of translation tiles. Nothing to configure per session — ⌘1 still means &quot;clean this up properly&quot; whatever you are speaking. (#3)</li>
+      <li><strong>A model per language.</strong> English keeps Parakeet v2, which is English-only but the strongest on English; other languages use Apple Speech, which ships a separately tuned asset per locale and tells European Portuguese apart from Brazilian. Dutch uses Parakeet v3, since Apple has no Dutch model. You can override the choice for any language. (#3)</li>
+      <li><strong>Clean-up prompts written in the language you are speaking</strong>, not translated into it. Portuguese (Portugal and Brazil), Spanish, French, German, Italian and Dutch each get a prompt that states its own conventions for numbers, currency, dates and times — so &quot;quatro mil e quinhentos euros&quot; becomes &quot;4500 €&quot; rather than something an English prompt guessed at. (#3)</li>
+      <li><strong>A permanent ⌘ key for every translation.</strong> Translation tiles are generated from the languages you dictate in, so the two can no longer disagree, and each destination keeps the same key whichever language you are speaking. The tile for the language you are currently speaking is shown inert — there is nothing to translate into the language you are already using. (#3, #25)</li>
+      <li><strong>The live text preview now works with Apple Speech.</strong> It only ever worked in English before, because Parakeet v2 was the one model with a streaming path. Apple Speech now streams too, which also means the final transcript arrives while you are still speaking rather than being produced from the file afterwards. (#49)</li>
+      <li><strong>The active language is visible when Siloquy is not in front</strong> — the notch flashes it on a switch, and the menu bar icon shows it. Neither appears if you only dictate in one language. (#3)</li>
+      <li>Dutch, in place of Mexican Spanish. (#3)</li>
+    </ul>
+    <h3>Changed</h3>
+    <ul>
+      <li><strong>The prompt strip has a fixed order.</strong> Drag-and-drop assigned the shortcuts before, which meant a stray drag could undo the one guarantee the language switch is built to make. ⌘1 is always the clean-up prompt. (#3)</li>
+      <li>Dictation Languages live in Dictation Models rather than Settings, next to the models they choose between. (#3)</li>
+      <li>The &quot;Local Model Default&quot; prompt is retired. Since 0.13.0 the on-device provider picks its prompt per model, so choosing it and choosing Default produced identical output. (#48, #22)</li>
+      <li>Translation prompts stored by 0.13.x are removed on first launch. Translation tiles are generated from your dictation languages now, so a stored one cannot be edited or regenerated. Re-add a destination by enabling that language. (#53)</li>
+    </ul>
+    <h3>Fixed</h3>
+    <ul>
+      <li><strong>Switching dictation language now says so, even with Siloquy in front.</strong> The flash under the notch was suppressed whenever the app was frontmost, on the assumption you could see the change in the window. That only held on the Dictation Models section — from Dashboard, History or AI Enhancement the switch happened silently. One indication now, whatever has focus. (#54)</li>
+      <li><strong>Downloading one Apple Speech language no longer uninstalls the others.</strong> A reservation is what stops macOS reclaiming an installed locale, and the download released every one of them before claiming its own — so fetching Spanish could silently cost you Portuguese. Harmless when there was a single language; not any more. (#50)</li>
+      <li>The Apple Speech card no longer claims to be downloaded when the language you are about to speak is not. Download state is shown per language. (#3)</li>
+      <li>Switching language mid-dictation is refused rather than half-applied, and the rows now look clickable because they are. (#3)</li>
+      <li>Removing a dictation language asks first, and a shortcut can use any modifier combination — ⌥⌘E and friends were rejected before. (#3)</li>
+    </ul>
+    <h3>Performance</h3>
+    <ul>
+      <li>The prompt strip and model readiness are cached rather than rebuilt on every keystroke and settings change, which kept Keychain lookups off the dictation path. (#51)</li>
+    </ul>
+    <h3>Internal</h3>
+    <ul>
+      <li>A language is defined in one place instead of three. Its clean-up prompt is a required field on the language itself, so a new language cannot be added without deciding what its prompt is. (#52)</li>
+      <li>The enhancement pipeline is documented in <code>docs/enhancement-pipeline.md</code>: which model a language selects, which prompt each key sends, and every prompt verbatim.</li>
+    </ul>
+    <h2>0.13.3 — 2026-08-16</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li><strong>A selected local model that isn&#x27;t downloaded now says so.</strong> Choosing a model filled its radio button and looked settled, while AI enhancement quietly did nothing — the only clue was a Download button in the same row. The row now states plainly that enhancement is off, and names another model if one is already downloaded and ready. Selecting a model still never starts a download on its own. (#46)</li>
+      <li>The app now ships the complete GNU GPL v3 text rather than only its preamble and a link. No change to the licence — Siloquy was and remains GPL v3. (#45)</li>
+    </ul>
+    <h2>0.13.2 — 2026-08-16</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li><strong>Archiving a Mac no longer erases its history from your totals.</strong> Retiring a machine used to wipe its whole contribution from the dashboard — hours, words and sessions all vanished, in one case dropping Time Saved from 98 hours to 52. Nothing was ever deleted, but a lifetime total that falls when you replace a laptop isn&#x27;t measuring a lifetime. Archived Macs now keep counting. (#41)</li>
+    </ul>
+    <h3>Changed</h3>
+    <ul>
+      <li><strong>Archived Macs fold out of the way.</strong> They collapse into a single row that names them, expanding in place when you want it, so the device list shows the Macs you actually use — and un-archiving one stays on the same screen. (#41)</li>
+      <li><strong>Deleting a Mac&#x27;s history is now its own action</strong>, sitting beside Restore on an archived machine. It asks first, naming the exact sessions and words it will erase. Use it for a test rig or a loaner whose dictation was never really yours; for a Mac you&#x27;ve simply replaced, leave it archived and keep the hours. (#41)</li>
+    </ul>
+    <h2>0.13.1 — 2026-07-17</h2>
+    <h3>Changed</h3>
+    <ul>
+      <li><strong>A fresh app icon</strong> — a cleaner, more premium take on the microphone, keeping the warm copper identity. (#35)</li>
+    </ul>
+    <h3>Fixed</h3>
+    <ul>
+      <li>The recorder&#x27;s prompt icon now greys out when enhancement is off for a dictation, so a translation flag no longer looks active when it isn&#x27;t. (#32)</li>
+      <li>The update dialog renders bold text in the release notes, and now shows the cumulative changes since your installed version — not just the newest release&#x27;s notes. (#7, #31)</li>
+    </ul>
+    <h2>0.13.0 — 2026-07-17</h2>
+    <h3>Added</h3>
+    <ul>
+      <li><strong>Translation.</strong> Dictate in English and get the text back in another language. Translation prompts now sit alongside your enhancement prompts, each with its country flag. European Portuguese is ready out of the box; add Spanish, German, Italian, Dutch, or Mandarin Chinese in one tap from the ＋ menu. Each translation is a first-class prompt, so it takes a ⌘-number shortcut like any other and can be reordered, and the recorder shows the flag and a &quot;Translating&quot; status while it runs. It all runs on-device on Gemma 4 E4B. (#25)</li>
+      <li><strong>Shortcut hints on prompts.</strong> Every prompt tile shows its ⌘-number badge (⌘1 through ⌘0), and the hint now says you can drag tiles to reorder — which is what assigns the shortcut. (#25)</li>
+    </ul>
+    <h3>Changed</h3>
+    <ul>
+      <li><strong>The on-device default prompt now adapts to the model you pick.</strong> Gemma 4 E4B gets the full polishing prompt; the smaller Gemma 4 E2B gets a lighter one it handles more reliably — automatically, with nothing to configure. (#22)</li>
+      <li><strong>Gemma 4 E4B is now the recommended on-device model</strong>, and the one a new install downloads during onboarding. The picker is reworded to match: E4B for quality, E2B as a lighter low-RAM fallback. (#21, #26)</li>
+      <li>The Recommended dictation models list is simplified to a single obvious choice, Parakeet v2; the rest remain under Local, Cloud, and Custom. (#28)</li>
+      <li>The sidebar is clearer: &quot;AI Models&quot; is now &quot;Dictation Models&quot; and &quot;Enhancement&quot; is now &quot;AI Enhancement&quot;. (#29)</li>
+    </ul>
+    <h3>Fixed</h3>
+    <ul>
+      <li>The transcription-model download no longer looks stuck on the large model file — a live spinner shows it&#x27;s working, and the progress bar advances instead of freezing on the file count. (#27)</li>
+      <li>Cancelling an on-device model download now actually stops it, instead of quietly running to completion. (#30)</li>
+      <li>History now records the on-device model that actually produced the enhancement, instead of always showing the provider default. (#19)</li>
+      <li>Power Modes can now switch the on-device model; the choice was previously ignored for the local provider. (#20)</li>
+    </ul>
+    <h3>Removed</h3>
+    <ul>
+      <li>Qwen3 0.6B is no longer offered as an on-device model — it proved unreliable for enhancement in testing. If you had it selected, you&#x27;re moved to the recommended model automatically. (#23)</li>
+    </ul>
+    <h2>0.12.0 — 2026-07-09</h2>
+    <h3>Added</h3>
+    <ul>
+      <li><strong>Your statistics now sync across your Macs.</strong> Sessions, words, words-per-minute, and keystrokes saved sync over iCloud and combine across every Mac you dictate on. The dashboard gains a Devices section: a per-device split on each metric, each Mac&#x27;s own words-per-minute, and an &quot;All devices / This Mac&quot; scope toggle. A machine you&#x27;ve switched off can be archived — and later restored — so it drops out of your combined totals without losing its history. None of this appears on a single-Mac setup, so nothing changes unless you actually use more than one Mac. (#2)</li>
+    </ul>
+    <h3>Changed</h3>
+    <ul>
+      <li>Enhancement now has a single &quot;New dictations start&quot; control — <strong>Enhanced</strong> (stays on until you turn it off) or <strong>Raw</strong> (each dictation starts un-enhanced; opt in per dictation with the ⌥ shortcut) — replacing the old sticky global toggle. Power Mode and trigger words still take precedence. (#14)</li>
+    </ul>
+    <h3>Fixed</h3>
+    <ul>
+      <li>Removed the dead &quot;Learn more&quot; links from info tips that pointed at the upstream author&#x27;s documentation, which doesn&#x27;t apply to this fork. (#15)</li>
+    </ul>
+    <h2>0.11.2 — 2026-07-05</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>With &quot;Hide Dock Icon&quot; and &quot;Launch at Login&quot; both enabled, the app could come up with a visible Dock icon after a reboot. Menu-bar-only mode now starts hidden no matter how the app was launched; a normal double-click launch still opens the window, focused, as before. (#10)</li>
+    </ul>
+    <h2>0.11.1 — 2026-06-27</h2>
+    <h3>Changed</h3>
+    <ul>
+      <li>The &quot;Recommended Settings…&quot; sheet now shows which settings will actually change versus the ones that already match your current setup, with a count in the header. Apply is disabled when everything already matches.</li>
+    </ul>
+    <h2>0.11.0 — 2026-06-27</h2>
+    <h3>Added</h3>
+    <ul>
+      <li>Recommended settings: onboarding now ends with a &quot;One last thing&quot; step that applies a set of sensible defaults in one click, and Settings → General has a new &quot;Recommended Settings…&quot; button that does the same any time. The default enhancement model is unchanged.</li>
+      <li>The onboarding Keyboard Shortcuts step now also sets up the enhancement toggle, pre-assigned to Right Option (⌥). You still choose your own recording shortcut, and you can change or clear the enhancement shortcut.</li>
+    </ul>
+    <h3>Fixed</h3>
+    <ul>
+      <li>On a fresh install, the Screen Recording onboarding step no longer opens System Settings at the same moment macOS shows its own permission dialog — the two were racing and left the dialog stuck. The dialog now appears on its own the first time; later attempts open System Settings instead.</li>
+    </ul>
+    <h2>0.10.5 — 2026-06-24</h2>
+    <h3>Added</h3>
+    <ul>
+      <li>Gemma 4 E4B is now available as an optional local enhancement model — higher quality, especially for other languages, at a larger download (3.4 GB) and more memory than the default. Download it from Settings → AI Models. The default model stays Gemma 4 E2B.</li>
+      <li>The local model picker now shows a short note on what each model is best for.</li>
+    </ul>
+    <h2>0.10.4 — 2026-06-23</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>iCloud sync of your dictionary (word replacements and custom vocabulary) across machines now works. v0.10.3 declared the iCloud entitlements but was missing <code>com.apple.application-identifier</code>, so CloudKit couldn&#x27;t initialise the container and sync never started; this adds it.</li>
+      <li>The in-app update window now shows clean, formatted release notes instead of rendering the GitHub release web page.</li>
+    </ul>
+    <h2>0.10.3 — 2026-06-19</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>iCloud sync of your dictionary (word replacements and custom vocabulary) across machines now works. CloudKit requires the Push Notifications entitlement for its change tracking, and the release build was missing it — so sync silently never started. Added the <code>aps-environment</code> entitlement and a provisioning profile that authorises it.</li>
+    </ul>
+    <h2>0.10.2 — 2026-06-14</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>When Siloquy launches at login, it now starts in the background with just the menu-bar icon — no Dock icon — like other startup menu-bar apps. Opening it manually still shows the window and Dock icon as before.</li>
+    </ul>
+    <h2>0.10.1 — 2026-06-14</h2>
+    <h3>Fixed</h3>
+    <ul>
+      <li>Local AI enhancement no longer gets stuck after a long dictation. A long local enhancement could exceed the short default timeout; the timed-out generation left the on-device model engine wedged, so every later enhancement failed until the app was restarted. The engine now recovers on its own, the local timeout scales with the length of the dictation (so long ones aren&#x27;t cut off mid-way), and only one enhancement runs at a time.</li>
+    </ul>
+    <h2>0.10.0 — 2026-06-14</h2>
+    <h3>Onboarding</h3>
+    <ul>
+      <li>Onboarding now downloads both on-device models the app needs — the Parakeet V2 transcription model and the Gemma 4 E2B enhancement model — so dictation and AI cleanup both work offline as soon as setup finishes</li>
+      <li>Removed the Input Monitoring step: Accessibility (required for pasting) already grants the input access the global shortcut needs, so the separate grant was redundant — and couldn&#x27;t be auto-registered once Accessibility was on anyway</li>
+      <li>Onboarding resumes where you left off after the macOS-forced restart that follows granting Screen Recording, instead of starting over</li>
+      <li>&quot;Skip Tour&quot; relabelled &quot;Skip Setup&quot;</li>
+      <li>Removed a spurious &quot;keystroke receiving&quot; prompt that appeared on the welcome screen before onboarding asked for it</li>
+    </ul>
+    <h3>Permissions</h3>
+    <ul>
+      <li>Input Monitoring is now detected with a real event-tap probe, fixing a macOS 26 false positive where the app reported the permission as granted when it was not</li>
+      <li>Opening the Input Monitoring permission now correctly registers Siloquy in System Settings so it can be enabled</li>
+      <li>Clearer Input Monitoring help text</li>
+    </ul>
+    <h3>App launch &amp; Dock</h3>
+    <ul>
+      <li>Fixed a duplicate Dock icon in menu-bar-only mode, caused by switching the activation policy at launch</li>
+      <li>First launch now defaults to menu-bar-only mode</li>
+      <li>No stray focus ring on the first window at launch</li>
+    </ul>
+    <h3>Privacy — screen context is now opt-in</h3>
+    <ul>
+      <li>Screen-context capture is off by default and runs only when explicitly enabled. Previously the app reached for ScreenCaptureKit on every recording whenever Screen Recording was granted, which triggered macOS&#x27;s periodic &quot;bypass the window picker&quot; consent dialog</li>
+    </ul>
+    <h3>Enhancement</h3>
+    <ul>
+      <li>Provider-aware prompt routing: local providers (Gemma, Ollama, Local CLI) receive a leaner prompt with worked self-correction examples tuned for small on-device models; cloud providers keep the existing detailed prompt; an explicit user prompt selection always overrides the automatic choice</li>
+    </ul>
+    <h3>Apple Silicon only</h3>
+    <ul>
+      <li>Builds restricted to <code>arm64</code> (<code>LocalBuild.xcconfig</code> and the Makefile release target) — Intel Macs are not supported; the binary no longer contains an <code>x86_64</code> slice</li>
+      <li>README and docs updated to state this as a hard requirement</li>
+    </ul>
+    <h3>Reliability</h3>
+    <ul>
+      <li>Single-instance enforcement: the app terminates any existing instance with the same bundle ID at launch, preventing the duplicate paste that occurred when two copies both intercepted the global recording shortcut</li>
+      <li>Parakeet download progress now advances by file count, so the bar moves steadily instead of sticking near the start and then jumping</li>
+    </ul>
+    <h3>Help &amp; &quot;Copy System Info&quot;</h3>
+    <ul>
+      <li>&quot;Copy System Info&quot; header corrected from <code>VOICEINK SYSTEM INFORMATION</code> to <code>SILOQUY SYSTEM INFORMATION</code></li>
+      <li>Help &amp; Resources: removed the &quot;Recommended Models&quot; and &quot;YouTube Videos &amp; Guides&quot; links; Documentation now points to <code>https://siloquy.jeunj.com</code> and Feedback to GitHub Issues</li>
+    </ul>
+    <h3>Docs site &amp; deploy tooling</h3>
+    <ul>
+      <li>New self-contained static site at <code>docs/index.html</code></li>
+      <li><code>make deploy-docs</code> uploads the site via WebDAV; runs automatically at the end of <code>make release</code></li>
+      <li><code>tools/deploy-docs.sh</code> supports <code>deploy</code>, <code>mount</code>, and <code>unmount</code>; upload failures are non-fatal</li>
+    </ul>
+    <h2>0.9.5 — 2026-06-08</h2>
+    <ul>
+      <li>Sparkle auto-update enabled with signed appcast hosted on GitHub</li>
+      <li>Download button added to README and docs site</li>
+      <li>DMG filename simplified (version number dropped from filename)</li>
+      <li>Input Monitoring permission added to onboarding flow</li>
+    </ul>
+    <h2>0.9.4 — 2026-06-08</h2>
+    <ul>
+      <li>English variant setting added (Australian / British / Canadian / American) in the Enhancement gear panel — AI output uses the selected spelling</li>
+    </ul>
+    <h2>0.9.3 — 2026-06-08</h2>
+    <ul>
+      <li>Local on-device AI enhancement via Google LiteRT-LM</li>
+      <li>Two models available for in-app download: Qwen3 0.6B (497 MB) and Gemma 4 E2B (2.4 GB, recommended)</li>
+      <li>Engine runs in-process via Metal (GPU), CPU fallback on failure</li>
+      <li>No API key or server required</li>
+    </ul>
+    <h2>0.9.2 — 2026-06-08</h2>
+    <ul>
+      <li>App renamed from VoiceInk to Siloquy throughout (bundle ID, display name, window titles, logger subsystems, file paths, export filenames)</li>
+      <li>New app icon</li>
+      <li>Bundle ID: <code>com.victorrodrigues.siloquy</code></li>
+      <li>In-app purchase requirement removed — app fully unlocked</li>
+      <li>Attribution UI updated to credit Prakash Joshi Pax / VoiceInk</li>
+    </ul>
+    <h2>0.9.1 — 2026-06-08</h2>
+    <ul>
+      <li>Initial private fork of VoiceInk</li>
+      <li>Signing and build configuration updated for personal Apple Developer account</li>
+      <li>whisper.cpp path updated to local directory structure</li>
+      <li>Support email and issue links updated</li>
+    </ul>
+            ]]></description>
+            <enclosure
+                url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.14.2/Siloquy.dmg"
+                sparkle:edSignature="gWG828rhEKrYjSx750KlfBWYbplteOCbQ5WH751tKF/9dWO+Yhe05f7eDHFYS4QhpNLstDpe9HBr9Csl3UHZDg=="
+                length="56437529"
+                type="application/octet-stream"/>
+        </item>
+        <item>
             <title>Siloquy 0.14.1</title>
             <pubDate>Mon, 31 Aug 2026 05:58:17 +0000</pubDate>
             <sparkle:version>0.14.1</sparkle:version>
