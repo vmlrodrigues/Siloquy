@@ -7,6 +7,29 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.14.2 — 2026-09-01
+
+#### Fixed
+- **A single modifier key can be assigned as a shortcut again.** Setting Right ⌥
+  to toggle AI enhancement — or any bare modifier to anything other than starting
+  a recording — silently failed in 0.14.1. The key appeared as you pressed it,
+  then vanished on release with no explanation. The same gate discarded
+  onboarding's pre-assignment of Right ⌥ to the enhancement toggle on every fresh
+  install, and dropped that shortcut when restoring from a backup. Combinations
+  like ⌥⌘E remain enterable, and abandoning one now leaves the recorder waiting
+  rather than closing on a guess. (#59)
+
+#### Added
+- **Each prompt can say what context it receives.** Clipboard and current-window
+  context were single switches applied to every prompt, but a clean-up prompt
+  reads context as a spelling reference while Assistant reads it as the thing you
+  are asking about. Each prompt now chooses for itself, or follows the global
+  switch as before; Assistant asks for both. Screen context is only captured when
+  the armed prompt wants it, so a quick grammar fix no longer pays for an OCR pass
+  it never uses. (#55)
+
+---
+
 ### 0.14.1 — 2026-08-30
 
 #### Added
