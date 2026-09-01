@@ -27,7 +27,14 @@ enum ShortcutValidator {
             return error
         }
 
-        if shortcut.kind == .modifierOnly, !action.allowsModifierOnly {
+        // Any action may be bound to a bare modifier — `ShortcutMonitor` has always
+        // dispatched them without caring which action they belong to. What keeps one from
+        // firing during ordinary typing is scope, not interruption: the enhancement toggle
+        // and cancel are `miniRecorderStoredActions`, monitored only while the recorder is
+        // on screen, so Right ⌥ is inert while you are typing an accented character.
+        //
+        // It has to be a single modifier, matching what the recorder will produce (#59).
+        if shortcut.isModifierOnly, !shortcut.isSingleModifierOnly {
             return .plainKeyRequiresModifier
         }
 

@@ -22,21 +22,6 @@ enum ShortcutAction: Hashable {
         "Shortcut_\(storageName)"
     }
 
-    /// Whether this action can be triggered by modifiers alone, with no letter key.
-    ///
-    /// Only recording supports it, because only recording is hold-to-talk: you hold the
-    /// chord for as long as you speak. Every other action fires the moment the chord is
-    /// recognised, so a modifier-only binding would trigger it any time those modifiers
-    /// were held for something else — ⌥⌘ is the start of dozens of ordinary shortcuts.
-    var allowsModifierOnly: Bool {
-        switch self {
-        case .primaryRecording, .secondaryRecording:
-            return true
-        default:
-            return false
-        }
-    }
-
     var isStored: Bool {
         switch self {
         case .miniRecorderEscape, .miniRecorderPrompt, .miniRecorderPowerMode:

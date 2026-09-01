@@ -23,6 +23,15 @@ struct Shortcut: Codable, Equatable {
         kind == .modifierOnly
     }
 
+    /// A bare-modifier shortcut carrying exactly one modifier.
+    ///
+    /// The only shape the recorder will commit without a key, because it is the only
+    /// unambiguous one: two or more modifiers released together are as likely to be an
+    /// abandoned run at a combination as a deliberate chord (#59).
+    var isSingleModifierOnly: Bool {
+        kind == .modifierOnly && modifierFlags.shortcutSingleModifierCount == 1
+    }
+
     var displayString: String {
         displayTokens.joined(separator: " + ")
     }

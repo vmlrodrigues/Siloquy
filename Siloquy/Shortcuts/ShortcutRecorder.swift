@@ -296,11 +296,16 @@ final class ShortcutRecorderModel: ObservableObject {
             )
 
             // Preview the chord either way so the user sees their modifiers register,
-            // but only arm it for commit where a modifier-only binding is usable.
-            // Otherwise releasing ⌥⌘ before pressing the letter would capture ⌥⌘ and
-            // end recording, making a combination like ⌥⌘E impossible to enter by hand.
+            // but only arm a *single* modifier for commit. Which action this is for makes
+            // no difference — the ambiguity is in the chord, not the action.
+            //
+            // One modifier is never a prefix in practice: hold ⌥ and press E and
+            // `handleKeyDown` fires first, so this path only runs when the chord is
+            // released having pressed nothing, which says the modifier *is* the shortcut.
+            // Two or more is the ambiguous case — releasing ⌥⌘ on the way to ⌥⌘E must not
+            // commit ⌥⌘ — so it stays unarmed and the recorder keeps listening (#59).
             previewShortcut = shortcut
-            pendingModifierShortcut = (activeAction?.allowsModifierOnly ?? false) ? shortcut : nil
+            pendingModifierShortcut = singleModifierKeyCode == nil ? nil : shortcut
             return true
         }
 
@@ -309,9 +314,9 @@ final class ShortcutRecorderModel: ObservableObject {
             return true
         }
 
-        // Nothing to commit: the chord was released without a key, and this action
-        // cannot use a modifier-only binding. Go back to waiting rather than leaving a
-        // preview of a shortcut that will never be assigned.
+        // Nothing to commit: two or more modifiers were released without a key, which
+        // is as likely to be an abandoned run at a combination as a deliberate chord. Go
+        // back to waiting rather than committing a guess or leaving a stale preview.
         previewShortcut = nil
         peakModifierFlags = []
         return true
