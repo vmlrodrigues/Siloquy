@@ -126,9 +126,10 @@ class FluidAudioModelManager: ObservableObject {
         }
 
         do {
-            if isRetry && modelsExist(version) {
-                // The SDK skips downloads when all paths exist, even if vocabulary or
-                // model contents are corrupt. Repair only this failed model's cache.
+            if isRetry {
+                // The SDK's download gate only checks CoreML paths, so even an
+                // incomplete cache (e.g. missing vocabulary) can skip fetching forever.
+                // Repair this failed version whether its cache is complete or partial.
                 try resetModels(version)
             }
             try await downloadModels(version, progressHandler)

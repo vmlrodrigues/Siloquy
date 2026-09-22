@@ -18,8 +18,12 @@ struct LanguageModelDownloadTests {
         var installed = false
         var attempts = 0
         var refreshes = 0
+        var repairs = 0
         var manager: FluidAudioModelManager!
-        manager = FluidAudioModelManager(defaults: defaults, modelsExist: { _ in installed }, resetModels: { _ in Issue.record("No complete cache to repair") }) { version, _ in
+        manager = FluidAudioModelManager(defaults: defaults, modelsExist: { _ in installed }, resetModels: { version in
+            #expect(version == .v3)
+            repairs += 1
+        }) { version, _ in
             #expect(version == .v3)
             #expect(manager.isFluidAudioModelDownloading(model))
             #expect(manager.downloadError(for: model) == nil)
@@ -39,6 +43,7 @@ struct LanguageModelDownloadTests {
         #expect(!manager.isFluidAudioModelDownloading(model))
         #expect(manager.downloadError(for: model) != nil)
         #expect(refreshes == 1)
+        #expect(repairs == 0)
 
         await manager.downloadFluidAudioModel(model)
         #expect(attempts == 2)
@@ -46,6 +51,7 @@ struct LanguageModelDownloadTests {
         #expect(manager.downloadStatus(for: model) == nil)
         #expect(manager.downloadError(for: model) == nil)
         #expect(refreshes == 2)
+        #expect(repairs == 1)
         manager = nil
     }
 
