@@ -68,4 +68,36 @@ struct DictationLanguageTests {
         let ids = DictationLanguage.available.map(\.translationPromptID)
         #expect(Set(ids).count == ids.count)
     }
+    @Test func legacyBackfillKeepsTheCurrentCompatibleModel() throws {
+        let v2 = try model("parakeet-tdt-0.6b-v2")
+        let whisper = try model("ggml-large-v3")
+        #expect(DictationLanguage.english.resolveModel(
+            from: [v2, whisper], selectedName: nil, readyModelNames: [v2.name, whisper.name],
+            context: .existingLanguage(currentModelName: whisper.name)
+        )?.name == whisper.name)
+        #expect(DictationLanguage.english.resolveModel(
+            from: [v2, whisper], selectedName: v2.name, readyModelNames: [whisper.name],
+            context: .existingLanguage(currentModelName: whisper.name)
+        )?.name == v2.name, "An explicit per-language assignment still wins")
+    }
+
+    @Test func legacyBackfillUsesAnInstalledFallbackWithoutACompatibleCurrentModel() throws {
+        let v2 = try model("parakeet-tdt-0.6b-v2")
+        let whisper = try model("ggml-large-v3")
+        for currentName in [nil, "removed-model"] as [String?] {
+            #expect(DictationLanguage.english.resolveModel(
+                from: [v2, whisper], selectedName: nil, readyModelNames: [whisper.name],
+                context: .existingLanguage(currentModelName: currentName)
+            )?.name == whisper.name)
+        }
+        let swedish = try #require(DictationLanguage.named("sv-SE"))
+        let v3 = try model("parakeet-tdt-0.6b-v3")
+        #expect(swedish.resolveModel(
+            from: [v2, v3, whisper], selectedName: nil, readyModelNames: [v2.name, whisper.name],
+            context: .existingLanguage(currentModelName: v2.name)
+        )?.name == whisper.name, "Ignore an incompatible legacy model")
+        #expect(swedish.resolveModel(
+            from: [v3, whisper], selectedName: nil, readyModelNames: [whisper.name]
+        )?.name == v3.name, "New Swedish still recommends V3")
+    }
 }

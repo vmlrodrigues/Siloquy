@@ -146,13 +146,6 @@ struct VoiceInkApp: App {
         // 5. Configure circular deps
         recorderUIManager.configure(engine: engine, recorder: engine.recorder)
         engine.recorderUIManager = recorderUIManager
-        // Language switching changes the transcription model, so it needs the engine
-        // rather than writing the defaults behind its back.
-        DictationLanguageManager.shared.configure(engine: engine, modelManager: transcriptionModelManager)
-        // The enhancement service was built before the language manager knew its
-        // languages, so its prompt strip was computed against an empty set.
-        enhancementService.refreshPromptSlots()
-
         // 6. Initialize model state
         // Migration and refreshAllAvailableModels must run before loadCurrentTranscriptionModel so renamed keys are remapped and imported models are present when restoring the saved selection.
         StreamingKeysMigration.run()
@@ -160,6 +153,11 @@ struct VoiceInkApp: App {
         whisperModelManager.loadAvailableModels()
         transcriptionModelManager.refreshAllAvailableModels()
         transcriptionModelManager.loadCurrentTranscriptionModel()
+
+        // Backfill language assignments after restoring installed/imported models and
+        // the legacy selection, so an upgrade preserves the model already in use.
+        DictationLanguageManager.shared.configure(engine: engine, modelManager: transcriptionModelManager)
+        enhancementService.refreshPromptSlots()
 
         _whisperModelManager = StateObject(wrappedValue: whisperModelManager)
         _fluidAudioModelManager = StateObject(wrappedValue: fluidAudioModelManager)

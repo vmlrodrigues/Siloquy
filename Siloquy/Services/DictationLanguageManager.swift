@@ -82,8 +82,8 @@ final class DictationLanguageManager: ObservableObject {
         self.recorderState = engine as? any RecorderStateProvider
         modelManager.refreshUsableModels()
         readyModelNames = modelManager.usableModelNames
-        // Resolve the recommendation against this machine's catalogue before persisting
-        // it. Readiness is also needed when no recommended model is supported here.
+        // Upgrade legacy assignments only after the installed models and the saved
+        // global model have been restored by the caller.
         backfillMissingModels()
 
         // Push the restored language out before listening for anyone else's writes. At
@@ -223,7 +223,13 @@ final class DictationLanguageManager: ObservableObject {
     /// UI has something concrete to show and the choice survives a model being removed.
     private func backfillMissingModels() {
         for language in enabled where modelNameByLanguage[language.id] == nil {
-            if let model = model(for: language) {
+            if let model = language.resolveModel(
+                from: candidateModels(for: language),
+                selectedName: nil,
+                readyModelNames: readyModelNames,
+                context: .existingLanguage(currentModelName:
+                    language == current ? engine?.currentTranscriptionModel?.name : nil)
+            ) {
                 modelNameByLanguage[language.id] = model.name
             }
         }
@@ -394,6 +400,10 @@ final class DictationLanguageManager: ObservableObject {
 
     func enable(_ language: DictationLanguage) {
         guard !enabled.contains(language) else { return }
+        // New languages use their recommendation; startup migration uses readiness.
+        if let model = model(for: language) {
+            modelNameByLanguage[language.id] = model.name
+        }
         enabled.append(language)
         persistEnabled()
         backfillMissingModels()

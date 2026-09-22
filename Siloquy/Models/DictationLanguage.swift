@@ -93,18 +93,35 @@ extension DictationLanguage {
         languageCode(for: model) != nil
     }
 
-    /// Keep the language's recommended model even when it needs a download. Merely
+    enum ModelSelectionContext {
+        case newLanguage
+        case existingLanguage(currentModelName: String?)
+    }
+
+    /// Keep a new language's recommended model even when it needs a download. Merely
     /// having another model installed must not change the recommendation. An explicit
     /// compatible choice still wins, including when that model needs downloading again.
     func resolveModel(
         from candidates: [any TranscriptionModel],
         selectedName: String?,
-        readyModelNames: Set<String>
+        readyModelNames: Set<String>,
+        context: ModelSelectionContext = .newLanguage
     ) -> (any TranscriptionModel)? {
         let compatible = candidates.filter { isSupported(by: $0) }
         if let selectedName,
            let selected = compatible.first(where: { $0.name == selectedName }) {
             return selected
+        }
+        if case .existingLanguage(let currentModelName) = context {
+            if let currentModelName,
+               let current = compatible.first(where: { $0.name == currentModelName }) {
+                return current
+            }
+            let ready = compatible.filter { readyModelNames.contains($0.name) }
+            for name in preferredModelNames {
+                if let model = ready.first(where: { $0.name == name }) { return model }
+            }
+            if let model = ready.first { return model }
         }
         for name in preferredModelNames {
             if let recommended = compatible.first(where: { $0.name == name }) {
