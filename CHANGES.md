@@ -7,7 +7,7 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
-### 0.14.4 — 2026-09-22
+### 0.15.0 — 2026-09-22
 
 #### Added
 - **Swedish dictation.** Add Svenska in Dictation Models to use Parakeet V3,
@@ -19,6 +19,14 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 - **A recommended shortcut for pasting enhanced text.** Applying Recommended
   Settings assigns ⇧⌘R to Paste Last Enhanced Transcription. If another action
   already uses it, Siloquy reports the conflict and keeps that assignment. (#65)
+
+#### Fixed
+- **Failed Parakeet downloads stay retryable.** If final model loading fails,
+  Siloquy keeps the error visible across restarts and repairs the affected cache
+  when you retry, instead of treating the files as a ready model. (#66)
+- **Upgrades preserve existing model choices.** Older installations without
+  per-language assignments keep their compatible model or an installed fallback.
+  Adding a new language still selects its recommended model. (#67)
 
 ---
 
