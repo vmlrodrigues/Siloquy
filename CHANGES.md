@@ -7,6 +7,21 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.14.4 — 2026-09-22
+
+#### Added
+- **Swedish dictation.** Add Svenska in Dictation Models to use Parakeet V3,
+  with a download button, progress, and retry available beside the language.
+  Swedish also has its own AI cleanup prompt and translation destination. (#63)
+- **Start raw with Recommended Settings.** Onboarding and Settings now offer
+  Raw as the recommended starting point for new dictations, so you can opt
+  into AI enhancement when you want it. (#64)
+- **A recommended shortcut for pasting enhanced text.** Applying Recommended
+  Settings assigns ⇧⌘R to Paste Last Enhanced Transcription. If another action
+  already uses it, Siloquy reports the conflict and keeps that assignment. (#65)
+
+---
+
 ### 0.14.3 — 2026-09-01
 
 #### Fixed
