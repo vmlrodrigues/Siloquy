@@ -9,7 +9,7 @@
         <language>en</language>
                                                                                                                                                                                 <item>
             <title>Siloquy 0.15.0</title>
-            <pubDate>Tue, 22 Sep 2026 19:24:07 +0000</pubDate>
+            <pubDate>Tue, 22 Sep 2026 19:34:14 +0000</pubDate>
             <sparkle:version>0.15.0</sparkle:version>
             <sparkle:shortVersionString>0.15.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
@@ -284,8 +284,8 @@
             ]]></description>
             <enclosure
                 url="https://github.com/vmlrodrigues/Siloquy/releases/download/v0.15.0/Siloquy.dmg"
-                sparkle:edSignature="7VgpI00c1pQfj5jFG0dLUX3EYFPgQ3jkLI88EKfQosHZt3qifeQG6dacKknqmRLMi2HhMeitG6otm1NZXgG/DA=="
-                length="56461043"
+                sparkle:edSignature="IsCG98WeexU53fTDQ827eo3JZIok6xQ5tUHX1DQlmMFXAGHyG5Jwh8XTtdPByLdVj9P/tqO+dJhPA+VjxqdFDQ=="
+                length="56460506"
                 type="application/octet-stream"/>
         </item>
         <item>
