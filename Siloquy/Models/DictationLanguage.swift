@@ -93,6 +93,27 @@ extension DictationLanguage {
         languageCode(for: model) != nil
     }
 
+    /// Keep the language's recommended model even when it needs a download. Merely
+    /// having another model installed must not change the recommendation. An explicit
+    /// compatible choice still wins, including when that model needs downloading again.
+    func resolveModel(
+        from candidates: [any TranscriptionModel],
+        selectedName: String?,
+        readyModelNames: Set<String>
+    ) -> (any TranscriptionModel)? {
+        let compatible = candidates.filter { isSupported(by: $0) }
+        if let selectedName,
+           let selected = compatible.first(where: { $0.name == selectedName }) {
+            return selected
+        }
+        for name in preferredModelNames {
+            if let recommended = compatible.first(where: { $0.name == name }) {
+                return recommended
+            }
+        }
+        return compatible.first(where: { readyModelNames.contains($0.name) }) ?? compatible.first
+    }
+
     /// Another offered language shares this one's base code, so a model that only
     /// understands the base cannot tell them apart — "pt-PT" and "pt-BR" both become
     /// "pt". Where there is no sibling, dropping the region loses nothing worth saying.
@@ -127,10 +148,10 @@ extension DictationLanguage {
         DictationLanguage(id: "pt-PT", nativeName: "Português", englishName: "Portuguese (Portugal)", tileName: "Portuguese", flag: "🇵🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.portuguesePT, translationPhrase: "European Portuguese (as spoken in Portugal)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E2")!),
         DictationLanguage(id: "pt-BR", nativeName: "Português (Brasil)", englishName: "Portuguese (Brazil)", tileName: "Portuguese (BR)", flag: "🇧🇷", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.portugueseBR, translationPhrase: "Brazilian Portuguese", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E3")!),
         DictationLanguage(id: "es-ES", nativeName: "Español", englishName: "Spanish", tileName: "Spanish", flag: "🇪🇸", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.spanishES, translationPhrase: "Spanish (as spoken in Spain)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E4")!),
-        // Apple has no Dutch model, so this one leans on Parakeet v3 — which is the
-        // point of choosing a model per language: English keeps v2 and its better
-        // English accuracy, and only Dutch pays v3's multilingual trade-off.
+        // Apple's current SpeechTranscriber coverage omits Dutch and Swedish. Both
+        // use Parakeet v3, while English keeps the v2 specialist.
         DictationLanguage(id: "nl-NL", nativeName: "Nederlands", englishName: "Dutch", tileName: "Dutch", flag: "🇳🇱", preferredModelNames: ["parakeet-tdt-0.6b-v3"], cleanUpPrompt: LocalizedEnhancementPrompts.dutch, translationPhrase: "Dutch", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E9")!),
+        DictationLanguage(id: "sv-SE", nativeName: "Svenska", englishName: "Swedish", tileName: "Swedish", flag: "🇸🇪", preferredModelNames: ["parakeet-tdt-0.6b-v3"], cleanUpPrompt: LocalizedEnhancementPrompts.swedish, translationPhrase: "Swedish (as spoken in Sweden)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000EA")!),
         DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", tileName: "French", flag: "🇫🇷", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.french, translationPhrase: "French", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!),
         DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", tileName: "German", flag: "🇩🇪", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.german, translationPhrase: "German", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!),
         DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.italian, translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),

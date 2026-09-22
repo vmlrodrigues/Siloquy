@@ -82,8 +82,8 @@ final class DictationLanguageManager: ObservableObject {
         self.recorderState = engine as? any RecorderStateProvider
         modelManager.refreshUsableModels()
         readyModelNames = modelManager.usableModelNames
-        // Only now, with readiness known: resolving against an empty ready set records
-        // a model that cannot run, and the choice is persisted.
+        // Resolve the recommendation against this machine's catalogue before persisting
+        // it. Readiness is also needed when no recommended model is supported here.
         backfillMissingModels()
 
         // Push the restored language out before listening for anyone else's writes. At
@@ -203,30 +203,11 @@ final class DictationLanguageManager: ObservableObject {
         state(of: language).selected
     }
 
-    private func resolveModel(
-        for language: DictationLanguage,
-        candidates: [any TranscriptionModel],
-        usable: [any TranscriptionModel]
-    ) -> (any TranscriptionModel)? {
-        if let chosen = modelNameByLanguage[language.id],
-           let model = candidates.first(where: { $0.name == chosen }) {
-            return model
-        }
-
-        // Prefer something that runs today; fall back to the best candidate so the row
-        // can name what to download rather than showing no model at all.
-        for preferred in language.preferredModelNames {
-            if let model = usable.first(where: { $0.name == preferred }) { return model }
-        }
-        if let first = usable.first { return first }
-
-        for preferred in language.preferredModelNames {
-            if let model = candidates.first(where: { $0.name == preferred }) { return model }
-        }
-        return candidates.first
-    }
-
     func setModel(_ model: any TranscriptionModel, for language: DictationLanguage) {
+        guard language.isSupported(by: model) else {
+            logger.error("\(model.name, privacy: .public) cannot transcribe \(language.id, privacy: .public)")
+            return
+        }
         modelNameByLanguage[language.id] = model.name
         UserDefaults.standard.set(modelNameByLanguage, forKey: modelsKey)
         logger.notice("\(language.id, privacy: .public) → \(model.name, privacy: .public)")
@@ -285,7 +266,11 @@ final class DictationLanguageManager: ObservableObject {
     func state(of language: DictationLanguage) -> LanguageState {
         let candidates = candidateModels(for: language)
         let usable = candidates.filter { readyModelNames.contains($0.name) }
-        let selected = resolveModel(for: language, candidates: candidates, usable: usable)
+        let selected = language.resolveModel(
+            from: candidates,
+            selectedName: modelNameByLanguage[language.id],
+            readyModelNames: readyModelNames
+        )
 
         guard let selected else {
             return LanguageState(candidates: candidates, usable: usable, selected: nil, isReady: false, missing: nil)

@@ -1,5 +1,43 @@
 import SwiftUI
 
+/// Uses the same download state as the model catalogue, including downloads started
+/// there or shared by another language. Adding a language never starts a download.
+private struct LanguageParakeetDownloadControl: View {
+    let model: FluidAudioModel
+    @EnvironmentObject private var models: FluidAudioModelManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let status = models.downloadStatus(for: model) {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.small)
+                    Text("\(model.displayName): \(Int(status.fractionCompleted * 100))%")
+                        .monospacedDigit()
+                    Text(status.message)
+                }
+                .foregroundColor(.secondary)
+            } else {
+                HStack(spacing: 6) {
+                    Label("Not downloaded", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                    Button(models.downloadError(for: model) == nil
+                           ? "Download \(model.displayName)" : "Retry download") {
+                        Task { await models.downloadFluidAudioModel(model) }
+                    }
+                    .controlSize(.small)
+                    .help("Download \(model.displayName) (\(model.size)) for on-device dictation.")
+                }
+                if let error = models.downloadError(for: model) {
+                    Text("Couldn't download \(model.displayName): \(error)")
+                        .foregroundColor(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .font(.caption)
+    }
+}
+
 /// The languages you dictate in, each with its own model and shortcut.
 ///
 /// The language is the organising unit, not the model. A single global "default model"
@@ -76,10 +114,7 @@ struct DictationLanguagesSection: View {
                 languageToRemove = nil
             }
         } message: { _ in
-            // Careful not to over-promise: removing releases the locale's reservation,
-            // which is precisely what makes macOS willing to reclaim the model. It
-            // usually survives, but it is not ours to keep or to delete.
-            Text("Its shortcut will be cleared. The speech model belongs to macOS, which reclaims it when it needs the space — so re-adding this language often needs no download, and nothing can delete it on demand.")
+            Text("Its shortcut will be cleared. Removing a language does not delete its downloaded models.")
         }
     }
 
@@ -211,13 +246,14 @@ struct DictationLanguagesSection: View {
                     .foregroundColor(.secondary)
             }
         } else if let missing = state.missing {
-            // The transcriber itself is absent, not just this language's slice of it.
-            // Downloading it belongs in the model list below, where its size and
-            // progress are shown, so this points there rather than duplicating it.
-            Label("Needs \(missing.displayName)", systemImage: "exclamationmark.triangle.fill")
-                .font(.caption)
-                .foregroundColor(.orange)
-                .help("\(missing.displayName) is the only model here that transcribes \(language.englishName). Download it under Downloaded or Local below, and this language becomes usable.")
+            if let parakeet = missing as? FluidAudioModel {
+                LanguageParakeetDownloadControl(model: parakeet)
+            } else {
+                Label("Needs \(missing.displayName)", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                    .help("Download the selected model under Local below to dictate in \(language.englishName).")
+            }
         } else if !state.isReady {
             HStack(spacing: 6) {
                 Label("Not downloaded", systemImage: "exclamationmark.triangle.fill")

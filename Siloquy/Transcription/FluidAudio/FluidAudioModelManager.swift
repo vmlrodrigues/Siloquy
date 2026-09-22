@@ -11,7 +11,10 @@ struct FluidAudioDownloadStatus {
 @MainActor
 class FluidAudioModelManager: ObservableObject {
     @Published private var downloadStatuses: [String: FluidAudioDownloadStatus] = [:]
+    @Published private var downloadErrors: [String: String] = [:]
     private var activeDownloadIDs: [String: UUID] = [:]
+    private let modelsExist: (AsrModelVersion) -> Bool
+    private let downloadModels: (AsrModelVersion, DownloadUtils.ProgressHandler?) async throws -> Void
 
     var onModelDeleted: ((String) -> Void)?
     var onModelsChanged: (() -> Void)?
@@ -29,6 +32,8 @@ class FluidAudioModelManager: ObservableObject {
     }
 
     nonisolated static func languageHint(from languageCode: String?, for modelName: String) -> Language? {
+        // This SDK enum controls script filtering, not model language coverage. V3
+        // also supports languages such as Swedish without a hint (automatic detection).
         guard asrVersion(for: modelName) == .v3,
               let languageCode,
               languageCode != "auto"
@@ -37,13 +42,23 @@ class FluidAudioModelManager: ObservableObject {
         return Language(rawValue: languageCode)
     }
 
-    init() {}
+    init(
+        modelsExist: @escaping (AsrModelVersion) -> Bool = { version in
+            AsrModels.modelsExist(at: AsrModels.defaultCacheDirectory(for: version), version: version)
+        },
+        downloadModels: @escaping (AsrModelVersion, DownloadUtils.ProgressHandler?) async throws -> Void = { version, progress in
+            _ = try await AsrModels.downloadAndLoad(version: version, progressHandler: progress)
+        }
+    ) {
+        self.modelsExist = modelsExist
+        self.downloadModels = downloadModels
+    }
 
     // MARK: - Query helpers
 
     func isFluidAudioModelDownloaded(named modelName: String) -> Bool {
         let version = FluidAudioModelManager.asrVersion(for: modelName)
-        return AsrModels.modelsExist(at: cacheDirectory(for: version), version: version)
+        return modelsExist(version)
     }
 
     func isFluidAudioModelDownloaded(_ model: FluidAudioModel) -> Bool {
@@ -58,14 +73,23 @@ class FluidAudioModelManager: ObservableObject {
         downloadStatuses[model.name]
     }
 
+    func downloadError(for model: FluidAudioModel) -> String? {
+        downloadErrors[model.name]
+    }
+
     // MARK: - Download
 
     func downloadFluidAudioModel(_ model: FluidAudioModel) async {
-        if isFluidAudioModelDownloaded(model) || isFluidAudioModelDownloading(model) {
+        if isFluidAudioModelDownloading(model) {
+            return
+        }
+        if isFluidAudioModelDownloaded(model) {
+            onModelsChanged?()
             return
         }
 
         let modelName = model.name
+        downloadErrors[modelName] = nil
         let downloadID = UUID()
         activeDownloadIDs[modelName] = downloadID
         downloadStatuses[modelName] = FluidAudioDownloadStatus(
@@ -85,11 +109,9 @@ class FluidAudioModelManager: ObservableObject {
         }
 
         do {
-            _ = try await AsrModels.downloadAndLoad(
-                version: version,
-                progressHandler: progressHandler
-            )
+            try await downloadModels(version, progressHandler)
         } catch {
+            downloadErrors[modelName] = error.localizedDescription
             logger.error("❌ FluidAudio download failed for \(modelName, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
