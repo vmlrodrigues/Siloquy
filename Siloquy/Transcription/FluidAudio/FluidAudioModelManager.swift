@@ -13,7 +13,10 @@ class FluidAudioModelManager: ObservableObject {
     @Published private var downloadStatuses: [String: FluidAudioDownloadStatus] = [:]
     @Published private var downloadErrors: [String: String] = [:]
     private var activeDownloadIDs: [String: UUID] = [:]
+    private static let errorsKey = "FluidAudioModelDownloadErrors"
+    private let defaults: UserDefaults
     private let modelsExist: (AsrModelVersion) -> Bool
+    private let resetModels: (AsrModelVersion) throws -> Void
     private let downloadModels: (AsrModelVersion, DownloadUtils.ProgressHandler?) async throws -> Void
 
     var onModelDeleted: ((String) -> Void)?
@@ -43,20 +46,32 @@ class FluidAudioModelManager: ObservableObject {
     }
 
     init(
+        defaults: UserDefaults = .standard,
         modelsExist: @escaping (AsrModelVersion) -> Bool = { version in
             AsrModels.modelsExist(at: AsrModels.defaultCacheDirectory(for: version), version: version)
+        },
+        resetModels: @escaping (AsrModelVersion) throws -> Void = { version in
+            let directory = AsrModels.defaultCacheDirectory(for: version)
+            if FileManager.default.fileExists(atPath: directory.path) {
+                try FileManager.default.removeItem(at: directory)
+            }
         },
         downloadModels: @escaping (AsrModelVersion, DownloadUtils.ProgressHandler?) async throws -> Void = { version, progress in
             _ = try await AsrModels.downloadAndLoad(version: version, progressHandler: progress)
         }
     ) {
+        self.defaults = defaults
+        self.downloadErrors = defaults.dictionary(forKey: Self.errorsKey) as? [String: String] ?? [:]
         self.modelsExist = modelsExist
+        self.resetModels = resetModels
         self.downloadModels = downloadModels
     }
 
     // MARK: - Query helpers
 
     func isFluidAudioModelDownloaded(named modelName: String) -> Bool {
+        // Paths can exist before loading/validation finishes, or after it fails.
+        guard downloadErrors[modelName] == nil, downloadStatuses[modelName] == nil else { return false }
         let version = FluidAudioModelManager.asrVersion(for: modelName)
         return modelsExist(version)
     }
@@ -89,6 +104,8 @@ class FluidAudioModelManager: ObservableObject {
         }
 
         let modelName = model.name
+        let isRetry = downloadErrors[modelName] != nil
+        // Keep the persisted failure until success, including if the app quits mid-retry.
         downloadErrors[modelName] = nil
         let downloadID = UUID()
         activeDownloadIDs[modelName] = downloadID
@@ -109,9 +126,15 @@ class FluidAudioModelManager: ObservableObject {
         }
 
         do {
+            if isRetry && modelsExist(version) {
+                // The SDK skips downloads when all paths exist, even if vocabulary or
+                // model contents are corrupt. Repair only this failed model's cache.
+                try resetModels(version)
+            }
             try await downloadModels(version, progressHandler)
+            setDownloadError(nil, for: modelName)
         } catch {
-            downloadErrors[modelName] = error.localizedDescription
+            setDownloadError(error.localizedDescription, for: modelName)
             logger.error("❌ FluidAudio download failed for \(modelName, privacy: .public): \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -125,6 +148,7 @@ class FluidAudioModelManager: ObservableObject {
             if FileManager.default.fileExists(atPath: cacheDirectory.path) {
                 try FileManager.default.removeItem(at: cacheDirectory)
             }
+            setDownloadError(nil, for: model.name)
         } catch {
             // Silently ignore removal errors
         }
@@ -144,6 +168,15 @@ class FluidAudioModelManager: ObservableObject {
     }
 
     // MARK: - Private helpers
+
+    private func setDownloadError(_ error: String?, for modelName: String) {
+        downloadErrors[modelName] = error
+        // Another model may be retrying concurrently: its persisted failure must
+        // survive until that model succeeds, even while its visible error is cleared.
+        var errors = defaults.dictionary(forKey: Self.errorsKey) as? [String: String] ?? [:]
+        errors[modelName] = error
+        defaults.set(errors, forKey: Self.errorsKey)
+    }
 
     private func cacheDirectory(for model: FluidAudioModel) -> URL {
         cacheDirectory(for: FluidAudioModelManager.asrVersion(for: model.name))
