@@ -10,23 +10,19 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 ### 0.15.0 — 2026-09-22
 
 #### Added
-- **Swedish dictation.** Add Svenska in Dictation Models to use Parakeet V3,
-  with a download button, progress, and retry available beside the language.
-  Swedish also has its own AI cleanup prompt and translation destination. (#63)
-- **Start raw with Recommended Settings.** Onboarding and Settings now offer
-  Raw as the recommended starting point for new dictations, so you can opt
-  into AI enhancement when you want it. (#64)
-- **A recommended shortcut for pasting enhanced text.** Applying Recommended
-  Settings assigns ⇧⌘R to Paste Last Enhanced Transcription. If another action
-  already uses it, Siloquy reports the conflict and keeps that assignment. (#65)
+- **Hej, Svenska!** Swedish dictation uses Parakeet V3, with download, progress,
+  and retry beside the language. Swedish AI cleanup and translation are included.
+  No flat-pack assembly required. (#63)
+- **Raw by recommendation.** Onboarding and Recommended Settings now suggest
+  starting each dictation raw, with AI enhancement when you want it. (#64)
+- **Paste the polished version.** Recommended Settings assigns ⇧⌘R to paste
+  your last enhanced transcription, while respecting shortcut conflicts. (#65)
 
 #### Fixed
-- **Failed Parakeet downloads stay retryable.** If final model loading fails,
-  Siloquy keeps the error visible across restarts and repairs the affected cache
-  when you retry, instead of treating the files as a ready model. (#66)
-- **Upgrades preserve existing model choices.** Older installations without
-  per-language assignments keep their compatible model or an installed fallback.
-  Adding a new language still selects its recommended model. (#67)
+- Failed Parakeet downloads stay visibly unavailable across restarts;
+  Retry repairs the affected cache. (#66)
+- Upgrades preserve compatible model choices or an installed fallback,
+  while new languages keep their recommended model. (#67)
 
 ---
 
