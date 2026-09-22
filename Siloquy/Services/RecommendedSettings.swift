@@ -1,7 +1,11 @@
 import Foundation
 import LaunchAtLogin
+import Carbon.HIToolbox
 
 enum RecommendedSettings {
+    static let pasteLastEnhancementShortcut = Shortcut.key(
+        keyCode: UInt16(kVK_ANSI_R), modifierFlags: [.shift, .command]
+    )
 
     struct Item {
         let icon: String
@@ -46,6 +50,16 @@ enum RecommendedSettings {
              title: "Keep Clipboard Content",
              description: "Restores whatever was on your clipboard after Siloquy pastes.",
              isAlreadySet: { UserDefaults.standard.bool(forKey: "restoreClipboardAfterPaste") }),
+        Item(icon: "text.alignleft",
+             title: "New Dictations Start Raw",
+             description: "Start with raw text and opt into AI enhancement per dictation.",
+             isAlreadySet: { UserDefaults.standard.bool(forKey: "resetEnhancementPerDictation") }),
+        Item(icon: "keyboard",
+             title: "Paste Last Enhanced Transcription",
+             description: "Press ⇧⌘R to paste your last enhanced transcription.",
+             isAlreadySet: {
+                 ShortcutStore.shortcut(for: .pasteLastEnhancement) == pasteLastEnhancementShortcut
+             }),
     ]
 
     // Number of settings that don't yet match the recommendation.
@@ -57,7 +71,11 @@ enum RecommendedSettings {
     // update immediately (no wait for next launch). Re-applying an already-correct
     // value is a harmless no-op, so this always applies the full set.
     @MainActor
-    static func apply(menuBarManager: MenuBarManager, recorderUIManager: RecorderUIManager) {
+    static func apply(
+        menuBarManager: MenuBarManager,
+        recorderUIManager: RecorderUIManager,
+        enhancementService: AIEnhancementService
+    ) {
         menuBarManager.isMenuBarOnly = true
         recorderUIManager.recorderType = "notch"
         UserDefaults.standard.set(true,  forKey: "showLiveTextPreview")
@@ -65,6 +83,19 @@ enum RecommendedSettings {
         SoundManager.shared.isEnabled = true
         MediaController.shared.isSystemMuteEnabled = true
         UserDefaults.standard.set(true,  forKey: "restoreClipboardAfterPaste")
+        enhancementService.resetEnhancementPerDictation = true
+        enhancementService.isEnhancementEnabled = false
         LaunchAtLogin.isEnabled = true
+
+        if let error = ShortcutValidator.validationError(
+            for: pasteLastEnhancementShortcut, action: .pasteLastEnhancement
+        ) {
+            NotificationManager.shared.showNotification(
+                title: error.notificationTitle(for: pasteLastEnhancementShortcut),
+                type: .error
+            )
+        } else {
+            ShortcutStore.setShortcut(pasteLastEnhancementShortcut, for: .pasteLastEnhancement)
+        }
     }
 }

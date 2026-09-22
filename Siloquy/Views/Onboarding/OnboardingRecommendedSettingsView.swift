@@ -4,6 +4,7 @@ struct OnboardingRecommendedSettingsView: View {
     @Binding var hasCompletedOnboarding: Bool
     @EnvironmentObject private var menuBarManager: MenuBarManager
     @EnvironmentObject private var recorderUIManager: RecorderUIManager
+    @EnvironmentObject private var enhancementService: AIEnhancementService
 
     @State private var scale: CGFloat = 0.8
     @State private var opacity: CGFloat = 0
@@ -57,7 +58,8 @@ struct OnboardingRecommendedSettingsView: View {
                         Button {
                             RecommendedSettings.apply(
                                 menuBarManager: menuBarManager,
-                                recorderUIManager: recorderUIManager
+                                recorderUIManager: recorderUIManager,
+                                enhancementService: enhancementService
                             )
                             hasCompletedOnboarding = true
                         } label: {

@@ -514,6 +514,7 @@ struct RecommendedSettingsSheet: View {
     @Binding var isPresented: Bool
     @EnvironmentObject private var menuBarManager: MenuBarManager
     @EnvironmentObject private var recorderUIManager: RecorderUIManager
+    @EnvironmentObject private var enhancementService: AIEnhancementService
 
     private var changeCount: Int { RecommendedSettings.pendingChangeCount }
 
@@ -557,7 +558,8 @@ struct RecommendedSettingsSheet: View {
                 Button(applyTitle) {
                     RecommendedSettings.apply(
                         menuBarManager: menuBarManager,
-                        recorderUIManager: recorderUIManager
+                        recorderUIManager: recorderUIManager,
+                        enhancementService: enhancementService
                     )
                     isPresented = false
                 }
