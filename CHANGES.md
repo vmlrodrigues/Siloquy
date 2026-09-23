@@ -7,12 +7,24 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
-### 0.16.0 — Unreleased
+### 0.16.0 — 2026-09-23
 
 #### Improved
-- **Less waiting for the polished version.** Updated the local AI runtime and
-  enabled multi-token prediction for compatible models on Metal. The same Gemma,
-  with a little more get-up-and-go. Older model files still work. (#70)
+- **Gemma has had its coffee.** Faster local AI enhancement on compatible models,
+  with a newer runtime and multi-token prediction. Your sentences get polished;
+  the spinning indicator gets less stage time. (#70)
+
+#### Fixed
+- **Cancel means cancel.** Cancelling during warm-up no longer leaves enhancement
+  stuck busy. Switching models also keeps the old model from pulling the plug
+  on its replacement. (#70)
+- **Caches get a second chance.** Damaged AI caches rebuild automatically before
+  trying a slower fallback. “Have you tried turning it off and on?” is now an
+  inside job. (#70)
+
+#### Known issues
+- E4B remains the recommended model for translation. E2B can change times when
+  translating into Dutch; tracked separately in #71.
 
 ---
 
