@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import LiteRTLM
 import os
 
@@ -18,9 +19,12 @@ actor LocalEngineLoader {
     private var waiters: [CheckedContinuation<Void, Never>] = []
     private let logger = Logger(subsystem: "com.victorrodrigues.siloquy", category: "LocalEngineLoader")
 
-    nonisolated static func cacheDirectory(root: URL, attempt: Attempt) -> URL {
-        root.appendingPathComponent(runtimeVersion, isDirectory: true)
+    nonisolated static func cacheDirectory(root: URL, modelPath: String, attempt: Attempt) -> URL {
+        let path = URL(fileURLWithPath: modelPath).standardizedFileURL.path
+        let key = SHA256.hash(data: Data(path.utf8)).map { String(format: "%02x", $0) }.joined()
+        return root.appendingPathComponent(runtimeVersion, isDirectory: true)
             .appendingPathComponent(attempt.rawValue, isDirectory: true)
+            .appendingPathComponent(key, isDirectory: true)
     }
 
     func load(modelPath: String, cacheDirectory: String? = nil) async throws -> Engine {
@@ -31,23 +35,54 @@ actor LocalEngineLoader {
         return try await load(supportsMTP: supportsMTP) { [logger] attempt in
             // A failed MTP initialization can leave incomplete cache files.
             // Normal Metal and CPU must not reuse that attempt's cache.
-            let cache = Self.cacheDirectory(root: cacheRoot, attempt: attempt)
-            try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+            let cache = Self.cacheDirectory(root: cacheRoot, modelPath: modelPath, attempt: attempt)
             ExperimentalFlags.optIntoExperimentalAPIs()
             ExperimentalFlags.enableSpeculativeDecoding = attempt == .metalMTP
             // Leave a conservative default for any later initialization.
             defer { ExperimentalFlags.enableSpeculativeDecoding = false }
 
-            let config = try EngineConfig(
-                modelPath: modelPath,
-                backend: attempt == .cpu ? .cpu() : .gpu,
-                cacheDir: cache.path
-            )
-            let engine = Engine(engineConfig: config)
-            try await engine.initialize()
+            let engine = try await Self.withCacheRepair(at: cache) { directory in
+                let config = try EngineConfig(
+                    modelPath: modelPath,
+                    backend: attempt == .cpu ? .cpu() : .gpu,
+                    cacheDir: directory.path
+                )
+                let engine = Engine(engineConfig: config)
+                try await engine.initialize()
+                return engine
+            }
             logger.info("Local enhancement engine ready: \(attempt.rawValue, privacy: .public)")
             return engine
         }
+    }
+
+    /// Retry once after discarding only this model/backend's generated cache.
+    /// An empty cache cannot explain the failure; cancellation must not delete
+    /// a cache that may have been built successfully while native code finished.
+    nonisolated static func withCacheRepair<T: Sendable>(
+        at cache: URL,
+        removeCache: @Sendable (URL) throws -> Void = { try FileManager.default.removeItem(at: $0) },
+        initialize: @Sendable (URL) async throws -> T
+    ) async throws -> T {
+        for pass in 0...1 {
+            try Task.checkCancellation()
+            try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
+            do {
+                let result = try await initialize(cache)
+                try Task.checkCancellation()
+                return result
+            } catch {
+                if error is CancellationError { throw error }
+                try Task.checkCancellation()
+                guard pass == 0,
+                      !(try FileManager.default.contentsOfDirectory(atPath: cache.path)).isEmpty
+                else { throw error }
+                try removeCache(cache)
+                Logger(subsystem: "com.victorrodrigues.siloquy", category: "LocalEngineLoader")
+                    .notice("Retrying local engine initialization with a clean model cache")
+            }
+        }
+        preconditionFailure("The final cache attempt must return or throw")
     }
 
     /// The injected initializer keeps failure and concurrency tests independent

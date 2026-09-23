@@ -113,6 +113,11 @@ class GemmaService: ObservableObject {
 
     private var engine: Engine?
     private var engineModelID: String?          // model the current engine was built from
+    private var initialization: (id: UUID, modelID: String, task: Task<Void, Never>)?
+    // UserDefaults is thread-safe, but this SDK does not mark it Sendable.
+    nonisolated(unsafe) private let preferences: UserDefaults
+    nonisolated let modelDirectory: URL
+    private let loadEngine: @Sendable (String) async throws -> Engine
     private var downloadTasks: [String: Task<Void, Error>] = [:]
     /// The live URLSession per active download, kept reachable so cancelDownload can actually
     /// stop the network transfer (cancelling the Swift Task alone does not) — #30.
@@ -121,11 +126,6 @@ class GemmaService: ObservableObject {
     private let logger = Logger(subsystem: "com.victorrodrigues.siloquy", category: "GemmaService")
 
     // MARK: - Computed helpers (called from non-actor contexts too)
-
-    nonisolated var modelDirectory: URL {
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        return appSupport.appendingPathComponent("Siloquy/Models", isDirectory: true)
-    }
 
     nonisolated func modelPath(for model: LocalModel) -> URL {
         modelDirectory.appendingPathComponent(model.filename)
@@ -141,31 +141,32 @@ class GemmaService: ObservableObject {
 
     /// True when the selected model's file is present on disk.
     nonisolated var isModelDownloaded: Bool {
-        guard let id = UserDefaults.standard.string(forKey: "localModelSelectedID"),
-              let model = GemmaService.catalog.first(where: { $0.id == id })
-        else {
-            // Fall back to first model
-            return GemmaService.catalog.first.map {
-                FileManager.default.fileExists(atPath:
-                    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                        .appendingPathComponent("Siloquy/Models/\($0.filename)").path)
-            } ?? false
-        }
-        return FileManager.default.fileExists(atPath:
-            FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("Siloquy/Models/\(model.filename)").path)
+        let id = preferences.string(forKey: "localModelSelectedID")
+        let model = Self.catalog.first { $0.id == id } ?? Self.catalog.first!
+        return isDownloaded(model)
     }
 
     // MARK: - Init
 
-    nonisolated init() {
+    nonisolated init(
+        defaults: UserDefaults = .standard,
+        modelDirectory: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Siloquy/Models", isDirectory: true),
+        automaticallyInitialize: Bool = true,
+        loadEngine: @escaping @Sendable (String) async throws -> Engine = {
+            try await LocalEngineLoader.shared.load(modelPath: $0)
+        }
+    ) {
+        self.preferences = defaults
+        self.modelDirectory = modelDirectory
+        self.loadEngine = loadEngine
         // Migrate selections pointing at removed catalog entries (e.g. Qwen3,
         // removed in #23) back to the catalog default so enhancement keeps working.
-        let savedID = UserDefaults.standard.string(forKey: "localModelSelectedID")
+        let savedID = defaults.string(forKey: "localModelSelectedID")
         let validID = savedID.flatMap { id in Self.catalog.first(where: { $0.id == id })?.id }
                       ?? Self.catalog.first!.id
         if validID != savedID {
-            UserDefaults.standard.set(validID, forKey: "localModelSelectedID")
+            defaults.set(validID, forKey: "localModelSelectedID")
         }
         _selectedModelID = Published(initialValue: validID)
 
@@ -176,7 +177,7 @@ class GemmaService: ObservableObject {
                 self.downloadStates[model.id] = self.isDownloaded(model) ? .downloaded : .notDownloaded
             }
             // Auto-init engine if the selected model is already downloaded
-            if let selected = self.selectedModel, self.isDownloaded(selected) {
+            if automaticallyInitialize, let selected = self.selectedModel, self.isDownloaded(selected) {
                 await self.initializeEngine()
             }
         }
@@ -187,13 +188,11 @@ class GemmaService: ObservableObject {
     func selectModel(_ model: LocalModel) async {
         guard model.id != selectedModelID else { return }
         selectedModelID = model.id
-        UserDefaults.standard.set(model.id, forKey: "localModelSelectedID")
+        preferences.set(model.id, forKey: "localModelSelectedID")
 
         // Tear down engine if it was built for a different model
         if engineModelID != model.id {
-            engine = nil
-            engineModelID = nil
-            engineState = .notReady
+            discardEngine()
         }
 
         if isDownloaded(model) {
@@ -291,6 +290,7 @@ class GemmaService: ObservableObject {
             try FileManager.default.copyItem(at: sourceURL, to: dest)
             downloadStates[model.id] = .downloaded
             if model.id == selectedModelID {
+                discardEngine()
                 Task { await self.initializeEngine() }
             }
         } catch {
@@ -301,10 +301,8 @@ class GemmaService: ObservableObject {
     // MARK: - Delete
 
     func deleteModel(_ model: LocalModel) {
-        if engineModelID == model.id {
-            engine = nil
-            engineModelID = nil
-            engineState = .notReady
+        if engineModelID == model.id || initialization?.modelID == model.id {
+            discardEngine()
         }
         try? FileManager.default.removeItem(at: modelPath(for: model))
         downloadStates[model.id] = .notDownloaded
@@ -313,33 +311,51 @@ class GemmaService: ObservableObject {
     // MARK: - Engine Initialization
 
     func initializeEngine() async {
+        guard !Task.isCancelled else { return }
         guard let model = selectedModel, isDownloaded(model) else { return }
 
         // Already warm for this model
         if engineModelID == model.id, engineState == .ready { return }
 
+        // Callers share service-owned warm-up. Cancelling one waiter must not
+        // cancel the load or change readiness for other callers (#70).
+        if let pending = initialization, pending.modelID == model.id {
+            await pending.task.value
+            return
+        }
+
         // Different model — tear down first
         if engineModelID != model.id {
-            engine = nil
-            engineModelID = nil
+            discardEngine()
         }
 
         engineState = .initializing
         let path = modelPath(for: model).path
         let modelID = model.id
-
-        do {
-            // The loader and native engine run off the main actor. Await them
-            // directly so cancellation also reaches initialization and retries.
-            let newEngine = try await LocalEngineLoader.shared.load(modelPath: path)
-            engine = newEngine
-            engineModelID = modelID
-            engineState = .ready
-        } catch is CancellationError {
-            engineState = .notReady
-        } catch {
-            engineState = .error("Engine init failed: \(error.localizedDescription)")
+        let id = UUID()
+        let task = Task { @MainActor [weak self, loadEngine] in
+            defer {
+                if self?.initialization?.id == id { self?.initialization = nil }
+            }
+            do {
+                let newEngine = try await loadEngine(path)
+                try Task.checkCancellation()
+                guard let self, self.initialization?.id == id else { return }
+                guard self.selectedModelID == modelID, self.isDownloaded(model) else {
+                    self.engineState = .notReady
+                    return
+                }
+                self.engine = newEngine
+                self.engineModelID = modelID
+                self.engineState = .ready
+            } catch {
+                guard let self, self.initialization?.id == id else { return }
+                self.engineState = error is CancellationError ? .notReady
+                    : .error("Engine init failed: \(error.localizedDescription)")
+            }
         }
+        initialization = (id, modelID, task)
+        await task.value
     }
 
     // MARK: - Engine recovery
@@ -352,6 +368,12 @@ class GemmaService: ObservableObject {
     /// next call reinitialise a fresh one.
     private func resetEngine() {
         logger.notice("Resetting Gemma engine after a failed/timed-out generation; it will rebuild on the next request.")
+        discardEngine()
+    }
+
+    private func discardEngine() {
+        initialization?.task.cancel()
+        initialization = nil
         engine = nil
         engineModelID = nil
         engineState = .notReady
@@ -370,11 +392,14 @@ class GemmaService: ObservableObject {
         guard !isGenerating else {
             throw GemmaError.busy
         }
+        isGenerating = true
+        defer { isGenerating = false }
 
         if engine == nil || engineState != .ready {
             await initializeEngine()
         }
         try Task.checkCancellation()
+        guard selectedModelID == model.id else { throw CancellationError() }
 
         guard let engine, engineState == .ready else {
             throw GemmaError.initializationFailed("Engine is not available")
@@ -396,9 +421,6 @@ class GemmaService: ObservableObject {
         let localBudget = min(300, max(60, Double(userText.count) / 12))
         let effectiveTimeout = max(timeout, localBudget)
 
-        isGenerating = true
-        defer { isGenerating = false }
-
         do {
             return try await withThrowingTaskGroup(of: String.self) { group in
                 group.addTask {
@@ -406,10 +428,18 @@ class GemmaService: ObservableObject {
                         systemMessage: Message(systemPrompt, role: .system)
                     )
                     let conversation = try await engine.createConversation(with: convConfig)
+                    // Cancelling AsyncThrowingStream can finish iteration normally.
+                    // Stop native inference and throw so recovery does not reuse
+                    // an engine that is still generating in the background.
+                    defer {
+                        if Task.isCancelled { try? conversation.cancel() }
+                    }
+                    try Task.checkCancellation()
                     var result = ""
                     for try await chunk in conversation.sendMessageStream(Message(userText)) {
                         result += chunk.toString
                     }
+                    try Task.checkCancellation()
                     return result
                 }
                 group.addTask {
