@@ -329,25 +329,14 @@ class GemmaService: ObservableObject {
         let modelID = model.id
 
         do {
-            let engineTask: Task<Engine, Error> = Task.detached(priority: .userInitiated) {
-                // Try GPU (Metal) first; fall back to CPU if Metal compilation fails.
-                do {
-                    let config = try EngineConfig(modelPath: path, backend: .gpu)
-                    let e = Engine(engineConfig: config)
-                    try await e.initialize()
-                    return e
-                } catch {
-                    // GPU failed — retry on CPU (avoids Metal shader compilation issues)
-                    let config = try EngineConfig(modelPath: path, backend: .cpu())
-                    let e = Engine(engineConfig: config)
-                    try await e.initialize()
-                    return e
-                }
-            }
-            let newEngine = try await engineTask.value
+            // The loader and native engine run off the main actor. Await them
+            // directly so cancellation also reaches initialization and retries.
+            let newEngine = try await LocalEngineLoader.shared.load(modelPath: path)
             engine = newEngine
             engineModelID = modelID
             engineState = .ready
+        } catch is CancellationError {
+            engineState = .notReady
         } catch {
             engineState = .error("Engine init failed: \(error.localizedDescription)")
         }
@@ -385,6 +374,7 @@ class GemmaService: ObservableObject {
         if engine == nil || engineState != .ready {
             await initializeEngine()
         }
+        try Task.checkCancellation()
 
         guard let engine, engineState == .ready else {
             throw GemmaError.initializationFailed("Engine is not available")

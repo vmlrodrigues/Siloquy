@@ -7,6 +7,15 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.16.0 — Unreleased
+
+#### Improved
+- **Less waiting for the polished version.** Updated the local AI runtime and
+  enabled multi-token prediction for compatible models on Metal. The same Gemma,
+  with a little more get-up-and-go. Older model files still work. (#70)
+
+---
+
 ### 0.15.0 — 2026-09-22
 
 #### Added
