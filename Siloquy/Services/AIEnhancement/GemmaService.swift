@@ -114,10 +114,12 @@ class GemmaService: ObservableObject {
     private var engine: Engine?
     private var engineModelID: String?          // model the current engine was built from
     private var initialization: (id: UUID, modelID: String, task: Task<Void, Never>)?
+    private var initializationWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
     // UserDefaults is thread-safe, but this SDK does not mark it Sendable.
     nonisolated(unsafe) private let preferences: UserDefaults
     nonisolated let modelDirectory: URL
     private let loadEngine: @Sendable (String) async throws -> Engine
+    private let generate: @Sendable (Engine, String, String) async throws -> String
     private var downloadTasks: [String: Task<Void, Error>] = [:]
     /// The live URLSession per active download, kept reachable so cancelDownload can actually
     /// stop the network transfer (cancelling the Swift Task alone does not) — #30.
@@ -155,11 +157,15 @@ class GemmaService: ObservableObject {
         automaticallyInitialize: Bool = true,
         loadEngine: @escaping @Sendable (String) async throws -> Engine = {
             try await LocalEngineLoader.shared.load(modelPath: $0)
+        },
+        generate: @escaping @Sendable (Engine, String, String) async throws -> String = {
+            try await GemmaService.generate(using: $0, text: $1, systemPrompt: $2)
         }
     ) {
         self.preferences = defaults
         self.modelDirectory = modelDirectory
         self.loadEngine = loadEngine
+        self.generate = generate
         // Migrate selections pointing at removed catalog entries (e.g. Qwen3,
         // removed in #23) back to the catalog default so enhancement keeps working.
         let savedID = defaults.string(forKey: "localModelSelectedID")
@@ -320,7 +326,7 @@ class GemmaService: ObservableObject {
         // Callers share service-owned warm-up. Cancelling one waiter must not
         // cancel the load or change readiness for other callers (#70).
         if let pending = initialization, pending.modelID == model.id {
-            await pending.task.value
+            await waitForInitialization(pending.id)
             return
         }
 
@@ -335,7 +341,10 @@ class GemmaService: ObservableObject {
         let id = UUID()
         let task = Task { @MainActor [weak self, loadEngine] in
             defer {
-                if self?.initialization?.id == id { self?.initialization = nil }
+                if self?.initialization?.id == id {
+                    self?.initialization = nil
+                    self?.resumeInitializationWaiters()
+                }
             }
             do {
                 let newEngine = try await loadEngine(path)
@@ -355,7 +364,33 @@ class GemmaService: ObservableObject {
             }
         }
         initialization = (id, modelID, task)
-        await task.value
+        await waitForInitialization(id)
+    }
+
+    /// A caller may stop waiting without cancelling the service-owned load.
+    /// Registration, completion and cancellation all run on the main actor,
+    /// so each continuation is removed and resumed exactly once.
+    private func waitForInitialization(_ id: UUID) async {
+        let waiterID = UUID()
+        await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                guard !Task.isCancelled, initialization?.id == id else {
+                    continuation.resume()
+                    return
+                }
+                initializationWaiters[waiterID] = continuation
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                self?.initializationWaiters.removeValue(forKey: waiterID)?.resume()
+            }
+        }
+    }
+
+    private func resumeInitializationWaiters() {
+        let waiters = initializationWaiters.values
+        initializationWaiters.removeAll()
+        for waiter in waiters { waiter.resume() }
     }
 
     // MARK: - Engine recovery
@@ -366,7 +401,10 @@ class GemmaService: ObservableObject {
     /// LiteRT-LM engine wedged — every later request then hangs until the app is restarted.
     /// There's no reliable way to "unstick" it in place, so we drop the engine and let the
     /// next call reinitialise a fresh one.
-    private func resetEngine() {
+    private func resetEngine(ifCurrent failedEngine: Engine) {
+        // A generation can finish after selection has started a newer load.
+        // Its failure owns only the engine captured by that generation.
+        guard engine === failedEngine else { return }
         logger.notice("Resetting Gemma engine after a failed/timed-out generation; it will rebuild on the next request.")
         discardEngine()
     }
@@ -374,6 +412,7 @@ class GemmaService: ObservableObject {
     private func discardEngine() {
         initialization?.task.cancel()
         initialization = nil
+        resumeInitializationWaiters()
         engine = nil
         engineModelID = nil
         engineState = .notReady
@@ -423,24 +462,8 @@ class GemmaService: ObservableObject {
 
         do {
             return try await withThrowingTaskGroup(of: String.self) { group in
-                group.addTask {
-                    let convConfig = ConversationConfig(
-                        systemMessage: Message(systemPrompt, role: .system)
-                    )
-                    let conversation = try await engine.createConversation(with: convConfig)
-                    // Cancelling AsyncThrowingStream can finish iteration normally.
-                    // Stop native inference and throw so recovery does not reuse
-                    // an engine that is still generating in the background.
-                    defer {
-                        if Task.isCancelled { try? conversation.cancel() }
-                    }
-                    try Task.checkCancellation()
-                    var result = ""
-                    for try await chunk in conversation.sendMessageStream(Message(userText)) {
-                        result += chunk.toString
-                    }
-                    try Task.checkCancellation()
-                    return result
+                group.addTask { [generate] in
+                    try await generate(engine, userText, systemPrompt)
                 }
                 group.addTask {
                     try await Task.sleep(nanoseconds: UInt64(effectiveTimeout * 1_000_000_000))
@@ -457,9 +480,26 @@ class GemmaService: ObservableObject {
             // Timed out or errored mid-generation. A cancelled native generation can leave the
             // engine wedged, so tear it down — the next call rebuilds a clean engine and recovers
             // automatically (this previously required an app restart).
-            resetEngine()
+            resetEngine(ifCurrent: engine)
             throw error
         }
+    }
+
+    nonisolated private static func generate(using engine: Engine, text: String, systemPrompt: String) async throws -> String {
+        let convConfig = ConversationConfig(systemMessage: Message(systemPrompt, role: .system))
+        let conversation = try await engine.createConversation(with: convConfig)
+        // Cancelling AsyncThrowingStream can finish iteration normally. Stop
+        // native inference and throw so recovery does not reuse a busy engine.
+        defer {
+            if Task.isCancelled { try? conversation.cancel() }
+        }
+        try Task.checkCancellation()
+        var result = ""
+        for try await chunk in conversation.sendMessageStream(Message(text)) {
+            result += chunk.toString
+        }
+        try Task.checkCancellation()
+        return result
     }
 }
 
