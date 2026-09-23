@@ -11,16 +11,17 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 #### Improved
 - **Gemma has had its coffee.** Faster local AI enhancement on compatible models,
-  with a newer runtime and multi-token prediction. Your sentences get polished;
-  the spinning indicator gets less stage time. (#70)
+  so your sentences get polished and the spinning indicator gets less stage
+  time. (#70)
 
 #### Fixed
-- **Cancel means cancel.** Cancelling during warm-up no longer leaves enhancement
-  stuck busy. Switching models also keeps the old model from pulling the plug
-  on its replacement. (#70)
-- **Caches get a second chance.** Damaged AI caches rebuild automatically before
-  trying a slower fallback. “Have you tried turning it off and on?” is now an
-  inside job. (#70)
+- **Less backstage drama.** More reliable AI enhancement, including smoother
+  recovery when cancelling a request or switching models. (#70)
+
+#### Looking ahead
+- **E2B is packing its bags.** We expect to remove E2B in a future release and
+  focus local AI enhancement on E4B, our recommended option for Macs with 16 GB
+  of memory or more. E2B remains available in this release. (#72)
 
 #### Known issues
 - E4B remains the recommended model for translation. E2B can change times when

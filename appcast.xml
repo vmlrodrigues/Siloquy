@@ -30,12 +30,15 @@
     <h2>0.16.0 — 2026-09-23</h2>
     <h3>Improved</h3>
     <ul>
-      <li><strong>Gemma has had its coffee.</strong> Faster local AI enhancement on compatible models, with a newer runtime and multi-token prediction. Your sentences get polished; the spinning indicator gets less stage time. (#70)</li>
+      <li><strong>Gemma has had its coffee.</strong> Faster local AI enhancement on compatible models, so your sentences get polished and the spinning indicator gets less stage time. (#70)</li>
     </ul>
     <h3>Fixed</h3>
     <ul>
-      <li><strong>Cancel means cancel.</strong> Cancelling during warm-up no longer leaves enhancement stuck busy. Switching models also keeps the old model from pulling the plug on its replacement. (#70)</li>
-      <li><strong>Caches get a second chance.</strong> Damaged AI caches rebuild automatically before trying a slower fallback. “Have you tried turning it off and on?” is now an inside job. (#70)</li>
+      <li><strong>Less backstage drama.</strong> More reliable AI enhancement, including smoother recovery when cancelling a request or switching models. (#70)</li>
+    </ul>
+    <h3>Looking ahead</h3>
+    <ul>
+      <li><strong>E2B is packing its bags.</strong> We expect to remove E2B in a future release and focus local AI enhancement on E4B, our recommended option for Macs with 16 GB of memory or more. E2B remains available in this release. (#72)</li>
     </ul>
     <h3>Known issues</h3>
     <ul>
