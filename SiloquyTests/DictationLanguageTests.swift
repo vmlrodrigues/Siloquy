@@ -59,6 +59,38 @@ struct DictationLanguageTests {
         )?.name == v2.name)
     }
 
+    @Test func russianRecommendsV3AndAcceptsAnExplicitMultilingualWhisperModel() throws {
+        let russian = try #require(DictationLanguage.named("ru-RU"))
+        let v2 = try model("parakeet-tdt-0.6b-v2")
+        let v3 = try model("parakeet-tdt-0.6b-v3")
+        let whisper = try model("ggml-large-v3-turbo")
+        let models = [v2, whisper, v3]
+
+        #expect(russian.languageCode(for: v3) == "ru")
+        #expect(russian.languageCode(for: whisper) == "ru")
+        #expect(russian.languageCode(for: v2) == nil)
+        #expect(TranscriptionLanguageSupport.validLanguageOrFallback("ru", for: v3) == "ru")
+        #expect(FluidAudioModelManager.languageHint(from: russian.languageCode(for: v3), for: v3.name) == .russian)
+        #expect(russian.resolveModel(
+            from: models, selectedName: nil, readyModelNames: [v2.name, whisper.name]
+        )?.name == v3.name, "Recommend V3 even when it needs downloading")
+        #expect(russian.resolveModel(
+            from: models, selectedName: whisper.name, readyModelNames: [v3.name]
+        )?.name == whisper.name, "Preserve an explicit compatible choice")
+    }
+
+    @Test func russianUsesLocalizedCleanupAndGeneratesATranslationTile() throws {
+        let russian = try #require(DictationLanguage.named("ru-RU"))
+        let prompt = CustomPrompt.translation(to: russian)
+
+        #expect(russian.nativeName == "Русский")
+        #expect(russian.cleanUpPrompt == LocalizedEnhancementPrompts.russian)
+        #expect(prompt.title == "To Russian")
+        #expect(prompt.targetLanguage == "ru-RU")
+        #expect(prompt.promptText == TranslationPrompt.text(for: "Russian"))
+        #expect(prompt.id == russian.translationPromptID)
+    }
+
     @Test func swedishHasItsOwnCleanupAndStableTranslationIdentity() throws {
         let swedish = try #require(DictationLanguage.named("sv-SE"))
         #expect(swedish.nativeName == "Svenska")

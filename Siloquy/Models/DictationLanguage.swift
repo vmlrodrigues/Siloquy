@@ -72,8 +72,8 @@ extension DictationLanguage {
     /// The code `model` expects for this language, or `nil` if it cannot transcribe it.
     ///
     /// Transcribers disagree about language codes: Apple ships a per-dialect asset and
-    /// wants "pt-PT", Whisper has one multilingual model and wants "pt", Parakeet is
-    /// English-only and wants "en". Handing a model the wrong form does not fail
+    /// wants "pt-PT", while multilingual Whisper and Parakeet V3 use base codes
+    /// such as "pt". Handing a model the wrong form does not fail
     /// loudly — `TranscriptionModelManager` silently substitutes a fallback, and the
     /// first sign is a transcript in the wrong language.
     func languageCode(for model: any TranscriptionModel) -> String? {
@@ -169,6 +169,13 @@ extension DictationLanguage {
         // use Parakeet v3, while English keeps the v2 specialist.
         DictationLanguage(id: "nl-NL", nativeName: "Nederlands", englishName: "Dutch", tileName: "Dutch", flag: "🇳🇱", preferredModelNames: ["parakeet-tdt-0.6b-v3"], cleanUpPrompt: LocalizedEnhancementPrompts.dutch, translationPhrase: "Dutch", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E9")!),
         DictationLanguage(id: "sv-SE", nativeName: "Svenska", englishName: "Swedish", tileName: "Swedish", flag: "🇸🇪", preferredModelNames: ["parakeet-tdt-0.6b-v3"], cleanUpPrompt: LocalizedEnhancementPrompts.swedish, translationPhrase: "Swedish (as spoken in Sweden)", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000EA")!),
+        DictationLanguage(
+            id: "ru-RU", nativeName: "Русский", englishName: "Russian", tileName: "Russian", flag: "🇷🇺",
+            preferredModelNames: ["parakeet-tdt-0.6b-v3"],
+            cleanUpPrompt: LocalizedEnhancementPrompts.russian,
+            translationPhrase: "Russian",
+            translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000EB")!
+        ),
         DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", tileName: "French", flag: "🇫🇷", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.french, translationPhrase: "French", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!),
         DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", tileName: "German", flag: "🇩🇪", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.german, translationPhrase: "German", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!),
         DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.italian, translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),
