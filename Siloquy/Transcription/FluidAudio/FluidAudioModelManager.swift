@@ -35,14 +35,15 @@ class FluidAudioModelManager: ObservableObject {
     }
 
     nonisolated static func languageHint(from languageCode: String?, for modelName: String) -> Language? {
-        // This SDK enum controls script filtering, not model language coverage. V3
-        // also supports languages such as Swedish without a hint (automatic detection).
+        // FluidAudio uses the hint to filter scripts. Let V3 detect Russian from
+        // the audio so it can keep Latin terms such as product names and commands.
         guard asrVersion(for: modelName) == .v3,
               let languageCode,
-              languageCode != "auto"
+              let hint = Language(rawValue: languageCode),
+              hint != .russian
         else { return nil }
 
-        return Language(rawValue: languageCode)
+        return hint
     }
 
     init(

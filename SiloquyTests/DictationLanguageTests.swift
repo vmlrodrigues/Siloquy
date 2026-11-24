@@ -70,13 +70,21 @@ struct DictationLanguageTests {
         #expect(russian.languageCode(for: whisper) == "ru")
         #expect(russian.languageCode(for: v2) == nil)
         #expect(TranscriptionLanguageSupport.validLanguageOrFallback("ru", for: v3) == "ru")
-        #expect(FluidAudioModelManager.languageHint(from: russian.languageCode(for: v3), for: v3.name) == .russian)
         #expect(russian.resolveModel(
             from: models, selectedName: nil, readyModelNames: [v2.name, whisper.name]
         )?.name == v3.name, "Recommend V3 even when it needs downloading")
         #expect(russian.resolveModel(
             from: models, selectedName: whisper.name, readyModelNames: [v3.name]
         )?.name == whisper.name, "Preserve an explicit compatible choice")
+    }
+
+    @Test func russianV3UsesAutomaticDetectionWithoutDisablingOtherHints() throws {
+        let russian = try #require(DictationLanguage.named("ru-RU"))
+        let v3 = try model("parakeet-tdt-0.6b-v3")
+        let code = try #require(russian.languageCode(for: v3))
+
+        #expect(FluidAudioTranscriptionService.languageHint(from: code, model: v3) == nil)
+        #expect(FluidAudioTranscriptionService.languageHint(from: "pl", model: v3) == .polish)
     }
 
     @Test func russianUsesLocalizedCleanupAndGeneratesATranslationTile() throws {
