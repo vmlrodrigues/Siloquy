@@ -7,6 +7,22 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.17.0 — 2026-11-24
+
+#### Added
+- **Russian dictation.** Add **Русский** in Dictation Models to use on-device
+  Parakeet V3. Download the model from the Russian language row if needed and
+  assign a shortcut to switch languages. (#75)
+- **Russian AI cleanup and translation.** Translate between Russian and your
+  other enabled languages. Russian cleanup helps preserve command casing and
+  keeps dictated requests for a reply or translation in the resulting text. (#75)
+
+#### Improved
+- Russian dictation can keep English product names and terminal commands in
+  Latin script when Parakeet recognises them. (#75)
+
+---
+
 ### 0.16.0 — 2026-09-23
 
 #### Improved
