@@ -78,12 +78,15 @@ struct DictationLanguageTests {
         )?.name == whisper.name, "Preserve an explicit compatible choice")
     }
 
-    @Test func russianV3UsesAutomaticDetectionWithoutDisablingOtherHints() throws {
+    @Test func russianAndUkrainianV3AvoidScriptFiltering() throws {
         let russian = try #require(DictationLanguage.named("ru-RU"))
+        let ukrainian = try #require(DictationLanguage.named("uk-UA"))
         let v3 = try model("parakeet-tdt-0.6b-v3")
-        let code = try #require(russian.languageCode(for: v3))
+        let russianCode = try #require(russian.languageCode(for: v3))
+        let ukrainianCode = try #require(ukrainian.languageCode(for: v3))
 
-        #expect(FluidAudioTranscriptionService.languageHint(from: code, model: v3) == nil)
+        #expect(FluidAudioTranscriptionService.languageHint(from: russianCode, model: v3) == nil)
+        #expect(FluidAudioTranscriptionService.languageHint(from: ukrainianCode, model: v3) == nil)
         #expect(FluidAudioTranscriptionService.languageHint(from: "pl", model: v3) == .polish)
     }
 
@@ -97,6 +100,40 @@ struct DictationLanguageTests {
         #expect(prompt.targetLanguage == "ru-RU")
         #expect(prompt.promptText == TranslationPrompt.text(for: "Russian"))
         #expect(prompt.id == russian.translationPromptID)
+    }
+
+    @Test(arguments: ["af-ZA", "uk-UA"])
+    func newLanguagesRecommendMultilingualWhisper(_ id: String) throws {
+        let language = try #require(DictationLanguage.named(id))
+        let recommended = try model("ggml-large-v3-turbo-q5_0")
+        let englishOnly = try model("ggml-base.en")
+        let alternative = try model("ggml-large-v3")
+        let parakeet = try model("parakeet-tdt-0.6b-v3")
+        let models = [englishOnly, parakeet, alternative, recommended]
+
+        #expect(language.languageCode(for: recommended) == language.baseCode)
+        #expect(language.languageCode(for: englishOnly) == nil)
+        #expect(language.languageCode(for: parakeet) == (id == "uk-UA" ? "uk" : nil))
+        #expect(language.resolveModel(
+            from: models, selectedName: nil, readyModelNames: [parakeet.name, alternative.name]
+        )?.name == recommended.name)
+        #expect(language.resolveModel(
+            from: models, selectedName: alternative.name, readyModelNames: [recommended.name]
+        )?.name == alternative.name)
+    }
+
+    @Test(arguments: ["af-ZA", "uk-UA"])
+    func newLanguagesUseLocalizedCleanupAndTranslation(_ id: String) throws {
+        let language = try #require(DictationLanguage.named(id))
+        let cleanup = id == "af-ZA" ? LocalizedEnhancementPrompts.afrikaans : LocalizedEnhancementPrompts.ukrainian
+        let target = id == "af-ZA" ? "Afrikaans" : "Ukrainian"
+        let prompt = CustomPrompt.translation(to: language)
+
+        #expect(LocalizedEnhancementPrompts.systemPrompt(for: language) == cleanup)
+        #expect(prompt.title == "To \(target)")
+        #expect(prompt.targetLanguage == id)
+        #expect(prompt.promptText == TranslationPrompt.text(for: target))
+        #expect(prompt.id == language.translationPromptID)
     }
 
     @Test func swedishHasItsOwnCleanupAndStableTranslationIdentity() throws {

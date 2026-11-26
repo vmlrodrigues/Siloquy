@@ -176,6 +176,20 @@ extension DictationLanguage {
             translationPhrase: "Russian",
             translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000EB")!
         ),
+        DictationLanguage(
+            id: "af-ZA", nativeName: "Afrikaans", englishName: "Afrikaans", tileName: "Afrikaans", flag: "🇿🇦",
+            preferredModelNames: ["ggml-large-v3-turbo-q5_0"],
+            cleanUpPrompt: LocalizedEnhancementPrompts.afrikaans,
+            translationPhrase: "Afrikaans",
+            translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000EC")!
+        ),
+        DictationLanguage(
+            id: "uk-UA", nativeName: "Українська", englishName: "Ukrainian", tileName: "Ukrainian", flag: "🇺🇦",
+            preferredModelNames: ["ggml-large-v3-turbo-q5_0"],
+            cleanUpPrompt: LocalizedEnhancementPrompts.ukrainian,
+            translationPhrase: "Ukrainian",
+            translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000ED")!
+        ),
         DictationLanguage(id: "fr-FR", nativeName: "Français", englishName: "French", tileName: "French", flag: "🇫🇷", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.french, translationPhrase: "French", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E6")!),
         DictationLanguage(id: "de-DE", nativeName: "Deutsch", englishName: "German", tileName: "German", flag: "🇩🇪", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.german, translationPhrase: "German", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E7")!),
         DictationLanguage(id: "it-IT", nativeName: "Italiano", englishName: "Italian", tileName: "Italian", flag: "🇮🇹", preferredModelNames: [appleNative], cleanUpPrompt: LocalizedEnhancementPrompts.italian, translationPhrase: "Italian", translationPromptID: UUID(uuidString: "00000000-0000-0000-0000-0000000000E8")!),
