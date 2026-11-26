@@ -43,6 +43,12 @@ class TranscriptionServiceRegistry {
         return try await service.transcribe(audioURL: audioURL, model: model)
     }
 
+    func transcribeWithLanguage(audioURL: URL, model: any TranscriptionModel) async throws -> TranscriptionResult {
+        let service = service(for: model.provider)
+        logger.debug("Transcribing with \(model.displayName, privacy: .public) using \(String(describing: type(of: service)), privacy: .public)")
+        return try await service.transcribeWithLanguage(audioURL: audioURL, model: model)
+    }
+
     /// Creates a streaming or file-based session depending on the model's capabilities.
     func createSession(for model: any TranscriptionModel, onPartialTranscript: ((String) -> Void)? = nil) -> TranscriptionSession {
         if supportsStreaming(model: model) {

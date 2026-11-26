@@ -45,9 +45,9 @@ class AudioTranscriptionService: ObservableObject {
         
         do {
             let transcriptionStart = Date()
-            var text = try await serviceRegistry.transcribe(audioURL: url, model: model)
+            let result = try await serviceRegistry.transcribeWithLanguage(audioURL: url, model: model)
             let transcriptionDuration = Date().timeIntervalSince(transcriptionStart)
-            text = TranscriptionOutputFilter.filter(text)
+            var text = TranscriptionOutputFilter.filter(result.text)
             text = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
             let powerModeManager = PowerModeManager.shared
@@ -97,7 +97,9 @@ class AudioTranscriptionService: ObservableObject {
                enhancementService.isConfigured {
                 do {
                     let textForAI = promptDetectionResult?.processedText ?? text
-                    let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(textForAI)
+                    let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(
+                        textForAI, transcriptionLanguageCode: result.languageCode
+                    )
                     let newTranscription = Transcription(
                         text: originalText,
                         duration: duration,

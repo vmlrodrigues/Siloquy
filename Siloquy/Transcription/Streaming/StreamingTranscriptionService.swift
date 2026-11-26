@@ -92,6 +92,8 @@ class StreamingTranscriptionService {
     private var stopStartedAt: Date?
     private var firstPartialLogged = false
     private var firstCommitLogged = false
+    /// Explicit local ASR language supplied to this connection, never reread at stop.
+    private(set) var capturedLanguageCode: String?
 
     init(modelContext: ModelContext, fluidAudioService: FluidAudioTranscriptionService? = nil, onPartialTranscript: ((String) -> Void)? = nil) {
         self.modelContext = modelContext
@@ -126,6 +128,13 @@ class StreamingTranscriptionService {
         self.provider = provider
 
         let selectedLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage") ?? "auto"
+        if (model.provider == .fluidAudio || model.provider == .nativeApple),
+           selectedLanguage != "auto",
+           TranscriptionLanguageSupport.languages(for: model)[selectedLanguage] != nil {
+            capturedLanguageCode = selectedLanguage
+        } else {
+            capturedLanguageCode = nil
+        }
         logger.notice("Streaming start requested model=\(model.displayName, privacy: .public) language=\(selectedLanguage, privacy: .public)")
 
         try await provider.connect(model: model, language: selectedLanguage)

@@ -94,13 +94,13 @@ class TranscriptionPipeline {
 
         do {
             let transcriptionStart = Date()
-            var text: String
+            let result: TranscriptionResult
             if let session {
-                text = try await session.transcribe(audioURL: audioURL)
+                result = try await session.transcribe(audioURL: audioURL)
             } else {
-                text = try await serviceRegistry.transcribe(audioURL: audioURL, model: model)
+                result = try await serviceRegistry.transcribeWithLanguage(audioURL: audioURL, model: model)
             }
-            text = TranscriptionOutputFilter.filter(text)
+            var text = TranscriptionOutputFilter.filter(result.text)
             let transcriptionDuration = Date().timeIntervalSince(transcriptionStart)
 
             if shouldCancel() { await finishCanceledTranscription(); return }
@@ -143,7 +143,9 @@ class TranscriptionPipeline {
                 let textForAI = promptDetectionResult?.processedText ?? text
 
                 do {
-                    let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(textForAI)
+                    let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(
+                        textForAI, transcriptionLanguageCode: result.languageCode
+                    )
                     transcription.enhancedText = enhancedText
                     transcription.aiEnhancementModelName = enhancementService.getAIService()?.currentModel
                     transcription.promptName = promptName

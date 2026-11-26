@@ -44,6 +44,10 @@ class NativeAppleTranscriptionService: TranscriptionService {
     }
 
     func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
+        (try await transcribeWithLanguage(audioURL: audioURL, model: model)).text
+    }
+
+    func transcribeWithLanguage(audioURL: URL, model: any TranscriptionModel) async throws -> TranscriptionResult {
         guard model is NativeAppleModel else {
             throw ServiceError.invalidModel
         }
@@ -60,8 +64,13 @@ class NativeAppleTranscriptionService: TranscriptionService {
         let audioDuration = Double(audioFile.length) / audioFile.processingFormat.sampleRate
         
         // Apple Speech stores and consumes actual BCP-47 locale identifiers directly.
-        let selectedLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage") ?? "en-US"
+        let configuredLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage")
+        let selectedLanguage = configuredLanguage ?? "en-US"
         let locale = Locale(identifier: selectedLanguage)
+        let hasExplicitLanguage = configuredLanguage.map {
+            let code = $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            return !code.isEmpty && code != "auto" && code != "unknown"
+        } ?? false
 
         let supportedLocales = await SpeechTranscriber.supportedLocales
         let installedLocales = await SpeechTranscriber.installedLocales
@@ -133,7 +142,10 @@ class NativeAppleTranscriptionService: TranscriptionService {
             throw error
         }
 
-        return finalTranscription
+        return TranscriptionResult(
+            text: finalTranscription,
+            languageCode: hasExplicitLanguage ? selectedLocaleIdentifier : nil
+        )
         #else
         throw ServiceError.unsupportedOS
         #endif

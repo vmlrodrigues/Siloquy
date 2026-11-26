@@ -332,7 +332,7 @@ class AIEnhancementService: ObservableObject {
         lastRequestTime = Date()
     }
 
-    private func getSystemMessage(for mode: EnhancementPrompt) async -> String {
+    private func getSystemMessage(for mode: EnhancementPrompt, transcriptionLanguageCode: String?) async -> String {
         let selectedTextContext: String
         if AXIsProcessTrusted() {
             if let selectedText = await SelectedTextService.fetchSelectedText(), !selectedText.isEmpty {
@@ -422,7 +422,11 @@ class AIEnhancementService: ObservableObject {
             if aiService.selectedProvider == .gemmaLocal,
                GemmaService.currentSelectedModelID == "gemma4-e4b",
                let targetLanguage = DictationLanguage.named(targetLanguageID),
-               let prompt = TranslationPrompt.gemmaE4BText(from: dictationLanguage, to: targetLanguage) {
+               let prompt = TranslationPrompt.gemmaE4BText(
+                   from: dictationLanguage,
+                   to: targetLanguage,
+                   transcriptionLanguageCode: transcriptionLanguageCode
+               ) {
                 return prompt + allContextSections
             }
             return activePrompt.promptText + allContextSections
@@ -470,7 +474,7 @@ class AIEnhancementService: ObservableObject {
         }
     }
 
-    private func makeRequest(text: String, mode: EnhancementPrompt) async throws -> String {
+    private func makeRequest(text: String, mode: EnhancementPrompt, transcriptionLanguageCode: String?) async throws -> String {
         guard isConfigured else {
             throw EnhancementError.notConfigured
         }
@@ -480,7 +484,7 @@ class AIEnhancementService: ObservableObject {
         }
 
         let formattedText = "\n<TRANSCRIPT>\n\(text)\n</TRANSCRIPT>"
-        let systemMessage = await getSystemMessage(for: mode)
+        let systemMessage = await getSystemMessage(for: mode, transcriptionLanguageCode: transcriptionLanguageCode)
 
         await MainActor.run {
             self.lastSystemMessageSent = systemMessage
@@ -615,13 +619,19 @@ class AIEnhancementService: ObservableObject {
         UserDefaults.standard.bool(forKey: "EnhancementRetryOnTimeout")
     }
 
-    private func makeRequestWithRetry(text: String, mode: EnhancementPrompt, maxRetries: Int = 3, initialDelay: TimeInterval = 1.0) async throws -> String {
+    private func makeRequestWithRetry(
+        text: String,
+        mode: EnhancementPrompt,
+        transcriptionLanguageCode: String?,
+        maxRetries: Int = 3,
+        initialDelay: TimeInterval = 1.0
+    ) async throws -> String {
         var retries = 0
         var currentDelay = initialDelay
 
         while retries < maxRetries {
             do {
-                return try await makeRequest(text: text, mode: mode)
+                return try await makeRequest(text: text, mode: mode, transcriptionLanguageCode: transcriptionLanguageCode)
             } catch let error as EnhancementError {
                 switch error {
                 case .networkError, .serverError, .rateLimitExceeded:
@@ -671,13 +681,15 @@ class AIEnhancementService: ObservableObject {
         throw EnhancementError.enhancementFailed
     }
 
-    func enhance(_ text: String) async throws -> (String, TimeInterval, String?) {
+    func enhance(_ text: String, transcriptionLanguageCode: String? = nil) async throws -> (String, TimeInterval, String?) {
         let startTime = Date()
         let enhancementPrompt: EnhancementPrompt = .transcriptionEnhancement
         let promptName = activePrompt?.title
 
         do {
-            let result = try await makeRequestWithRetry(text: text, mode: enhancementPrompt)
+            let result = try await makeRequestWithRetry(
+                text: text, mode: enhancementPrompt, transcriptionLanguageCode: transcriptionLanguageCode
+            )
             let endTime = Date()
             let duration = endTime.timeIntervalSince(startTime)
             return (result, duration, promptName)

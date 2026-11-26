@@ -28,14 +28,28 @@ actor WhisperContext {
         }
     }
 
-    func fullTranscribe(samples: [Float]) -> Bool {
-        guard let context = context else { return false }
+    /// Keep the text and the explicit language consumed by whisper_full in one actor turn.
+    func fullTranscribeWithLanguage(samples: [Float]) -> TranscriptionResult? {
+        guard let context = context else { return nil }
         
         let maxThreads = max(1, min(8, cpuCount() - 2))
         var params = whisper_full_default_params(WHISPER_SAMPLING_GREEDY)
         
         // Read language directly from UserDefaults
         let selectedLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage") ?? "auto"
+        let selectedLanguageID = selectedLanguage == "auto"
+            ? -1 : selectedLanguage.withCString { whisper_lang_id($0) }
+        let explicitLanguageCode: String?
+        if selectedLanguage != "auto",
+           selectedLanguageID >= 0,
+           let code = whisper_lang_str(selectedLanguageID) {
+            let languageCode = String(cString: code)
+            // English-only Whisper ignores a non-English request; do not attribute it.
+            explicitLanguageCode = whisper_is_multilingual(context) != 0 || languageCode == "en"
+                ? languageCode : nil
+        } else {
+            explicitLanguageCode = nil
+        }
         if selectedLanguage != "auto" {
             languageCString = Array(selectedLanguage.utf8CString)
             params.language = languageCString?.withUnsafeBufferPointer { ptr in
@@ -98,7 +112,8 @@ actor WhisperContext {
         languageCString = nil
         promptCString = nil
         
-        return success
+        guard success else { return nil }
+        return TranscriptionResult(text: getTranscription(), languageCode: explicitLanguageCode)
     }
 
     func getTranscription() -> String {

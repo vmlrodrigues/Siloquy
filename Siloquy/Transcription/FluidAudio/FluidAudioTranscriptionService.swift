@@ -23,6 +23,20 @@ class FluidAudioTranscriptionService: TranscriptionService {
         return FluidAudioModelManager.languageHint(from: selectedLanguage, for: model.name)
     }
 
+    /// The explicit ASR selection, including V3's intentionally unfiltered ru/uk modes.
+    static func explicitLanguageCode(from selectedLanguage: String?, model: any TranscriptionModel) -> String? {
+        guard model.provider == .fluidAudio,
+              let selectedLanguage,
+              selectedLanguage != "auto",
+              model.supportedLanguages[selectedLanguage] != nil,
+              Language(rawValue: selectedLanguage) != nil else { return nil }
+
+        if FluidAudioModelManager.asrVersion(for: model.name) == .v2 {
+            return selectedLanguage == "en" ? selectedLanguage : nil
+        }
+        return selectedLanguage
+    }
+
     private func ensureModelsLoaded(for version: AsrModelVersion) async throws {
         if asrManager != nil, activeVersion == version {
             return
@@ -83,6 +97,10 @@ class FluidAudioTranscriptionService: TranscriptionService {
     }
 
     func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
+        (try await transcribeWithLanguage(audioURL: audioURL, model: model)).text
+    }
+
+    func transcribeWithLanguage(audioURL: URL, model: any TranscriptionModel) async throws -> TranscriptionResult {
         let targetVersion = version(for: model)
         try await ensureModelsLoaded(for: targetVersion)
 
@@ -90,10 +108,9 @@ class FluidAudioTranscriptionService: TranscriptionService {
             throw ASRError.notInitialized
         }
 
-        let languageHint = Self.languageHint(
-            from: UserDefaults.standard.string(forKey: "SelectedLanguage"),
-            model: model
-        )
+        let selectedLanguage = UserDefaults.standard.string(forKey: "SelectedLanguage")
+        let languageHint = Self.languageHint(from: selectedLanguage, model: model)
+        let languageCode = Self.explicitLanguageCode(from: selectedLanguage, model: model)
         let audioSamples = try readAudioSamples(from: audioURL)
 
         let durationSeconds = Double(audioSamples.count) / 16000.0
@@ -136,7 +153,10 @@ class FluidAudioTranscriptionService: TranscriptionService {
             language: languageHint
         )
 
-        return TextNormalizer.shared.normalizeSentence(result.text)
+        return TranscriptionResult(
+            text: TextNormalizer.shared.normalizeSentence(result.text),
+            languageCode: languageCode
+        )
     }
 
     private func readAudioSamples(from url: URL) throws -> [Float] {

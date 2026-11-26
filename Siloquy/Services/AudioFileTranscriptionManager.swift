@@ -153,9 +153,9 @@ class AudioTranscriptionManager: ObservableObject {
             // Phase: Transcribing
             item.status = .processing(phase: .transcribing)
             let transcriptionStart = Date()
-            var text = try await serviceRegistry.transcribe(audioURL: permanentURL, model: currentModel)
+            let result = try await serviceRegistry.transcribeWithLanguage(audioURL: permanentURL, model: currentModel)
             let transcriptionDuration = Date().timeIntervalSince(transcriptionStart)
-            text = TranscriptionOutputFilter.filter(text)
+            var text = TranscriptionOutputFilter.filter(result.text)
             text = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
             let powerModeManager = PowerModeManager.shared
@@ -179,7 +179,9 @@ class AudioTranscriptionManager: ObservableObject {
                enhancementService.isConfigured {
                 item.status = .processing(phase: .enhancing)
                 do {
-                    let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(text)
+                    let (enhancedText, enhancementDuration, promptName) = try await enhancementService.enhance(
+                        text, transcriptionLanguageCode: result.languageCode
+                    )
                     transcription = Transcription(
                         text: cleanedText,
                         duration: duration,

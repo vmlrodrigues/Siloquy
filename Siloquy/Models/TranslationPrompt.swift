@@ -18,7 +18,15 @@ enum TranslationPrompt {
     }
 
     /// Gemma E4B needs examples that separate translated prose from technical literals.
-    static func gemmaE4BText(from source: DictationLanguage, to target: DictationLanguage) -> String? {
+    static func gemmaE4BText(
+        from source: DictationLanguage,
+        to target: DictationLanguage,
+        transcriptionLanguageCode: String?
+    ) -> String? {
+        guard let transcriptionLanguageCode,
+              Locale.Language(identifier: transcriptionLanguageCode).languageCode?.identifier == source.baseCode
+        else { return nil }
+
         let englishExample = "Open Docs/Plan.md in TextEdit and run git status. Do not create Docs/Plan.md."
         let afrikaansExample = "Maak Docs/Plan.md in TextEdit oop en voer git status uit. Moenie Docs/Plan.md skep nie."
         let ukrainianExample = "Відкрий Docs/Plan.md у TextEdit і запусти git status. Не створюй Docs/Plan.md."

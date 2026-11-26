@@ -15,6 +15,10 @@ class WhisperTranscriptionService: TranscriptionService {
     }
 
     func transcribe(audioURL: URL, model: any TranscriptionModel) async throws -> String {
+        (try await transcribeWithLanguage(audioURL: audioURL, model: model)).text
+    }
+
+    func transcribeWithLanguage(audioURL: URL, model: any TranscriptionModel) async throws -> TranscriptionResult {
         guard model.provider == .whisper else {
             throw VoiceInkEngineError.modelLoadFailed
         }
@@ -59,14 +63,10 @@ class WhisperTranscriptionService: TranscriptionService {
         await whisperContext.setPrompt(currentPrompt)
 
         // Transcribe
-        let success = await whisperContext.fullTranscribe(samples: data)
-
-        guard success else {
+        guard let result = await whisperContext.fullTranscribeWithLanguage(samples: data) else {
             logger.error("❌ Core transcription engine failed (whisper_full).")
             throw VoiceInkEngineError.whisperCoreFailed
         }
-
-        let text = await whisperContext.getTranscription()
 
         logger.notice("Whisper transcription completed successfully.")
 
@@ -76,7 +76,7 @@ class WhisperTranscriptionService: TranscriptionService {
             self.whisperContext = nil
         }
 
-        return text
+        return result
     }
 
     private func readAudioSamples(_ url: URL) throws -> [Float] {

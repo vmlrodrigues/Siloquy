@@ -7,8 +7,8 @@ protocol TranscriptionSession: AnyObject {
     /// Prepares the session. Returns an audio chunk callback for streaming, or nil for file-based.
     func prepare(model: any TranscriptionModel) async throws -> ((Data) -> Void)?
 
-    /// Called after recording stops. Returns the final transcribed text.
-    func transcribe(audioURL: URL) async throws -> String
+    /// Called after recording stops. Returns the text and its captured ASR language.
+    func transcribe(audioURL: URL) async throws -> TranscriptionResult
 
     /// Cancel the session and clean up resources.
     func cancel()
@@ -31,11 +31,11 @@ final class FileTranscriptionSession: TranscriptionSession {
         return nil
     }
 
-    func transcribe(audioURL: URL) async throws -> String {
+    func transcribe(audioURL: URL) async throws -> TranscriptionResult {
         guard let model = model else {
             throw VoiceInkEngineError.transcriptionFailed
         }
-        return try await service.transcribe(audioURL: audioURL, model: model)
+        return try await service.transcribeWithLanguage(audioURL: audioURL, model: model)
     }
 
     func cancel() {
@@ -105,7 +105,7 @@ final class StreamingTranscriptionSession: TranscriptionSession {
         return callback
     }
 
-    func transcribe(audioURL: URL) async throws -> String {
+    func transcribe(audioURL: URL) async throws -> TranscriptionResult {
         guard let model = model else {
             throw VoiceInkEngineError.transcriptionFailed
         }
@@ -116,7 +116,7 @@ final class StreamingTranscriptionSession: TranscriptionSession {
                 logger.notice("Streaming stop/transcribe started model=\(model.displayName, privacy: .public)")
                 let text = try await streamingService.stopAndGetFinalText()
                 logger.notice("Streaming transcript received elapsed=\(Date().timeIntervalSince(start), format: .fixed(precision: 3), privacy: .public)s chars=\(text.count, privacy: .public)")
-                return text
+                return TranscriptionResult(text: text, languageCode: streamingService.capturedLanguageCode)
             } catch {
                 logger.error("❌ Streaming failed, falling back to batch: \(error.localizedDescription, privacy: .public)")
                 streamingService.cancel()
@@ -127,9 +127,9 @@ final class StreamingTranscriptionSession: TranscriptionSession {
 
         let fallbackStart = Date()
         logger.notice("Using batch fallback for \(model.displayName, privacy: .public) file=\(audioURL.lastPathComponent, privacy: .public)")
-        let text = try await fallbackService.transcribe(audioURL: audioURL, model: model)
-        logger.notice("Batch fallback completed elapsed=\(Date().timeIntervalSince(fallbackStart), format: .fixed(precision: 3), privacy: .public)s chars=\(text.count, privacy: .public)")
-        return text
+        let result = try await fallbackService.transcribeWithLanguage(audioURL: audioURL, model: model)
+        logger.notice("Batch fallback completed elapsed=\(Date().timeIntervalSince(fallbackStart), format: .fixed(precision: 3), privacy: .public)s chars=\(result.text.count, privacy: .public)")
+        return result
     }
 
     func cancel() {

@@ -136,11 +136,17 @@ struct DictationLanguageTests {
         #expect(prompt.id == language.translationPromptID)
     }
 
-    @Test(arguments: [("en-US", "af-ZA"), ("af-ZA", "en-US"), ("en-US", "uk-UA"), ("uk-UA", "en-US")])
-    func gemmaTranslationPromptNamesBothLanguages(_ pair: (String, String)) throws {
-        let source = try #require(DictationLanguage.named(pair.0))
-        let target = try #require(DictationLanguage.named(pair.1))
-        let prompt = try #require(TranslationPrompt.gemmaE4BText(from: source, to: target))
+    @Test(arguments: [
+        ("en-US", "af-ZA", "en"), ("af-ZA", "en-US", "af"),
+        ("en-US", "uk-UA", "en"), ("uk-UA", "en-US", "uk"),
+        ("en-US", "af-ZA", "en-AU"), ("en-US", "uk-UA", "en_US")
+    ])
+    func gemmaTranslationPromptNamesBothLanguages(_ route: (source: String, target: String, transcriptionCode: String)) throws {
+        let source = try #require(DictationLanguage.named(route.source))
+        let target = try #require(DictationLanguage.named(route.target))
+        let prompt = try #require(TranslationPrompt.gemmaE4BText(
+            from: source, to: target, transcriptionLanguageCode: route.transcriptionCode
+        ))
 
         #expect(prompt.contains("from \(source.englishName) into \(target.translationPhrase)"))
         #expect(prompt.contains("Docs/Plan.md"))
@@ -152,7 +158,17 @@ struct DictationLanguageTests {
         let source = try #require(DictationLanguage.named(pair.0))
         let target = try #require(DictationLanguage.named(pair.1))
 
-        #expect(TranslationPrompt.gemmaE4BText(from: source, to: target) == nil)
+        #expect(TranslationPrompt.gemmaE4BText(
+            from: source, to: target, transcriptionLanguageCode: source.baseCode
+        ) == nil)
+    }
+
+    @Test(arguments: ["ru", "auto", "en", "", nil] as [String?])
+    func gemmaTranslationUsesGenericPromptWhenAfrikaansTileDoesNotMatchTranscription(_ code: String?) throws {
+        let source = try #require(DictationLanguage.named("af-ZA"))
+        #expect(TranslationPrompt.gemmaE4BText(
+            from: source, to: .english, transcriptionLanguageCode: code
+        ) == nil)
     }
 
     @Test func swedishHasItsOwnCleanupAndStableTranslationIdentity() throws {
