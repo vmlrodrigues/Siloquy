@@ -418,7 +418,13 @@ class AIEnhancementService: ObservableObject {
         // custom-vocabulary and English-variant appendix would fight the target language
         // (e.g. appending "use Australian English spelling" while translating to Portuguese),
         // so translation gets only the selected-text/clipboard/window context, nothing else.
-        if let activePrompt = activePrompt, activePrompt.isTranslation {
+        if let activePrompt, let targetLanguageID = activePrompt.targetLanguage {
+            if aiService.selectedProvider == .gemmaLocal,
+               GemmaService.currentSelectedModelID == "gemma4-e4b",
+               let targetLanguage = DictationLanguage.named(targetLanguageID),
+               let prompt = TranslationPrompt.gemmaE4BText(from: dictationLanguage, to: targetLanguage) {
+                return prompt + allContextSections
+            }
             return activePrompt.promptText + allContextSections
         }
 

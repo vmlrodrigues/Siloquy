@@ -136,6 +136,25 @@ struct DictationLanguageTests {
         #expect(prompt.id == language.translationPromptID)
     }
 
+    @Test(arguments: [("en-US", "af-ZA"), ("af-ZA", "en-US"), ("en-US", "uk-UA"), ("uk-UA", "en-US")])
+    func gemmaTranslationPromptNamesBothLanguages(_ pair: (String, String)) throws {
+        let source = try #require(DictationLanguage.named(pair.0))
+        let target = try #require(DictationLanguage.named(pair.1))
+        let prompt = try #require(TranslationPrompt.gemmaE4BText(from: source, to: target))
+
+        #expect(prompt.contains("from \(source.englishName) into \(target.translationPhrase)"))
+        #expect(prompt.contains("Docs/Plan.md"))
+        #expect(prompt.contains("git status"))
+    }
+
+    @Test(arguments: [("en-US", "ru-RU"), ("ru-RU", "en-US"), ("af-ZA", "uk-UA"), ("uk-UA", "pt-PT")])
+    func otherLanguagePairsKeepTheirExistingTranslationPrompt(_ pair: (String, String)) throws {
+        let source = try #require(DictationLanguage.named(pair.0))
+        let target = try #require(DictationLanguage.named(pair.1))
+
+        #expect(TranslationPrompt.gemmaE4BText(from: source, to: target) == nil)
+    }
+
     @Test func swedishHasItsOwnCleanupAndStableTranslationIdentity() throws {
         let swedish = try #require(DictationLanguage.named("sv-SE"))
         #expect(swedish.nativeName == "Svenska")
