@@ -11,7 +11,8 @@
       --border: #2a2a30;
       --text: #e8e8ed;
       --muted: #8e8e99;
-      --accent: #007aff;
+      --accent: #66a9ff;
+      --accent-fill: #0064d7;
       --accent-dim: #0a52a8;
       --green: #34c759;
       --yellow: #ffd60a;
@@ -61,7 +62,7 @@
       display: inline-block;
       margin-top: 28px;
       padding: 13px 28px;
-      background: var(--accent);
+      background: var(--accent-fill);
       color: #fff;
       font-size: 0.95rem;
       font-weight: 600;
@@ -98,7 +99,7 @@
       width: 26px;
       height: 26px;
       border-radius: 50%;
-      background: var(--accent);
+      background: var(--accent-fill);
       color: #fff;
       font-size: 0.75rem;
       font-weight: 700;
@@ -160,7 +161,7 @@
       height: 24px;
       border-radius: 50%;
       background: var(--border);
-      color: var(--muted);
+      color: var(--text);
       font-size: 0.75rem;
       font-weight: 700;
       margin-top: 1px;
@@ -404,12 +405,12 @@
 
     <div class="card">
       <div class="card-title">A model chosen per language <span class="badge badge-green">On-device</span></div>
-      <div class="card-body">English keeps <strong>Parakeet V2</strong>, which is English-only but the strongest on English. <strong>Apple Speech</strong> is the default for Portuguese, Spanish, French, German and Italian. It uses separate assets for each locale and distinguishes European Portuguese from Brazilian Portuguese. Dutch, Swedish and Russian use multilingual <strong>Parakeet V3</strong>. Download V3 directly from the language row when needed. You can override the choice for any language.</div>
+      <div class="card-body">English keeps <strong>Parakeet V2</strong>, which is English-only but the strongest on English. <strong>Apple Speech</strong> is the default for Portuguese, Spanish, French, German and Italian. It uses separate assets for each locale and distinguishes European Portuguese from Brazilian Portuguese. Dutch, Swedish and Russian use multilingual <strong>Parakeet V3</strong>. Afrikaans and Ukrainian use <strong>Whisper Large v3 Turbo (Quantized)</strong>. You can override the choice for any language.</div>
     </div>
 
     <div class="card">
       <div class="card-title">Clean-up written <em>in</em> your language</div>
-      <div class="card-body">The clean-up prompt is not an English prompt pointed at another language — it is written in that language and states its own conventions for numbers, currency, dates and times. Portuguese (Portugal and Brazil), Spanish, French, German, Italian, Dutch, Swedish and Russian each have one, so <em>"quatro mil e quinhentos euros"</em> comes back as <em>"4500 €"</em>. <kbd>⌘1</kbd> keeps meaning "clean this up properly" whatever you are speaking.</div>
+      <div class="card-body">Each language has a clean-up prompt that follows its own conventions for numbers, currency, dates and times. Afrikaans and Ukrainian prompts also help keep dictated commands and file names intact. <kbd>⌘1</kbd> selects clean-up in the language you are speaking.</div>
     </div>
 
     <div class="card">
@@ -427,7 +428,7 @@
       <li>
         <div class="step-content">
           <div class="step-title">Download what it needs</div>
-          <div class="step-desc">The row says whether a model is ready for that language, and offers the download if not. Apple Speech assets come from macOS itself and need macOS 26 or later.</div>
+          <div class="step-desc">The row shows whether the model is ready. Download Parakeet V3 from the language row. For Afrikaans or Ukrainian, download <strong>Large v3 Turbo (Quantized)</strong> under <strong>Dictation Models → Local</strong>. Apple Speech assets come from macOS itself and need macOS 26 or later.</div>
         </div>
       </li>
       <li>
@@ -466,7 +467,7 @@
     </div>
     <div class="card">
       <div class="card-title">Live text preview</div>
-      <div class="card-body">Settings → <strong>Show Live Text Preview</strong> shows the words in the recorder as you speak. It needs a streaming model — Parakeet and Apple Speech both stream, so it works whichever language you are in.</div>
+      <div class="card-body">Settings → <strong>Show Live Text Preview</strong> shows the words in the recorder as you speak with a streaming model such as Parakeet or Apple Speech. Whisper produces the transcript after you stop recording.</div>
     </div>
     <div class="card">
       <div class="card-title">Translating into a language you don't dictate in</div>

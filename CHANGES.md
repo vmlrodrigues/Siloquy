@@ -7,6 +7,26 @@ Changes made to this fork relative to upstream [VoiceInk](https://github.com/Bei
 
 ---
 
+### 0.18.0 — 2026-11-27
+
+#### Added
+- **Afrikaans and Ukrainian dictation.** Add **Afrikaans** or **Українська**
+  under Dictation Models. Both use on-device Whisper Large v3 Turbo
+  (Quantized) by default. Download it from the **Local** tab and assign a
+  shortcut to switch languages. (#76)
+- **Afrikaans and Ukrainian AI Enhancement.** Both languages get their own
+  cleanup prompt and a translation tile. Cleanup helps preserve English
+  technical terms, command casing, and dictated instructions. (#76)
+
+#### Improved
+- With Gemma 4 E4B, translations between English and Afrikaans or Ukrainian
+  use examples that help preserve the requested action, negation, commands,
+  and file paths. Siloquy uses the general translation prompt when the
+  transcription language is automatic, unknown, or differs from the active
+  language tile. (#76)
+
+---
+
 ### 0.17.0 — 2026-11-24
 
 #### Added
